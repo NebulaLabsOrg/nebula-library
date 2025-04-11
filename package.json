@@ -1,0 +1,21 @@
+{
+  "name": "nebula-library",
+  "version": "1.0.0",
+  "description": "Javascript multipurposes library",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NebulaLabsOrg/nebula-library.git"
+  },
+  "keywords": ["library", "javascript", "utility", "web3", "crypto"],
+  "author": "Nebula Labs",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/NebulaLabsOrg/nebula-library/issues"
+  },
+  "homepage": "https://github.com/NebulaLabsOrg/nebula-library#readme"
+}
