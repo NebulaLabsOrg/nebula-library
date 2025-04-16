@@ -63,16 +63,4 @@ describe('TgNotifierClient', () => {
       // Assert
       expect(result).to.equal(newChatId);
    });
-
-    it('should stop polling successfully', () => {
-        // Arrange
-        botStopPollingStub.returns(true);
-
-        // Act
-        const result = tgNotifierClient.kill();
-
-        // Assert
-        expect(botStopPollingStub.calledOnce).to.be.true;
-        expect(result).to.be.true;
-    });
 });

@@ -56,23 +56,6 @@ export class TgNotifierClient {
     }    
 
     /**
-     * @method kill
-     * @description Stops the Telegram bot's polling mechanism, effectively disconnecting it.
-     * @returns {boolean} True if successful, throws Error if failed
-     * @throws {Error} If there's an error stopping the bot.
-     */
-    kill() {
-        try {
-            // Stop the bot's polling to gracefully shut down the connection
-            const result = this.bot.stopPolling();
-            return result;
-        } catch (error) {
-            console.error('Error stopping Telegram bot:', error);
-            throw error;
-        }
-    }
-
-    /**
      * @public
      * @method setChatId
      * @description Sets the ID of the Telegram chat to send messages to.
