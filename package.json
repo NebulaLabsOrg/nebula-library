@@ -4,7 +4,8 @@
   "description": "Javascript multipurposes library",
   "main": "index.js",
   "scripts": {
-    "test:bot": "mocha ./telegram-bot/notifier/test/*.test.mjs"
+    "verify:bot": "eslint ./telegram-bot/notifier/src/**/*.js",
+    "test:bot": "mocha ./telegram-bot/notifier/test/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "chai": "^5.2.0",
     "dotenv": "^16.5.0",
+    "eslint": "^9.24.0",
     "mocha": "^11.1.0",
     "sinon": "^20.0.0"
   }
