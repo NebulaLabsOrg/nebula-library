@@ -4,18 +4,33 @@
   "description": "Javascript multipurposes library",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:bot": "mocha ./telegram-bot/notifier/test/*.test.mjs"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NebulaLabsOrg/nebula-library.git"
   },
-  "keywords": ["library", "javascript", "utility", "web3", "crypto"],
+  "keywords": [
+    "library",
+    "javascript",
+    "utility",
+    "web3",
+    "crypto"
+  ],
   "author": "Nebula Labs",
   "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/NebulaLabsOrg/nebula-library/issues"
   },
-  "homepage": "https://github.com/NebulaLabsOrg/nebula-library#readme"
+  "homepage": "https://github.com/NebulaLabsOrg/nebula-library#readme",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0"
+  },
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "dotenv": "^16.5.0",
+    "mocha": "^11.1.0",
+    "sinon": "^20.0.0"
+  }
 }
