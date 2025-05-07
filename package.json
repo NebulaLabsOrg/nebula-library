@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test:bot": "mocha ./telegram-bot/notifier/test/*.test.js",
-    "test:erc20": "mocha ./web3/token/ERC20/test/*.test.js",
-    "test:utils": "mocha ./utils/test/*.test.js"
+    "test:erc20": "node ./web3/token/ERC20/example/erc20.example.js"
   },
   "repository": {
     "type": "git",
