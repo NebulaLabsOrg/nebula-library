@@ -4,8 +4,8 @@
   "description": "Javascript multipurposes library",
   "main": "index.js",
   "scripts": {
-    "verify:bot": "eslint ./telegram-bot/notifier/src/**/*.js",
-    "test:bot": "mocha ./telegram-bot/notifier/test/*.test.js"
+    "test:bot": "mocha ./telegram-bot/notifier/test/*.test.js",
+    "test:erc20": "node ./web3/token/ERC20/example/erc20.example.js"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/NebulaLabsOrg/nebula-library#readme",
   "dependencies": {
+    "ethers": "^6.13.7",
     "node-telegram-bot-api": "^0.66.0"
   },
   "devDependencies": {
