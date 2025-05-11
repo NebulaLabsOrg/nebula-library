@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { estimateGasLimit, calculateGasPrice } from '../../../../utils/src/gas.utils.js';
 import { createResponse } from '../../../../utils/src/response.utils.js';
 import { getTxGasOptions } from '../../../../utils/src/tx.utils.js';
+import { resolveSigner } from '../../../../utils/src/ethers.utils.js';
 
 const erc20Abi = JSON.parse(fs.readFileSync(new URL('../../../../abi/ERC20.json', import.meta.url)));
 /**
@@ -21,14 +22,7 @@ export class ERC20 {
      * @throws {Error} If neither a valid private key with a provider nor a Signer object is provided.
      */
     constructor(_signerOrKey, _rpcProvider = null, _numberConfirmation = 1, _EIP1559 = true) {
-        if (typeof _signerOrKey === 'string' && _rpcProvider) {
-            this.signer = new ethers.Wallet(_signerOrKey, new ethers.JsonRpcProvider(_rpcProvider));
-        } else if (_signerOrKey instanceof ethers.Signer) {
-            this.signer = _signerOrKey;
-        } else {
-            throw new Error('You must provide either a private key with a provider or a valid Signer object.');
-        }
-
+        this.signer = resolveSigner(_signerOrKey, _rpcProvider);
         this.rpcProvider = _rpcProvider || (this.signer.provider ? this.signer.provider.connection.url : null);
         this.erc20Abi = erc20Abi;
         this.numberConfirmation = _numberConfirmation;
