@@ -1,4 +1,5 @@
 import { TgNotifier } from '../src/tgBot.js';
+import { shiftAlert, shiftWithraw } from '../shift-templates/messages.js';
 import 'dotenv/config';
 
 // Replace with your Telegram bot token and chat ID
@@ -10,5 +11,5 @@ const threadId = process.env.TELEGRAM_TOPIC_ID;
 const notifier = new TgNotifier(botToken, chatId);
 
 // Send a message
-const response = await notifier.sendMessage('Hello, this is a test message!', threadId);
-console.log(response);
+console.log(await notifier.sendMessage(shiftAlert(3, 'Rebalance', 'Loss over 80%'), threadId));
+console.log(await notifier.sendMessage(shiftWithraw(3, '0xergr5tg', '2132', '250000'), threadId));
