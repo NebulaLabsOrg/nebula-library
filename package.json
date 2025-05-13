@@ -4,7 +4,6 @@
   "description": "Javascript multipurposes library",
   "main": "index.js",
   "scripts": {
-    "test:bot": "mocha ./telegram-bot/notifier/test/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -25,6 +24,7 @@
   },
   "homepage": "https://github.com/NebulaLabsOrg/nebula-library#readme",
   "dependencies": {
+    "axios": "^1.9.0",
     "ethers": "^6.13.7",
     "node-telegram-bot-api": "^0.66.0"
   },
