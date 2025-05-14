@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { estimateGasLimit, calculateGasPrice } from '../../../../utils/src/gas.utils.js';
 import { createResponse } from '../../../../utils/src/response.utils.js';
 import { getTxGasOptions } from '../../../../utils/src/tx.utils.js';
+import { resolveSigner } from '../../../../utils/src/ethers.utils.js';
 
 const erc20Abi = JSON.parse(fs.readFileSync(new URL('../../../../abi/ERC20.json', import.meta.url)));
 /**
@@ -21,14 +22,7 @@ export class ERC20 {
      * @throws {Error} If neither a valid private key with a provider nor a Signer object is provided.
      */
     constructor(_signerOrKey, _rpcProvider = null, _numberConfirmation = 1, _EIP1559 = true) {
-        if (typeof _signerOrKey === 'string' && _rpcProvider) {
-            this.signer = new ethers.Wallet(_signerOrKey, new ethers.JsonRpcProvider(_rpcProvider));
-        } else if (_signerOrKey instanceof ethers.Signer) {
-            this.signer = _signerOrKey;
-        } else {
-            throw new Error('You must provide either a private key with a provider or a valid Signer object.');
-        }
-
+        this.signer = resolveSigner(_signerOrKey, _rpcProvider);
         this.rpcProvider = _rpcProvider || (this.signer.provider ? this.signer.provider.connection.url : null);
         this.erc20Abi = erc20Abi;
         this.numberConfirmation = _numberConfirmation;
@@ -181,19 +175,17 @@ export class ERC20 {
      */
     async bkApprove(_token, _amount, _spender, _gasPriceIncreasePercent = 0, _gasPrice = undefined) { 
         try {
-            let gasPrice;
-            if (_gasPrice) {
-                gasPrice = ethers.parseUnits(_gasPrice, 'gwei');
-            } else {
-                gasPrice = await calculateGasPrice(this.rpcProvider, _gasPriceIncreasePercent, this.EIP1559);
-                if (!gasPrice.success) {
-                    return createResponse(
-                        false,
-                        gasPrice.message,
-                        gasPrice.data,
-                        `ERC20.bkApprove -- ${gasPrice.source}`
-                    );
-                }
+            const gasPrice = _gasPrice 
+                ? ethers.parseUnits(_gasPrice, 'gwei') 
+                : await calculateGasPrice(this.rpcProvider, _gasPriceIncreasePercent, this.EIP1559);
+
+            if (!gasPrice.success && !_gasPrice) {
+                return createResponse(
+                    false,
+                    gasPrice.message,
+                    gasPrice.data,
+                    `kyberswap.swap -- ${gasPrice.source}`
+                );
             }
 
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
@@ -207,8 +199,8 @@ export class ERC20 {
                 );
             }
 
-            const txGasOptions = getTxGasOptions(this.EIP1559, gasLimit, gasPrice);
-            const tx = await contract.approve(_spender, _amount, txGasOptions);
+            const txGasParams = getTxGasOptions(this.EIP1559, gasLimit, gasPrice);
+            const tx = await contract.approve(_spender, _amount, txGasParams);
             await tx.wait(this.numberConfirmation);
 
             return createResponse(true, 'success', { hash: tx.hash }, 'ERC20.bkApprove');
@@ -235,19 +227,17 @@ export class ERC20 {
      */
     async bkTransfer(_token, _to, _amount, _gasPriceIncreasePercent = 0, _gasPrice = undefined) { 
         try {
-            let gasPrice;
-            if (_gasPrice) {
-                gasPrice = ethers.parseUnits(_gasPrice, 'gwei');
-            } else {
-                gasPrice = await calculateGasPrice(this.rpcProvider, _gasPriceIncreasePercent, this.EIP1559);
-                if (!gasPrice.success) {
-                    return createResponse(
-                        false,
-                        gasPrice.message,
-                        gasPrice.data,
-                        `ERC20.bkTransfer -- ${gasPrice.source}`
-                    );
-                }
+            const gasPrice = _gasPrice 
+                ? ethers.parseUnits(_gasPrice, 'gwei') 
+                : await calculateGasPrice(this.rpcProvider, _gasPriceIncreasePercent, this.EIP1559);
+
+            if (!gasPrice.success && !_gasPrice) {
+                return createResponse(
+                    false,
+                    gasPrice.message,
+                    gasPrice.data,
+                    `kyberswap.swap -- ${gasPrice.source}`
+                );
             }
     
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
@@ -261,8 +251,8 @@ export class ERC20 {
                 );
             }
     
-            const txGasOptions = getTxGasOptions(this.EIP1559, gasLimit, gasPrice);
-            const tx = await contract.transfer(_to, _amount, txGasOptions);
+            const txGasParams = getTxGasOptions(this.EIP1559, gasLimit, gasPrice);
+            const tx = await contract.transfer(_to, _amount, txGasParams);
             await tx.wait(this.numberConfirmation);
     
             return createResponse(true, 'success', { hash: tx.hash }, 'ERC20.bkTransfer');

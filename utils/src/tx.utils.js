@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { createResponse } from './response.utils.js';
 /**
  * Generates transaction gas options based on the EIP-1559 standard.
  *
@@ -23,5 +24,37 @@ export function getTxGasOptions(_EIP1559, _gasLimit, _gasPrice) {
             gasLimit: BigInt(_gasLimit.data),
             gasPrice: ethers.parseUnits(_gasPrice.data.gasPrice, 'gwei')
         };
+    }
+}
+/**
+ * Signs and sends a transaction using the provided signer.
+ *
+ * @async
+ * @param {object} _signer - The signer object to sign and send the transaction.
+ * @param {object} _tx - The transaction object to be sent.
+ * @param {number} [_numberConfirmation=1] - The number of confirmations to wait for after sending the transaction.
+ * @returns {Promise<object>} A response object containing the transaction hash if successful, or an error message if failed.
+ */
+export async function signAndSendTx(_signer, _tx, _numberConfirmation = 1) {
+    try {
+        const signer = _signer;
+        const txResponse = await signer.sendTransaction(_tx);
+        await txResponse.wait(_numberConfirmation);
+        
+        return createResponse(
+            true,
+            'success',
+            {
+                txHash: txResponse.hash
+            },
+            'signAndSendTx'
+        );
+    } catch (error) {
+        return createResponse(
+            false,
+            error.message || 'Failed to send transaction',
+            null,
+            'signAndSendTx'
+        );
     }
 }
