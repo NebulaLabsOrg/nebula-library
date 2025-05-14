@@ -1,5 +1,5 @@
 //Telegram Bot
-export * from './telegram-bot/notifier/src/tg-bot-client.js';
+export * from './telegram-bot/notifier/src/tgBot.js';
 //Web3
 export * from './web3/token/ERC20/src/erc20.js';
 export * from './web3/dex/aggregator/kyberswap/src/kyberswap.js';
