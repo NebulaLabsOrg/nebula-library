@@ -34,3 +34,8 @@ console.log('Calling: bybit.getAccountInfo');
 const accountInfo = await bybitInstance.getAccountInfo();
 console.log(accountInfo);
 */
+
+console.log('View Only Calls');
+console.log('Calling: bybit.getMarketOpenInterest');
+const accountInfo = await bybitInstance.getMarketOpenInterest('ETHUSDT');
+console.log(accountInfo);

@@ -108,3 +108,36 @@ export async function vmGetFundingRateHour(_restClientV5, _symbol) {
         return createResponse(false, error.message || 'Failed to get funding rate', null, 'bybit.getFundingRateHour');
     }
 }
+
+/**
+ * @async
+ * @function vmGetMarketOpenInterest
+ * @description Retrieves the open interest and its USD value for a given trading symbol from Bybit's linear market.
+ * Fetches the latest market data to obtain the last traded price, then queries the open interest for the specified symbol.
+ * Calculates the open interest in USD by multiplying the open interest by the last price.
+ * @param {Object} _restClientV5 - The Bybit REST client instance used to make API requests.
+ * @param {string} [_symbol=''] - The trading symbol to retrieve open interest for (e.g., 'BTCUSDT').
+ * @returns {Promise<Object>} A Promise that resolves to a response object containing the open interest data or an error message.
+ */
+export async function vmGetMarketOpenInterest(_restClientV5, _symbol = '') {
+    try {
+        const marketData = await vmGetMarketData(_restClientV5, _symbol);
+        const lastPrice = marketData?.data?.list?.[0]?.lastPrice;
+        if (!lastPrice) return createResponse(false, 'No last price', null, 'bybit.getMarketOpenInterest');
+        const response = await _restClientV5.getOpenInterest({symbol: _symbol, category: 'linear', intervalTime: '1h',limit: 1});
+        return response.retCode === 0
+            ? createResponse(
+                true,
+                'success',
+                {
+                    symbol: _symbol,
+                    openInterest: response.result.list[0].openInterest,
+                    openInterestUsd: (Number(response.result.list[0].openInterest) * Number(lastPrice)).toString(),
+                },
+                'bybit.getMarketOpenInterest'
+                )
+            : createResponse(false, response.retMsg, null, 'bybit.getMarketOpenInterest');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getMarketOpenInterest');
+    }
+}

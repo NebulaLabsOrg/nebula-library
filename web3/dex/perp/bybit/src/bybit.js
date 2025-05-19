@@ -1,7 +1,7 @@
 import { RestClientV5 } from 'bybit-api';
 import {v4 as uuidv4} from 'uuid';
 
-import { vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour } from './viewModel.js';
+import { vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest } from './viewModel.js';
 
 
 export class bybit {
@@ -47,14 +47,23 @@ export class bybit {
         return await vmGetFundingRateHour(this.client, _symbol);
     }
 
+    /**
+     * @async
+     * @method getMarketOpenInterest
+     * @description Retrieves the open interest for a specific market symbol from Bybit's linear category.
+     * Calls the view model to fetch the open interest data for the given symbol.
+     * @param {string} _symbol - The market symbol to query open interest for (e.g., 'BTCUSDT').
+     * @returns {Promise<Object>} A Promise that resolves to a response object containing the open interest data or an error message.
+     */
+    async getMarketOpenInterest(_symbol) {
+        return await vmGetMarketOpenInterest(this.client, _symbol);
+    }
 
 
 
 
 
 
-
-    
     async getAccountInfo() {
         try {
             // UNIFIED o FUND
@@ -62,7 +71,7 @@ export class bybit {
             // Usa l'endpoint corretto con il tipo di account
             // const response = await this.client.getWalletBalance({accountType: 'UNIFIED'});
             // const test = await this.client.getAllCoinsBalance({ accountType: 'FUND', coin: 'USDT' });
-            //const response = await this.client.getWithdrawableAmount({ coin: 'USDC' });
+            //  const response = await this.client.getWithdrawableAmount({ coin: 'USDC' });
             // console.log(test.result.balance[0].transferBalance);
         
             /*
@@ -165,15 +174,6 @@ export class bybit {
                 marketUnit: 'quoteCoin',
                 reduceOnly: true,
                 timeInForce: 'IOC'
-            });
-            */
-
-            /*
-            const response = await this.client.getOpenInterest({
-                symbol: 'DOGEUSDT',
-                category: 'linear',
-                intervalTime: '1h',  // Usa intervalTime invece di period
-                limit: 1
             });
             */
 
