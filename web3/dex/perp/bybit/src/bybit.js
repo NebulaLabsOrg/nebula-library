@@ -1,5 +1,8 @@
 import { RestClientV5 } from 'bybit-api';
-import { createResponse } from '../../../../../utils/src/response.utils.js';
+import {v4 as uuidv4} from 'uuid';
+
+import { vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour } from './viewModel.js';
+
 
 export class bybit {
     constructor(_apiKey, _apiSecret) {
@@ -14,125 +17,172 @@ export class bybit {
      * @async
      * @method getMarketData
      * @description Retrieves market data for a specific symbol or all markets from Bybit's linear category.
-     * @param {string} [symbol=''] - The market symbol to query (e.g., 'BTCUSDT'). If empty, returns data for all markets.
+     * @param {string} [_symbol=''] - The market symbol to query (e.g., 'BTCUSDT'). If empty, returns data for all markets.
      * @returns {Promise<Object>} A Promise that resolves with a response object containing market data or an error message.
-     *
-     * Example of returns .data.lost:
-     * [
-     *   {
-     *     symbol: 'BIOUSDT',
-     *     lastPrice: '0.07086',
-     *     indexPrice: '0.07100',
-     *     markPrice: '0.07085',
-     *     prevPrice24h: '0.07563',
-     *     price24hPcnt: '-0.06307',
-     *     highPrice24h: '0.07958',
-     *     lowPrice24h: '0.06931',
-     *     prevPrice1h: '0.07021',
-     *     openInterest: '48555802',
-     *     openInterestValue: '3440178.57',
-     *     turnover24h: '5047510.2564',
-     *     volume24h: '68576098.0000',
-     *     fundingRate: '-0.00019576',
-     *     nextFundingTime: '1747670400000',
-     *     predictedDeliveryPrice: '',
-     *     basisRate: '',
-     *     deliveryFeeRate: '',
-     *     deliveryTime: '0',
-     *     ask1Size: '85',
-     *     bid1Price: '0.07089',
-     *     ask1Price: '0.07090',
-     *     bid1Size: '1357',
-     *     basis: '',
-     *     preOpenPrice: '',
-     *     preQty: '',
-     *     curPreListingPhase: 'Finished'
-     *   }
-     * ]
      */
-    async getMarketData(symbol = '') {
-        try {
-            const res = await this.client.getTickers({ category: 'linear', symbol });
-            return res.retCode === 0
-                ? createResponse(true, 'success', res.result, 'bybit.getMarketData')
-                : createResponse(false, res.retMsg, null, 'bybit.getMarketData');
-        } catch (error) {
-            return createResponse(false, error.message, null, 'bybit.getMarketData');
-        }
+    async getMarketData(_symbol = '') {
+        return await vmGetMarketData(this.client, _symbol);
     }
     
     /**
      * @async
-     * @method getMaketInfo
-     * @description Retrieves market information for a given symbol from Bybit's linear perpetual instruments.
-     * @param {string} symbol - The trading symbol (e.g., 'BTCUSDT') for which to fetch market information.
-     * @returns {Promise<Object>} A Promise that resolves with a response object containing the market information or an error message.
-     * 
-     * Example of returns .data.lost:
-     * [
-     *   {
-            symbol: 'BTCUSDT',
-            contractType: 'LinearPerpetual',
-            status: 'Trading',
-            baseCoin: 'BTC',
-            quoteCoin: 'USDT',
-            launchTime: '1584230400000',
-            deliveryTime: '0',
-            deliveryFeeRate: '',
-            priceScale: '2',
-            leverageFilter: [Object],
-            priceFilter: [Object],
-            lotSizeFilter: [Object],
-            unifiedMarginTrade: true,
-            fundingInterval: 480,
-            settleCoin: 'USDT',
-            copyTrading: 'both',
-            upperFundingRate: '0.005',
-            lowerFundingRate: '-0.005',
-            isPreListing: false,
-            preListingInfo: null,
-            riskParameters: [Object],
-            displayName: ''
-     *   }
-     * ]
-    */
-    async getMaketInfo(symbol) {
-        try {
-            const res = await this.client.getInstrumentsInfo({ category: 'linear', symbol });
-            return res.retCode === 0
-            ? createResponse(true, 'success', res.result.list, 'bybit.getMaketInfo')
-            : createResponse(false, res.retMsg, null, 'bybit.getMaketInfo');
-        } catch (error) {
-            return createResponse(false, error.message, null, 'bybit.getMaketInfo');
-        }
+     * @method getMaketOrderSize
+     * @description Retrieves the recommended market order size for a given trading symbol.
+     * @param {string} _symbol - The trading symbol to query (e.g., 'BTCUSDT').
+     * @returns {Promise<number>} A Promise that resolves to the recommended market order size for the specified symbol.
+     */
+    async getMaketOrderSize(_symbol) {
+        return await vmGetMaketOrderSize(this.client, _symbol);
     }
 
     /**
-     * Retrieves the hourly funding rate for a given symbol.
-     *
-     * This method fetches market information and market data for the specified symbol,
-     * calculates the hourly funding rate based on the funding interval and funding rate,
-     * and returns a standardized response object.
-     *
      * @async
-     * @param {string} symbol - The trading symbol to retrieve the funding rate for.
-     * @returns {Promise<Object>} A promise that resolves to a response object containing the hourly funding rate,
-     *                            or an error message if retrieval fails.
+     * @method getFundingRateHour
+     * @description Retrieves the hourly funding rate for a given trading symbol.
+     * Calls the view model to fetch and calculate the funding rate per hour.
+     * @param {string} _symbol - The trading symbol to retrieve the funding rate for (e.g., 'BTCUSDT').
+     * @returns {Promise<Object>} A Promise that resolves to a response object containing the hourly funding rate or an error message.
      */
-    async getFundingRateHour(symbol) {
+    async getFundingRateHour(_symbol) {
+        return await vmGetFundingRateHour(this.client, _symbol);
+    }
+
+
+
+
+
+
+
+
+    
+    async getAccountInfo() {
         try {
-            const marketInfo = await this.getMaketInfo(symbol);
-            const fundingInterval = marketInfo?.data?.[0]?.fundingInterval;
-            if (!fundingInterval) return createResponse(false, 'No funding interval', null, 'bybit.getFundingRateHour');
+            // UNIFIED o FUND
+            let myuuid = uuidv4();
+            // Usa l'endpoint corretto con il tipo di account
+            // const response = await this.client.getWalletBalance({accountType: 'UNIFIED'});
+            // const test = await this.client.getAllCoinsBalance({ accountType: 'FUND', coin: 'USDT' });
+            //const response = await this.client.getWithdrawableAmount({ coin: 'USDC' });
+            // console.log(test.result.balance[0].transferBalance);
+        
+            /*
+            // Preleva il saldo disponibile per il prelievo
+            const response = await this.client.submitWithdrawal({
+                coin: 'USDT',                    // Deve essere in maiuscolo
+                chain: 'ETH',                    // Deve essere in maiuscolo
+                address: '0x970669124ce6381386aaea27aff4a37fc579b992',
+                amount: '13',                  // Deve essere una stringa
+                timestamp: Date.now(),           // Deve essere un numero intero
+                forceChain: 0,                   // Deve essere un numero intero
+                accountType: 'FUND',          // Deve essere in maiuscolo
+                feeType: 1                       // Deve essere un numero intero
+            });*/
+            
+            /*
+            //transfer
+            const response = await this.client.createInternalTransfer(
+                myuuid,
+                'USDT',
+                test.result.balance[0].transferBalance,
+                'FUND',
+                'UNIFIED',
+            );*/
+            
+            /*
+            const response = await this.client.getWithdrawalRecords({
+                coin: 'USDC',
+                withdrawType: 0,
+                limit: 2,
+            });
+            */
 
-            const marketData = await this.getMarketData(symbol);
-            const fundingRate = marketData?.data?.list?.[0]?.fundingRate;
-            if (!fundingRate) return createResponse(false, 'No funding rate', null, 'bybit.getFundingRateHour');
+            /*
+            // Market Order
+            const response = await this.client.submitOrder({
+                category: 'linear',  // Per futures/perpetual
+                symbol: 'DOGEUSDT',
+                side: 'Buy', // 'Buy' o 'Sell'
+                orderType: 'Market',
+                qty: '10', //massimo 3 decimali
+                marketUnit: 'quoteCoin',  // Specifica che qty è in USDT
+                timeInForce: 'IOC', // Immediate or Cancel
+                slippageToleranceType: 'Percent',  // Opzionale
+                slippageTolerance: '0.1', 
+            });
+            // return.orderId
+            */
 
-            const hourlyFundingRate = fundingRate / (fundingInterval / (1000 * 60 * 60));
-            return createResponse(true, 'success', { symbol, fundingRate: hourlyFundingRate }, 'bybit.getFundingRateHour');
+            /*
+            // Limit Order
+            const response = await this.client.submitOrder({
+                category: 'linear',  // Per futures/perpetual
+                symbol: 'DOGEUSDT',
+                side: 'Buy', // 'Buy' o 'Sell'
+                orderType: 'Limit',
+                qty: '10', //massimo 3 decimali
+                marketUnit: 'quoteCoin',  // Specifica che qty è in USDT
+                timeInForce: 'GTC', // Good Till Cancel
+                price: '0.222', // Prezzo limite
+                orderLinkId: 'ordine-002',
+            });*/
+            
+
+            /*
+            // Close Limit Order
+            const response = await this.client.cancelOrder({
+                category: 'linear',  // Per futures/perpetual
+                symbol: 'DOGEUSDT',
+                orderId: 'ordine-002',
+            });
+            */
+
+            /*
+            //Get Order Status
+            const response = await this.client.getActiveOrders({
+                category: 'linear',
+                orderId: 'e1a6222c-5298-4aa2-93b1-a05d855b64dd',
+                openOnly: 0,
+                limit: 1
+            })
+            */
+
+            /*
+            // Get Order Details
+            const response = await this.client.getPositionInfo({
+                category: 'linear',
+                symbol: 'DOGEUSDT'
+            });
+            */
+
+            /*
+            // Close Market Posizion
+            const response = await this.client.submitOrder({
+                category: 'linear',
+                symbol: 'DOGEUSDT',
+                side: 'Sell',
+                orderType: 'Market',
+                qty: '10',
+                marketUnit: 'quoteCoin',
+                reduceOnly: true,
+                timeInForce: 'IOC'
+            });
+            */
+
+            /*
+            const response = await this.client.getOpenInterest({
+                symbol: 'DOGEUSDT',
+                category: 'linear',
+                intervalTime: '1h',  // Usa intervalTime invece di period
+                limit: 1
+            });
+            */
+
+            console.log(response);
+            return response.retCode === 0
+                ? createResponse(true, 'success', response.result, 'bybit.getAccountInfo')
+                : createResponse(false, response.retMsg, null, 'bybit.getAccountInfo');
         } catch (error) {
-            return createResponse(false, error.message || 'Failed to get funding rate', null, 'bybit.getFundingRateHour');
+            return createResponse(false, error.message, null, 'bybit.getAccountInfo');
         }
     }
 
