@@ -69,9 +69,10 @@ export async function vmGetMaketOrderSize(_restClientV5, _symbol = '') {
             'success',
             {
                 symbol: _symbol,
-                maxLimQtyUsd: response.result.list[0].lotSizeFilter.maxOrderQty,
-                minQtyUsd: response.result.list[0].lotSizeFilter.minOrderQty,
-                maxMktQtyUsd: response.result.list[0].lotSizeFilter.maxMktOrderQty,
+                maxLimQty: response.result.list[0].lotSizeFilter.maxOrderQty,
+                minQty: response.result.list[0].lotSizeFilter.minOrderQty,
+                qtyStep: response.result.list[0].lotSizeFilter.qtyStep,
+                maxMktQty: response.result.list[0].lotSizeFilter.maxMktOrderQty,
             },
             'bybit.getMaketOrderSize'
         )
@@ -139,5 +140,90 @@ export async function vmGetMarketOpenInterest(_restClientV5, _symbol = '') {
             : createResponse(false, response.retMsg, null, 'bybit.getMarketOpenInterest');
     } catch (error) {
         return createResponse(false, error.message, null, 'bybit.getMarketOpenInterest');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetOpenPositions
+ * @description Retrieves the number of open positions and their corresponding market symbols from Bybit using the provided REST client.
+ * Calls the Bybit API to fetch open positions for the 'linear' category settled in the specified coin.
+ * Returns the count of open positions and a list of market symbols if any positions are open.
+ * In case of an error or unsuccessful response, it returns an appropriate error message.
+ * @param {Object} _restClientV5 - The Bybit REST client instance with a `getPositionInfo` method.
+ * @param {string} _settleCoin - The coin used for settlement (e.g., 'USDT').
+ * @returns {Promise<Object>} A Promise that resolves to a response object containing the open positions data or an error message.
+ */
+export async function vmGetOpenPositions(_restClientV5, _settleCoin) {
+    try {
+        const response = await _restClientV5.getPositionInfo({ category: 'linear', settleCoin: _settleCoin });
+        const openPositions = response.result.list.length;
+        const markets = openPositions > 0 ? response.result.list.map(item => item.symbol) : [];
+        return response.retCode === 0
+            ? createResponse(true, 'success', { openPositions: openPositions, markets: markets }, 'bybit.getOpenPositions')
+            : createResponse(false, response.retMsg, null, 'bybit.getOpenPositions');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getOpenPositions');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetOutWithdrawableAmount
+ * @description Retrieves the withdrawable amount and total balance for a specified settlement coin from Bybit using the provided REST client.
+ * Calls the Bybit API to fetch withdrawable amount details for the given coin.
+ * Returns the coin, withdrawable amount, and total balance if the API call is successful.
+ * In case of an error or unsuccessful response, it returns an appropriate error message.
+ * @param {Object} _restClientV5 - The Bybit REST client instance with a `getWithdrawableAmount` method.
+ * @param {string} _settleCoin - The settlement coin symbol (e.g., 'USDT', 'BTC') for which to retrieve withdrawable amount information.
+ * @returns {Promise<Object>} A Promise that resolves to a response object containing withdrawable amount data or an error message.
+ */
+export async function vmGetOutWithdrawableAmount(_restClientV5, _settleCoin) {
+    try {
+        const response = await _restClientV5.getWithdrawableAmount({ coin: _settleCoin });
+        return response.retCode === 0
+            ? createResponse(
+                true,
+                'success',
+                {
+                    coin: response.result.withdrawableAmount.FUND.coin,
+                    withdrawableAmount: response.result.withdrawableAmount.FUND.withdrawableAmount,
+                    totalBalance: response.result.withdrawableAmount.FUND.availableBalance,
+                },
+                'bybit.getOutWithdrawableAmount'
+            )
+            : createResponse(false, response.retMsg, null, 'bybit.getOutWithdrawableAmount');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getOutWithdrawableAmount');
+    }
+}
+
+export async function vmGetOrderStatus(_restClientV5, _orderId) {
+    try {
+        const response = await _restClientV5.getActiveOrders({
+            category: 'linear',
+            orderId: _orderId,
+            openOnly: 0,
+            limit: 1
+        });
+        return response.retCode === 0
+            ? createResponse(
+                true,
+                'success',
+                {
+                    symbol: response.result.list[0].symbol,
+                    orderType: response.result.list[0].orderType,
+                    status: response.result.list[0].orderStatus,
+                    side: response.result.list[0].side === 'Buy' ? 'long' : 'short',
+                    qty: response.result.list[0].qty,
+                    qtyExe: response.result.list[0].cumExecQty,
+                    qtyExeUsd: response.result.list[0].cumExecValue,
+                    avgPrice: response.result.list[0].avgPrice
+                },
+                'bybit.getOrderStatus'
+            )
+            : createResponse(false, response.retMsg, null, 'bybit.getOrderStatus');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getOrderStatus');
     }
 }
