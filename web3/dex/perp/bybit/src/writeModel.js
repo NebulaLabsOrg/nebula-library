@@ -1,6 +1,6 @@
 import {v4 as uuidv4} from 'uuid';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetMaketOrderSize } from './viewModel.js';
+import { vmGetMaketOrderSize, vmGetMarketData, vmGetOpenPositionDetail } from './viewModel.js';
 import { bybitEnum } from './bybit.enum.js';
 
 /**
@@ -77,16 +77,24 @@ export async function wmSubmitMarketOrder(_restClientV5, _slippage, _symbol, _si
         if (!marketOrderSize.success)
             return createResponse(false, marketOrderSize.message, null, 'bybit.submitMarketOrder');
 
+        // Parse the order quantity as a float
         let qty = parseFloat(_orderQty);
+
+        // If the market unit is quoted in the secondary coin, convert the quantity to base units using the last price
         if (_marketUnit === bybitEnum.position.quoteOnSecCoin) {
-            const marketData = await _restClientV5.getTickers({ category: 'linear', symbol: _symbol });
-            const lastPrice = parseFloat(marketData?.result?.list[0]?.lastPrice);
-            if (!lastPrice) return createResponse(false, 'No last price', null, 'bybit.submitMarketOrder');
+            // Usa vmGetMarketData invece di getTickers e prendi avgPrice
+            const marketData = await vmGetMarketData(_restClientV5, _symbol);
+            const lastPrice = parseFloat(marketData?.data?.list[0].lastPrice);
+            if (!lastPrice)
+            return createResponse(false, 'No price', null, 'bybit.submitMarketOrder');
             qty = qty / lastPrice;
         }
 
+        // Adjust the quantity to the nearest valid step size
         const qtyStep = parseFloat(marketOrderSize.data.qtyStep);
         qty = Math.floor(qty / qtyStep) * qtyStep;
+
+        // Format the quantity to the correct number of decimal places based on the step size
         const stepDecimals = (qtyStep.toString().split('.')[1] || '').length;
         qty = qty.toFixed(stepDecimals);
 
@@ -106,9 +114,121 @@ export async function wmSubmitMarketOrder(_restClientV5, _slippage, _symbol, _si
         });
 
         return response.retCode === 0
-            ? createResponse(true, 'success', response.result.orderId, 'bybit.submitMarketOrder')
+            ? createResponse(true, 'success', {symbol: _symbol, orderId: response.result.orderId}, 'bybit.submitMarketOrder')
             : createResponse(false, response.retMsg, null, 'bybit.submitMarketOrder');
     } catch (error) {
         return createResponse(false, error.message, null, 'bybit.submitMarketOrder');
+    }
+}
+
+/**
+ * @function wmSubmitCancelOrder
+ * @description Submits a cancel order request to Bybit using the provided REST client.
+ *
+ * This function attempts to cancel an existing order for a specified symbol and order ID
+ * on Bybit's linear contract market. It returns a response object indicating the success
+ * or failure of the cancellation request.
+ *
+ * @param {Object} _restClientV5 - The Bybit API client instance.
+ * @param {string} _symbol - The trading symbol (e.g., 'BTCUSDT').
+ * @param {string} _orderId - The unique identifier of the order to cancel.
+ * @returns {Object} Response object indicating success or failure of the cancel order request.
+ */
+export async function wmSubmitCancelOrder(_restClientV5, _symbol, _orderId) {
+    try {
+        const response = await _restClientV5.cancelOrder({
+            category: 'linear',
+            symbol: _symbol,
+            orderId: _orderId,
+        });
+
+        return response.retCode === 0
+            ? createResponse(true, 'success', {symbol: _symbol, orderId: response.result.orderId}, 'bybit.submitCancelOrder')
+            : createResponse(false, response.retMsg, null, 'bybit.submitCancelOrder');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.submitCancelOrder');
+    }
+}
+
+/**
+ * @function wmSubmitCloseMarketOrder
+ * @description Submits a market order to close an open position on Bybit, either fully or partially, with support for market unit conversion and slippage tolerance.
+ *
+ * @param {Object} _restClientV5 - The Bybit API client instance.
+ * @param {string} _settleCoin - The settlement coin (e.g., 'USDT').
+ * @param {number|string} _slippage - The slippage tolerance for the order (as percent).
+ * @param {string} _symbol - The trading symbol (e.g., 'BTCUSDT').
+ * @param {number|string} _orderQty - The quantity to close (ignored if _closeAll is true).
+ * @param {string} _marketUnit - The market unit for the order (e.g., 'base' or 'quote').
+ * @param {boolean} _closeAll - If true, closes the entire position.
+ * @returns {Object} Response object indicating success or failure of the close order.
+ */
+export async function wmSubmitCloseMarketOrder(_restClientV5, _settleCoin, _slippage, _symbol, _orderQty, _marketUnit, _closeAll) {
+    try {
+        // Get current position info using vmGetOpenPositionDetail
+        const posRes = await vmGetOpenPositionDetail(_restClientV5, _settleCoin, _symbol);
+        if (!posRes.success || !posRes.data)
+            return createResponse(false, posRes.message || 'No open position found', null, 'bybit.submitCloseMarketOrder');
+        const position = posRes.data;
+        const positionSide = position.side; // 'Buy' or 'Sell'
+        const closeSide = positionSide === bybitEnum.position.long ? bybitEnum.position.short : bybitEnum.position.long;
+        const positionQty = Math.abs(parseFloat(position.qty));
+
+        if (positionQty === 0)
+            return createResponse(false, 'Position size is zero', null, 'bybit.submitCloseMarketOrder');
+
+        // Get market order size info
+        const marketOrderSize = await vmGetMaketOrderSize(_restClientV5, _symbol);
+        if (!marketOrderSize.success)
+            return createResponse(false, marketOrderSize.message, null, 'bybit.submitCloseMarketOrder');
+
+        // Determine qty to close
+        let qty;
+        if (_closeAll) {
+            qty = positionQty;
+        } else {
+            qty = parseFloat(_orderQty);
+            // If the market unit is quoted in the secondary coin, convert the quantity to base units using the last price
+            if (_marketUnit === bybitEnum.position.quoteOnSecCoin) {
+                // Usa vmGetMarketData invece di getTickers e prendi avgPrice
+                const marketData = await vmGetMarketData(_restClientV5, _symbol);
+                const lastPrice = parseFloat(marketData?.data?.list[0].lastPrice);
+                if (!lastPrice)
+                    return createResponse(false, 'No price', null, 'bybit.submitCloseMarketOrder');
+                qty = qty / lastPrice;
+            }
+            if (qty > positionQty) qty = positionQty;
+        }
+
+        // Adjust qty to step size
+        const qtyStep = parseFloat(marketOrderSize.data.qtyStep);
+        qty = Math.floor(qty / qtyStep) * qtyStep;
+
+        // Format the quantity to the correct number of decimal places based on the step size
+        const stepDecimals = (qtyStep.toString().split('.')[1] || '').length;
+        qty = qty.toFixed(stepDecimals);
+
+        if (parseFloat(qty) < marketOrderSize.data.minOrderQty)
+            return createResponse(false, `Order quantity must be greater than ${marketOrderSize.data.minOrderQty}`, null, 'bybit.submitCloseMarketOrder');
+
+        // Submit market order to close position
+        const response = await _restClientV5.submitOrder({
+            category: 'linear',
+            symbol: _symbol,
+            side: closeSide,
+            orderType: 'Market',
+            qty,
+            marketUnit: _marketUnit,
+            timeInForce: 'IOC',
+            slippageToleranceType: 'Percent',
+            slippageTolerance: _slippage.toString(),
+            reduceOnly: true
+        });
+
+        return response.retCode === 0
+            ? createResponse(true, 'success', {symbol: _symbol, orderId: response.result.orderId, closedQty: qty}, 'bybit.submitCloseMarketOrder')
+            : createResponse(false, response.retMsg, null, 'bybit.submitCloseMarketOrder');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.submitCloseMarketOrder');
     }
 }

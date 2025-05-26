@@ -2,6 +2,59 @@ import { createResponse } from '../../../../../utils/src/response.utils.js';
 
 /**
  * @async
+ * @method vmGetWalletStatus
+ * @description Retrieves the wallet status, including total equity and total margin balance, from Bybit's unified account via the provided API client.
+ * @param {Object} _restClientV5 - The Bybit API client instance used to perform the wallet balance request.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing wallet status data or an error message.
+ */
+export async function vmGetWalletStatus(_restClientV5) {
+    try {
+        const response = await _restClientV5.getWalletBalance({ accountType: 'UNIFIED' });
+        if (response.retCode === 0 && response.result && response.result.list && response.result.list[0]) {
+            const { totalEquity, totalMarginBalance } = response.result.list[0];
+            return createResponse(
+                true,
+                'success',
+                { totalEquity, totalMarginBalance },
+                'bybit.getWalletStatus'
+            );
+        } else {
+            return createResponse(false, response.retMsg, null, 'bybit.getWalletStatus');
+        }
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getWalletStatus');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetWalletBalance
+ * @description Retrieves the wallet balance, including transfer balance and wallet balance, for a specified settlement coin from Bybit's unified account using the provided API client.
+ * @param {Object} _restClientV5 - The Bybit API client instance used to perform the wallet balance request.
+ * @param {string} _settleCoin - The settlement coin symbol (e.g., 'USDT', 'BTC') for which to fetch the wallet balance.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the wallet balance data or an error message.
+ */
+export async function vmGetWalletBalance(_restClientV5, _settleCoin) {
+    try {
+        const response = await _restClientV5.getAllCoinsBalance({ accountType: 'UNIFIED', coin: _settleCoin });
+        if (response.retCode === 0 && response.result && response.result.balance && response.result.balance[0]) {
+            const { transferBalance, walletBalance } = response.result.balance[0];
+            return createResponse(
+                true,
+                'success',
+                { transferBalance, walletBalance },
+                'bybit.getWalletBalance'
+            );
+        } else {
+            return createResponse(false, response.retMsg, null, 'bybit.getWalletBalance');
+        }
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getWalletBalance');
+    }
+}
+
+/**
+ * @async
  * @method getMarketData
  * @description Retrieves market data for a specific symbol or all markets from Bybit's linear category.
  * @param {Object} _restClientV5 - The Bybit API client instance to use for requests.
@@ -168,6 +221,46 @@ export async function vmGetOpenPositions(_restClientV5, _settleCoin) {
 }
 
 /**
+ * @function vmGetOpenPositionDetail
+ * @description Retrieves detailed information about an open position for a specific symbol and settlement coin from Bybit using the provided REST client.
+ * Calls the Bybit API to fetch position information for the 'linear' category and obtains the latest market price for the symbol.
+ * Returns an object containing position details such as symbol, average price, unrealized and realized PnL, side, quantity, and USD value.
+ * If no position is found or an error occurs, returns an appropriate error message.
+ * @param {Object} _restClientV5 - The Bybit REST client instance with `getPositionInfo` and market data methods.
+ * @param {string} _settleCoin - The coin used for settlement (e.g., 'USDT').
+ * @param {string} _symbol - The market symbol to retrieve position details for (e.g., 'BTCUSDT').
+ * @returns {Promise<Object>} A Promise that resolves to a response object containing the position detail data or an error message.
+ */
+export async function vmGetOpenPositionDetail(_restClientV5, _settleCoin, _symbol) {
+    try {
+        const response = await _restClientV5.getPositionInfo({ category: 'linear', symbol: _symbol, settleCoin: _settleCoin });
+        if (response.retCode !== 0 || !response.result.list || response.result.list.length === 0) {
+            return createResponse(false, response.retMsg || 'No position found', null, 'bybit.getOpenPositionDetail');
+        }
+        const pos = response.result.list[0];
+
+        // Calcola lastPrice usando vmGetMarketData
+        const marketData = await vmGetMarketData(_restClientV5, _symbol);
+        const lastPrice = parseFloat(marketData?.data?.list?.[0]?.lastPrice);
+        if (!lastPrice) {
+            return createResponse(false, 'No last price', null, 'bybit.getOpenPositionDetail');
+        }
+        const detail = {
+            symbol: pos.symbol,
+            avgPrice: pos.avgPrice,
+            unrealisedPnl: pos.unrealisedPnl,
+            cumRealisedPnl: pos.cumRealisedPnl,
+            side: pos.side,
+            qty: pos.size,
+            qtyUsd: (Number(pos.size) * lastPrice).toString(),
+        };
+        return createResponse(true, 'success', detail, 'bybit.getOpenPositionDetail');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getOpenPositionDetail');
+    }
+}
+
+/**
  * @async
  * @function vmGetOutWithdrawableAmount
  * @description Retrieves the withdrawable amount and total balance for a specified settlement coin from Bybit using the provided REST client.
@@ -198,6 +291,16 @@ export async function vmGetOutWithdrawableAmount(_restClientV5, _settleCoin) {
     }
 }
 
+/**
+ * @function vmGetOrderStatus
+ * @description Retrieves the status and details of a specific order from Bybit using the provided REST client and order ID.
+ * Calls the Bybit API to fetch active order information for the given order ID.
+ * Returns order details such as symbol, order type, status, side, quantity, executed quantity, executed value in USD, and average price if the API call is successful.
+ * In case of an error or unsuccessful response, it returns an appropriate error message.
+ * @param {Object} _restClientV5 - The Bybit REST client instance with a `getActiveOrders` method.
+ * @param {string} _orderId - The unique identifier of the order to retrieve status for.
+ * @returns {Promise<Object>} A Promise that resolves to a response object containing order status data or an error message.
+ */
 export async function vmGetOrderStatus(_restClientV5, _orderId) {
     try {
         const response = await _restClientV5.getActiveOrders({
