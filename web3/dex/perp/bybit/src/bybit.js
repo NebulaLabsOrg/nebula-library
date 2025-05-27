@@ -6,7 +6,7 @@ import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetMaketOrder
 export { bybitEnum };
 
 export class bybit {
-    constructor(_apiKey, _apiSecret, _settleCoin = 'USDT', _slippage = 0.1) {
+    constructor(_apiKey, _apiSecret, _settleCoin = 'USDT', inputCoin = 'USDC', _slippage = 0.1) {
         this.client = new RestClientV5({
             key: _apiKey,
             secret: _apiSecret,
@@ -14,6 +14,7 @@ export class bybit {
         });
         this.settleCoin = _settleCoin;
         this.slippage = _slippage;
+        this.inputCoin = inputCoin;
         this.in = 'UNIFIED';
         this.out = 'FUND';
     }
@@ -34,8 +35,8 @@ export class bybit {
      * @description Retrieves the wallet balance for the current client and settlement coin using the Bybit API.
      * @returns {Promise<Object>} A Promise that resolves with the wallet balance object or an error message.
      */
-    async getWalletBalance(_coin) {
-        return await vmGetWalletBalance(this.client, _coin);
+    async getWalletBalance() {
+        return await vmGetWalletBalance(this.client, this.inputCoin);
     }
 
     /**
@@ -112,7 +113,7 @@ export class bybit {
      * @returns {Promise<Number>} A Promise that resolves to the withdrawable amount as a number.
      */
     async getOutWithdrawableAmount(){
-        return await vmGetOutWithdrawableAmount(this.client, this.settleCoin);
+        return await vmGetOutWithdrawableAmount(this.client, this.inputCoin);
     }
 
     /**
@@ -147,7 +148,7 @@ export class bybit {
      * @returns {Promise<Object>} A Promise that resolves to the result of the transfer operation.
      */
     async setInternalTranfer(to, amount, transferAll) {
-        return await wmSetInternalTranfer(this.client, this.settleCoin, this.in, this.out, to, amount, transferAll);
+        return await wmSetInternalTranfer(this.client, this.inputCoin, this.in, this.out, to, amount, transferAll);
     }
 
     /**
@@ -202,7 +203,7 @@ export class bybit {
      * @returns {Promise<any>} A Promise that resolves to the result of the withdrawal submission.
      */
     async submitWithdraw(_chain, _amount, _address, _withdrawAll) {
-        return await wmSubmitWihdraw(this.client, this.settleCoin, _chain, _amount, _address, _withdrawAll);
+        return await wmSubmitWihdraw(this.client, this.inputCoin, _chain, _amount, _address, _withdrawAll);
     }
 
 }

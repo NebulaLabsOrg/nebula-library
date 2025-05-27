@@ -5,7 +5,9 @@ import 'dotenv/config';
 const API_KEY = process.env.BYBIT_API_KEY;
 const API_SECRET = process.env.BYBIT_API_SECRET;
 
-const bybitInstance = new bybit(API_KEY, API_SECRET, 'USDT', 0.1);
+const bybitInstance = new bybit(API_KEY, API_SECRET, 'USDT', 'USDC', 0.1);
+
+// for processing status refer to enum : https://bybit-exchange.github.io/docs/v5/enum
 
 console.log('Get token quantity');
 console.log('Calling: bybit.getWalletBalance');
@@ -115,7 +117,7 @@ const transfer = await bybitInstance.setInternalTranfer(bybitEnum.transfer.toIn,
 console.log(transfer);
 */
 
-/*
+/*cl
 console.log('View Only Calls');
 console.log('Calling: bybit.submitMarketOrder');
 const order = await bybitInstance.submitMarketOrder('DOGEUSDT', bybitEnum.position.long, bybitEnum.position.quoteOnSecCoin, 6);
