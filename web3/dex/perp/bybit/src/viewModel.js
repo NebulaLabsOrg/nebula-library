@@ -36,7 +36,7 @@ export async function vmGetWalletStatus(_restClientV5) {
  */
 export async function vmGetWalletBalance(_restClientV5, _settleCoin) {
     try {
-        const response = await _restClientV5.getAllCoinsBalance({ accountType: 'UNIFIED', coin: _settleCoin });
+        const response = await _restClientV5.getAllCoinsBalance({ accountType: 'UNIFIED', coin: _settleCoin});
         if (response.retCode === 0 && response.result && response.result.balance && response.result.balance[0]) {
             const { transferBalance, walletBalance } = response.result.balance[0];
             return createResponse(

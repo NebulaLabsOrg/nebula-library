@@ -7,6 +7,51 @@ const API_SECRET = process.env.BYBIT_API_SECRET;
 
 const bybitInstance = new bybit(API_KEY, API_SECRET, 'USDT', 0.1);
 
+console.log('Get token quantity');
+console.log('Calling: bybit.getWalletBalance');
+const walletBalance = await bybitInstance.getWalletBalance('USDC');
+console.log(walletBalance);
+
+console.log('Open a position with all available balance');
+console.log('Calling: bybit.submitMarketOrder');
+const order = await bybitInstance.submitMarketOrder('HYPEUSDT', bybitEnum.position.long, bybitEnum.position.quoteOnSecCoin, walletBalance.data.transferBalance);
+console.log(order);
+
+console.log('Check order status');
+console.log('Calling: bybit.getOrderStatus');
+let markets = await bybitInstance.getOrderStatus(order.data.orderId);
+while (markets.data.status !== 'Filled') {
+    console.log('Waiting for order to be filled...');
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 5 seconds before checking again
+    markets = await bybitInstance.getOrderStatus(order.data.orderId);
+}
+console.log(markets);
+
+console.log('Get open positions');
+console.log('Calling: bybit.getOpenPositions');
+const openPositions = await bybitInstance.getOpenPositions();
+console.log(openPositions);
+
+console.log('Get position status and market data');
+console.log('Calling: bybit.getOpenPositionDetail');
+const openPositionDetail = await bybitInstance.getOpenPositionDetail(openPositions.data.markets[0]);
+console.log(openPositionDetail);
+
+console.log('Close the full position');
+console.log('Calling: bybit.submitCloseMarketOrder');
+const closeOrder = await bybitInstance.submitCloseMarketOrder(openPositions.data.markets[0], '0', bybitEnum.position.quoteOnMainCoin, true);
+console.log(closeOrder);
+
+console.log('Check close order status');
+console.log('Calling: bybit.getOrderStatus');
+let close = await bybitInstance.getOrderStatus(closeOrder.data.orderId);
+while (close.data.status !== 'Filled') {
+    console.log('Waiting for order to be filled...');
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 5 seconds before checking again
+    close = await bybitInstance.getOrderStatus(order.data.orderId);
+}
+console.log(close);
+
 /*
 console.log('View Only Calls');
 console.log('Calling: bybit.getWalletStatus');

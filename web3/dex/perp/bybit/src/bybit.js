@@ -1,5 +1,4 @@
 import { RestClientV5 } from 'bybit-api';
-import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { bybitEnum } from './bybit.enum.js';
 import { wmSetInternalTranfer, wmSubmitMarketOrder, wmSubmitCancelOrder, wmSubmitCloseMarketOrder, wmSubmitWihdraw } from './writeModel.js';
 import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount, vmGetWithdrawStatus, vmGetOrderStatus } from './viewModel.js';
@@ -26,7 +25,7 @@ export class bybit {
      * @returns {Promise<Object>} A Promise that resolves with the wallet status object or an error message.
      */
     async getWalletStatus() {
-        return await vmGetWalletStatus(this.client, this.settleCoin);
+        return await vmGetWalletStatus(this.client);
     }
 
     /**
@@ -35,8 +34,8 @@ export class bybit {
      * @description Retrieves the wallet balance for the current client and settlement coin using the Bybit API.
      * @returns {Promise<Object>} A Promise that resolves with the wallet balance object or an error message.
      */
-    async getWalletBalance() {
-        return await vmGetWalletBalance(this.client, this.settleCoin);
+    async getWalletBalance(_coin) {
+        return await vmGetWalletBalance(this.client, _coin);
     }
 
     /**
