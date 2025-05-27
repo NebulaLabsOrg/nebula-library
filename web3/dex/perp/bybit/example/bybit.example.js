@@ -105,9 +105,16 @@ const closeOrder = await bybitInstance.submitCloseMarketOrder('DOGEUSDT', '10', 
 console.log(closeOrder);
 */
 
-
+/*
 console.log('View Only Calls');
-console.log('Calling: bybit.getAccountInfo');
-const accountInfo = await bybitInstance.getAccountInfo();
-console.log(accountInfo);
+console.log('Calling: bybit.getWithdrawStatus');
+const withdrawableAmount = await bybitInstance.getWithdrawStatus('146618725');
+console.log(withdrawableAmount);
+*/
 
+/*
+console.log('View Only Calls');
+console.log('Calling: bybit.submitWithdraw');
+const withdraw = await bybitInstance.submitWithdraw(8453, 10000, '0x970669124ce6381386aaea27aff4a37fc579b992', true);
+console.log(withdraw);
+*/

@@ -1,7 +1,8 @@
 import {v4 as uuidv4} from 'uuid';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetMaketOrderSize, vmGetMarketData, vmGetOpenPositionDetail } from './viewModel.js';
+import { vmGetMaketOrderSize, vmGetMarketData, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount } from './viewModel.js';
 import { bybitEnum } from './bybit.enum.js';
+import { getBybitChainName } from './utils.js';
 
 /**
  * @async
@@ -230,5 +231,50 @@ export async function wmSubmitCloseMarketOrder(_restClientV5, _settleCoin, _slip
             : createResponse(false, response.retMsg, null, 'bybit.submitCloseMarketOrder');
     } catch (error) {
         return createResponse(false, error.message, null, 'bybit.submitCloseMarketOrder');
+    }
+}
+
+
+export async function wmSubmitWihdraw(_restClientV5, _settleCoin, _chain, _amount, _address, _withdrawAll = false) {
+    try {
+        const chain = getBybitChainName(_settleCoin, _chain);
+        if (chain && chain.success === false) {
+            return createResponse(false, chain.message || 'Invalid chain', null, 'bybit.submitWithdraw');
+        }
+
+        // Get withdrawable amount
+        const withdrawableRes = await vmGetOutWithdrawableAmount(_restClientV5, _settleCoin);
+        if (!withdrawableRes.success) {
+            return createResponse(false, withdrawableRes.message || 'Unable to fetch withdrawable amount', null, 'bybit.submitWithdraw');
+        }
+        const withdrawableAmount = parseFloat(withdrawableRes.data.withdrawableAmount);
+
+        let amount = parseFloat(_amount);
+        if (_withdrawAll) {
+            amount = withdrawableAmount;
+        } else if (amount > withdrawableAmount) {
+            return createResponse(false, `Requested amount exceeds withdrawable amount (${withdrawableAmount})`, null, 'bybit.submitWithdraw');
+        }
+
+        if (amount <= 0) {
+            return createResponse(false, 'No amount to withdraw', null, 'bybit.submitWithdraw');
+        }
+
+        const response = await _restClientV5.submitWithdrawal({
+            coin: _settleCoin.toUpperCase(),
+            chain: chain.chainName.toUpperCase(),
+            address: _address,
+            amount: amount.toString(),
+            timestamp: Date.now(),
+            forceChain: 0,
+            accountType: 'FUND',
+            feeType: 1,
+        });
+
+        return response.retCode === 0
+            ? createResponse(true, 'success', {coin: coin, id: response.result.id} , 'bybit.submitWithdraw')
+            : createResponse(false, response.retMsg, null, 'bybit.submitWithdraw');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.submitWithdraw');
     }
 }

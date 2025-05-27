@@ -330,3 +330,49 @@ export async function vmGetOrderStatus(_restClientV5, _orderId) {
         return createResponse(false, error.message, null, 'bybit.getOrderStatus');
     }
 }
+
+/**
+ * @async
+ * @function vmGetWithdrawStatus
+ * @description Retrieves the status and details of a specific withdrawal from Bybit using the provided REST client and withdrawal ID.
+ * Calls the Bybit API to fetch withdrawal records for the given withdrawal ID.
+ * Returns withdrawal details if found, otherwise returns an appropriate error message.
+ * @param {Object} _restClientV5 - The Bybit REST client instance with a `getWithdrawRecords` method.
+ * @param {string} _withdrawId - The unique identifier of the withdrawal to retrieve status for.
+ * @returns {Promise<Object>} A Promise that resolves to a response object containing withdrawal status data or an error message.
+ *
+ * Example of returns .data:
+ * {
+ *   coin: 'USDC',
+ *   chain: 'BASE',
+ *   amount: '9.5',
+ *   txID: '0xebe9d164708ae2ef55f953d08e76e121143abd03fe9b231e153d22b8dedb6d4f',
+ *   status: 'success',
+ *   toAddress: '0x970669124ce6381386aaea27aff4a37fc579b992',
+ *   tag: '',
+ *   withdrawFee: '0.5',
+ *   createTime: '1748327868000',
+ *   updateTime: '1748328072000',
+ *   withdrawId: '146615430',
+ *   withdrawType: 0
+ * }
+ */
+export async function vmGetWithdrawStatus(_restClientV5, _withdrawId) {
+    try {
+        const response = await _restClientV5.getWithdrawalRecords({
+            withdrawId: _withdrawId
+        });
+        if (response.retCode === 0 && response.result && Array.isArray(response.result.rows)) {
+            const withdraw = response.result.rows.find(item => item.withdrawId === _withdrawId);
+            if (withdraw) {
+                return createResponse(true, 'success', withdraw, 'bybit.getWithdrawStatus');
+            } else {
+                return createResponse(false, 'Withdraw ID not found', null, 'bybit.getWithdrawStatus');
+            }
+        } else {
+            return createResponse(false, response.retMsg || 'No withdraw records found', null, 'bybit.getWithdrawStatus');
+        }
+    } catch (error) {
+        return createResponse(false, error.message, null, 'bybit.getWithdrawStatus');
+    }
+}

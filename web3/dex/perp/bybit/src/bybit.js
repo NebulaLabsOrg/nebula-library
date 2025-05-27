@@ -1,10 +1,8 @@
 import { RestClientV5 } from 'bybit-api';
-import {v4 as uuidv4} from 'uuid';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { bybitEnum } from './bybit.enum.js';
-import { wmSetInternalTranfer, wmSubmitMarketOrder, wmSubmitCancelOrder, wmSubmitCloseMarketOrder } from './writeModel.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount, vmGetOrderStatus } from './viewModel.js';
-import { getBybitChainName } from './utils.js';
+import { wmSetInternalTranfer, wmSubmitMarketOrder, wmSubmitCancelOrder, wmSubmitCloseMarketOrder, wmSubmitWihdraw } from './writeModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount, vmGetWithdrawStatus, vmGetOrderStatus } from './viewModel.js';
 
 export { bybitEnum };
 
@@ -119,6 +117,17 @@ export class bybit {
     }
 
     /**
+     * @method getWithdrawStatus
+     * @description Retrieves the status of a withdrawal request from Bybit using the provided withdrawal ID.
+     * Utilizes the client instance to call the view model and fetch the current status of the specified withdrawal.
+     * @param {string} _withdrawId - The unique identifier of the withdrawal request to check the status for.
+     * @returns {Promise<Object>} A Promise that resolves to an object containing the withdrawal status details.
+     */
+    async getWithdrawStatus(_withdrawId) {
+        return await vmGetWithdrawStatus(this.client, _withdrawId);
+    }
+
+    /**
      * @method getOrderStatus
      * @description Retrieves the status of an order from Bybit using the provided order ID and the configured client instance.
      * Calls the view model to fetch the current status of the specified order.
@@ -183,55 +192,18 @@ export class bybit {
         return await wmSubmitCloseMarketOrder(this.client, this.settleCoin, this.slippage, _symbol, _orderQty, _marketUnit, _closeAll);
     }
 
-
-
-    async getAccountInfo() {
-        try {
-
-            
-            // Preleva il saldo disponibile per il prelievo
-            const chain = getBybitChainName('USDC', 8453); // 1 è l'ID della chain ETH
-            console.log(chain);
-            const response = await this.client.submitWithdrawal({
-                coin: 'USDC',                    // Deve essere in maiuscolo
-                chain: 'BASE',                    // Deve essere in maiuscolo
-                address: '0x970669124ce6381386aaea27aff4a37fc579b992',
-                amount: '10',                  // Deve essere una stringa
-                timestamp: Date.now(),           // Deve essere un numero intero
-                forceChain: 0,                   // Deve essere un numero intero
-                accountType: 'FUND',          // Deve essere in maiuscolo
-                feeType: 1                       // Deve essere un numero intero
-            });
-            
-            /*
-            const response = await this.client.getWithdrawalRecords({
-                coin: 'USDC',
-                withdrawType: 0,
-                limit: 2,
-            });*/
-            
-
-            /*
-            // Limit Order
-            const response = await this.client.submitOrder({
-                category: 'linear',  // Per futures/perpetual
-                symbol: 'DOGEUSDT',
-                side: 'Buy', // 'Buy' o 'Sell'
-                orderType: 'Limit',
-                qty: '10', //massimo 3 decimali
-                marketUnit: 'quoteCoin',  // Specifica che qty è in USDT
-                timeInForce: 'GTC', // Good Till Cancel
-                price: '0.222', // Prezzo limite
-            });*/
-            
-
-            console.log(response);
-            return response.retCode === 0
-                ? createResponse(true, 'success', response.result.withdrawableAmount, 'bybit.getAccountInfo')
-                : createResponse(false, response.retMsg, null, 'bybit.getAccountInfo');
-        } catch (error) {
-            return createResponse(false, error.message, null, 'bybit.getAccountInfo');
-        }
+    /**
+     * @method submitWithdraw
+     * @description Submits a withdrawal request to Bybit for the configured settlement coin using the provided client instance.
+     * Calls the withdrawal model to initiate the withdrawal process with the specified chain, amount, address, and withdraw-all flag.
+     * @param {string} _chain - The blockchain network to withdraw to (e.g., 1, 8453).
+     * @param {number|string} _amount - The amount to withdraw.
+     * @param {string} _address - The destination address for the withdrawal.
+     * @param {boolean} _withdrawAll - Flag indicating whether to withdraw the entire available balance.
+     * @returns {Promise<any>} A Promise that resolves to the result of the withdrawal submission.
+     */
+    async submitWithdraw(_chain, _amount, _address, _withdrawAll) {
+        return await wmSubmitWihdraw(this.client, this.settleCoin, _chain, _amount, _address, _withdrawAll);
     }
 
 }
