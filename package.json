@@ -28,6 +28,7 @@
     "chalk": "^5.4.1",
     "ethers": "^6.13.7",
     "node-telegram-bot-api": "^0.66.0",
+    "starknet": "^6.24.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
