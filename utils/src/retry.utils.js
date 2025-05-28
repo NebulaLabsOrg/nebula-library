@@ -1,13 +1,11 @@
 /**
- * Attempts to execute an asynchronous function multiple times with a delay between retries.
- * Retries the function if it throws an error or returns an object with success: false.
- * Logs each failed attempt and throws an error if all retries are exhausted.
- *
- * @param {Function} fn - The asynchronous function to execute. Should return a promise that resolves to an object with a 'success' property.
+ * @async
+ * @function retry
+ * @description Executes an asynchronous function with retry logic. Retries the function up to a specified number of times if it fails (either by throwing an error or returning an object with success: false), waiting a specified delay between attempts.
+ * @param {Function} fn - The asynchronous function to execute. Should return a Promise that resolves to an object with a 'success' property.
  * @param {number} [retries=3] - The maximum number of attempts.
- * @param {number} [delay=1000] - Delay in milliseconds between retries.
- * @returns {Promise<object>} The result of the successful function call.
- * @throws {Error} If all retry attempts fail.
+ * @param {number} [delay=1000] - The delay in milliseconds between attempts.
+ * @returns {Promise<Object>} A Promise that resolves with the successful result or rejects after all retries fail.
  */
 export async function retry(fn, retries = 3, delay = 1000) {
     for (let i = 1; i <= retries; i++) {

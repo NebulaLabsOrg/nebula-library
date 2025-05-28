@@ -13,7 +13,7 @@ import { resolveSigner } from '../../../../../utils/src/ethers.utils.js';
  */
 export class kyberswap {
     /**
-     * @constructor
+    * @constructor
     * @param {string|object} _signerOrKey - The private key or signer object for signing transactions.
     * @param {number} _chainId - The chain ID of the blockchain to interact with.
     * @param {string} _sourceName - The source name or client identifier for API requests.

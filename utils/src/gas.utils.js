@@ -1,13 +1,14 @@
 import { ethers } from 'ethers';
 import { createResponse } from './response.utils.js';
+
 /**
- * Estimates the gas limit required to execute a specific function on a smart contract.
- * 
  * @async
- * @param {Object} _contract - The smart contract instance to interact with.
- * @param {string} _function - The name of the function to estimate gas for.
- * @param {Array} [_params=[]] - The parameters to pass to the function (optional).
- * @returns {Promise<number>} The estimated gas limit as an integer. Returns 0 if an error occurs.
+ * @function estimateGasLimit
+ * @description Estimates the gas limit required to execute a specific contract function with given parameters.
+ * @param {Object} _contract - An ethers.js contract instance.
+ * @param {string} _function - The name of the contract function to estimate gas for.
+ * @param {Array} [_params=[]] - The parameters to pass to the contract function.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the estimated gas limit or an error message.
  */
 export async function estimateGasLimit(_contract, _function, _params = []) {
     try {
@@ -27,17 +28,15 @@ export async function estimateGasLimit(_contract, _function, _params = []) {
         );
     }
 }
-
 /**
- * Estimates the gas limit for a given transaction.
- *
  * @async
  * @function estimateTxGasLimit
- * @param {string} _rpcProvider - The RPC provider URL to connect to the Ethereum network.
- * @param {Object} _tx - The transaction object containing the details of the transaction.
- * @returns {Promise<Object>} A response object containing the success status, message, estimated gas limit (if successful), and the function name.
+ * @description Estimates the gas limit required for a transaction using the provided RPC provider and transaction object.
+ * @param {string} _rpcProvider - The RPC provider URL.
+ * @param {Object} _tx - The transaction object containing at least `from`, `to`, and `data` fields.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the estimated gas limit or an error message.
  */
-export async function estimateTxGasLimit(_rpcProvider, _tx,) {
+export async function estimateTxGasLimit(_rpcProvider, _tx) {
     try {
         const provider = new ethers.JsonRpcProvider(_rpcProvider);
         const estimation = await provider.estimateGas({ from: _tx.from, to: _tx.to, data: _tx.data });
@@ -57,13 +56,13 @@ export async function estimateTxGasLimit(_rpcProvider, _tx,) {
     }
 }
 /**
- * Calculates the gas price with an optional increase factor and supports EIP-1559.
- * 
  * @async
- * @param {string} _rpcProvider - The RPC URL to connect to the Ethereum network.
- * @param {number} _increasePercent - The percentage to increase the gas price by (default is 0).
- * @param {boolean} _EIP1559 - Whether to use EIP-1559 fee structure (default is true).
- * @returns {Promise<Object>} An object containing the status, message, and the calculated gas price details in gwei.
+ * @function calculateGasPrice
+ * @description Calculates the current gas price or EIP-1559 fee data from the given RPC provider, with an optional percentage increase.
+ * @param {string} _rpcProvider - The RPC provider URL.
+ * @param {number} [_increasePercent=0] - Optional percentage to increase the gas price or fees.
+ * @param {boolean} [_EIP1559=true] - Whether to use EIP-1559 fee data (maxFeePerGas, maxPriorityFeePerGas) if available.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the gas price or EIP-1559 fee data, or an error message.
  */
 export async function calculateGasPrice(_rpcProvider, _increasePercent = 0, _EIP1559 = true) {
     try {
