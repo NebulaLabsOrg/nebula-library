@@ -1,5 +1,5 @@
 
-import { bybit, bybitEnum } from '../../../../../index.js'
+import { bybit, bybitEnum } from '../../../../index.js'
 import 'dotenv/config';
 
 const API_KEY = process.env.BYBIT_API_KEY;

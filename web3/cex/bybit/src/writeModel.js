@@ -1,5 +1,5 @@
 import {v4 as uuidv4} from 'uuid';
-import { createResponse } from '../../../../../utils/src/response.utils.js';
+import { createResponse } from '../../../../utils/src/response.utils.js';
 import { vmGetMaketOrderSize, vmGetMarketData, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount } from './viewModel.js';
 import { bybitEnum } from './bybit.enum.js';
 import { getBybitChainName } from './utils.js';
@@ -55,8 +55,8 @@ export async function wmSetInternalTranfer(_restClientV5, _settleCoin, _inAcc, _
         return createResponse(false, error.message, null, 'bybit.setInternalTransfer');
     }
 }
-
 /**
+ * @async
  * @function wmSubmitMarketOrder
  * @description Submits a market order to Bybit using the provided REST client.
  *
@@ -121,8 +121,8 @@ export async function wmSubmitMarketOrder(_restClientV5, _slippage, _symbol, _si
         return createResponse(false, error.message, null, 'bybit.submitMarketOrder');
     }
 }
-
 /**
+ * @async
  * @function wmSubmitCancelOrder
  * @description Submits a cancel order request to Bybit using the provided REST client.
  *
@@ -150,7 +150,6 @@ export async function wmSubmitCancelOrder(_restClientV5, _symbol, _orderId) {
         return createResponse(false, error.message, null, 'bybit.submitCancelOrder');
     }
 }
-
 /**
  * @function wmSubmitCloseMarketOrder
  * @description Submits a market order to close an open position on Bybit, either fully or partially, with support for market unit conversion and slippage tolerance.
@@ -233,8 +232,21 @@ export async function wmSubmitCloseMarketOrder(_restClientV5, _settleCoin, _slip
         return createResponse(false, error.message, null, 'bybit.submitCloseMarketOrder');
     }
 }
-
-
+/**
+ * @async
+ * @function wmSubmitWihdraw
+ * @description Submits a withdrawal request to Bybit for a specified coin, chain, and address.
+ *
+ * This function initiates a withdrawal from the Bybit account to an external address. It supports withdrawing a specific amount or the entire available withdrawable balance.
+ *
+ * @param {Object} _restClientV5 - The Bybit API client instance.
+ * @param {string} _settleCoin - The coin symbol to withdraw (e.g., 'USDT').
+ * @param {string} _chain - The blockchain network to use for withdrawal (e.g., 'ETH', 'TRX').
+ * @param {number|string} _amount - The amount to withdraw.
+ * @param {string} _address - The destination address for the withdrawal.
+ * @param {boolean} [_withdrawAll=false] - If true, withdraws the entire available balance.
+ * @returns {Object} Response object indicating success or failure of the withdrawal request.
+ */
 export async function wmSubmitWihdraw(_restClientV5, _settleCoin, _chain, _amount, _address, _withdrawAll = false) {
     try {
         const chain = getBybitChainName(_settleCoin, _chain);
@@ -272,7 +284,7 @@ export async function wmSubmitWihdraw(_restClientV5, _settleCoin, _chain, _amoun
         });
 
         return response.retCode === 0
-            ? createResponse(true, 'success', {coin: coin, id: response.result.id} , 'bybit.submitWithdraw')
+            ? createResponse(true, 'success', {coin: _settleCoin, id: response.result.id} , 'bybit.submitWithdraw')
             : createResponse(false, response.retMsg, null, 'bybit.submitWithdraw');
     } catch (error) {
         return createResponse(false, error.message, null, 'bybit.submitWithdraw');

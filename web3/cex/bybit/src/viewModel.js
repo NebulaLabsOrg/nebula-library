@@ -1,8 +1,8 @@
-import { createResponse } from '../../../../../utils/src/response.utils.js';
+import { createResponse } from '../../../../utils/src/response.utils.js';
 
 /**
  * @async
- * @method vmGetWalletStatus
+ * @function vmGetWalletStatus
  * @description Retrieves the wallet status, including total equity and total margin balance, from Bybit's unified account via the provided API client.
  * @param {Object} _restClientV5 - The Bybit API client instance used to perform the wallet balance request.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing wallet status data or an error message.
@@ -25,7 +25,6 @@ export async function vmGetWalletStatus(_restClientV5) {
         return createResponse(false, error.message, null, 'bybit.getWalletStatus');
     }
 }
-
 /**
  * @async
  * @function vmGetWalletBalance
@@ -52,10 +51,9 @@ export async function vmGetWalletBalance(_restClientV5, _settleCoin) {
         return createResponse(false, error.message, null, 'bybit.getWalletBalance');
     }
 }
-
 /**
  * @async
- * @method getMarketData
+ * @function getMarketData
  * @description Retrieves market data for a specific symbol or all markets from Bybit's linear category.
  * @param {Object} _restClientV5 - The Bybit API client instance to use for requests.
  * @param {string} [_symbol=''] - The market symbol to query (e.g., 'BTCUSDT'). If empty, returns data for all markets.
@@ -104,10 +102,9 @@ export async function vmGetMarketData(_restClientV5, _symbol = '') {
         return createResponse(false, error.message, null, 'bybit.getMarketData');
     }
 }
-
 /**
  * @async
- * @method vmGetMarketOrderSize
+ * @function vmGetMarketOrderSize
  * @description Retrieves order size limits for a given symbol from Bybit's linear perpetual instruments.
  * @param {Object} _restClientV5 - The Bybit API client instance to use for requests.
  * @param {string} [_symbol=''] - The trading symbol (e.g., 'BTCUSDT') for which to fetch order size information.
@@ -134,10 +131,9 @@ export async function vmGetMaketOrderSize(_restClientV5, _symbol = '') {
         return createResponse(false, error.message, null, 'bybit.getMaketOrderSize');
     }
 }
-
 /**
  * @async
- * @method vmGetFundingRateHour
+ * @function vmGetFundingRateHour
  * @description Calculates and returns the hourly funding rate for a specific symbol on Bybit (linear category).
  *              Retrieves instrument information and market data, extracts the funding interval and funding rate,
  *              then calculates the hourly funding rate by dividing the funding rate by the number of hours in the funding interval.
@@ -162,7 +158,6 @@ export async function vmGetFundingRateHour(_restClientV5, _symbol) {
         return createResponse(false, error.message || 'Failed to get funding rate', null, 'bybit.getFundingRateHour');
     }
 }
-
 /**
  * @async
  * @function vmGetMarketOpenInterest
@@ -195,7 +190,6 @@ export async function vmGetMarketOpenInterest(_restClientV5, _symbol = '') {
         return createResponse(false, error.message, null, 'bybit.getMarketOpenInterest');
     }
 }
-
 /**
  * @async
  * @function vmGetOpenPositions
@@ -219,8 +213,8 @@ export async function vmGetOpenPositions(_restClientV5, _settleCoin) {
         return createResponse(false, error.message, null, 'bybit.getOpenPositions');
     }
 }
-
 /**
+ * @async
  * @function vmGetOpenPositionDetail
  * @description Retrieves detailed information about an open position for a specific symbol and settlement coin from Bybit using the provided REST client.
  * Calls the Bybit API to fetch position information for the 'linear' category and obtains the latest market price for the symbol.
@@ -259,7 +253,6 @@ export async function vmGetOpenPositionDetail(_restClientV5, _settleCoin, _symbo
         return createResponse(false, error.message, null, 'bybit.getOpenPositionDetail');
     }
 }
-
 /**
  * @async
  * @function vmGetOutWithdrawableAmount
@@ -290,8 +283,8 @@ export async function vmGetOutWithdrawableAmount(_restClientV5, _settleCoin) {
         return createResponse(false, error.message, null, 'bybit.getOutWithdrawableAmount');
     }
 }
-
 /**
+ * @async
  * @function vmGetOrderStatus
  * @description Retrieves the status and details of a specific order from Bybit using the provided REST client and order ID.
  * Calls the Bybit API to fetch active order information for the given order ID.
@@ -330,7 +323,6 @@ export async function vmGetOrderStatus(_restClientV5, _orderId) {
         return createResponse(false, error.message, null, 'bybit.getOrderStatus');
     }
 }
-
 /**
  * @async
  * @function vmGetWithdrawStatus
