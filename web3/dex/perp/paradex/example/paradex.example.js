@@ -14,8 +14,8 @@ const isViewOnly = true;
 console.log('View Only Calls');
 console.log('Calling: Paradex.onboardUser');
 console.log(await Paradex.onboardUser());
-console.log('Calling: Paradex.getAccountInfo');
-console.log(await Paradex.getAccountInfo());
+console.log('Calling: Paradex.test');
+console.log(await Paradex.test());
 
 if (!isViewOnly) {
     console.log('Transaction Calls');

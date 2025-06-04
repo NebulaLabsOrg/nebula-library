@@ -2,7 +2,7 @@ import { shortString } from 'starknet';
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { amOnboardUser, amAuthenticateUser } from './authModel.js';
-import { vmGetAccountInfo } from './viewModel.js';
+import { vmGetAccountInfo, test } from './viewModel.js';
 import { clearParadexHeaders } from './utils.js';
 import { PARADEX_CHAIN_ID } from './constants.js';
 
@@ -32,16 +32,6 @@ export class paradex {
     }
     /**
      * @async
-     * @method #authenticateUser
-     * @private
-     * @description Authenticates a user with Paradex using their account information.
-     * @returns {Promise<Object>} A Promise that resolves with the authentication response object.
-     */
-    async #authenticateUser() {
-        return await amAuthenticateUser(this.instance, this.chainId, this.account);
-    }
-    /**
-     * @async
      * @method onboardUser
      * @description Onboards the current user to Paradex using their account information.
      * @returns {Promise<Object>} A Promise that resolves with the onboarding response object.
@@ -63,5 +53,16 @@ export class paradex {
         clearParadexHeaders(this.instance);
         this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
         return await vmGetAccountInfo(this.instance);
+    }
+
+
+    async test(){
+        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+        if (!response.success) {
+            return createResponse(false, response.message, response.data, `paradex.test -- ${response.source}`);
+        }
+        clearParadexHeaders(this.instance);
+        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+        return await test(this.instance);
     }
 }
