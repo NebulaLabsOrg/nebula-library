@@ -144,15 +144,15 @@ export async function vmGetMaketOrderSize(_restClientV5, _symbol = '') {
  */
 export async function vmGetFundingRateHour(_restClientV5, _symbol) {
     try {
-        const marketInfo = await _restClientV5.getInstrumentsInfo({ category: 'linear', _symbol });
-        const fundingInterval = marketInfo?.data?.[0]?.fundingInterval;
+        const marketInfo = await _restClientV5.getInstrumentsInfo({ category: 'linear', symbol: _symbol });
+        const fundingInterval = marketInfo?.result?.list?.[0]?.fundingInterval;
         if (!fundingInterval) return createResponse(false, 'No funding interval', null, 'bybit.getFundingRateHour');
 
         const marketData = await vmGetMarketData(_restClientV5, _symbol);
         const fundingRate = marketData?.data?.list?.[0]?.fundingRate;
         if (!fundingRate) return createResponse(false, 'No funding rate', null, 'bybit.getFundingRateHour');
 
-        const hourlyFundingRate = fundingRate / (fundingInterval / (1000 * 60 * 60));
+        const hourlyFundingRate = (fundingRate * 100) / (fundingInterval / 60);
         return createResponse(true, 'success', { symbol: _symbol, fundingRate: hourlyFundingRate }, 'bybit.getFundingRateHour');
     } catch (error) {
         return createResponse(false, error.message || 'Failed to get funding rate', null, 'bybit.getFundingRateHour');
