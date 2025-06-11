@@ -2,8 +2,8 @@ import { shortString } from 'starknet';
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { amOnboardUser, amAuthenticateUser } from './authModel.js';
-import { vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetPositionStatus, test } from './viewModel.js';
-import { wmSubmitOrder } from './writeModel.js';
+import { vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './viewModel.js';
+import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './writeModel.js';
 import { clearParadexHeaders } from './utils.js';
 import { PARADEX_CHAIN_ID } from './constants.js';
 
@@ -177,43 +177,102 @@ export class paradex {
      * Authenticates the user, sets the authorization header, and calls the function to fetch the position status for the specified symbol.
      * 
      * @async
-     * @method getPositionStatus
+     * @method getOpenPositionDetail
      * @param {string} _symbol - The symbol of the position to retrieve the status for.
      * @returns {Promise<Object>} A Promise that resolves with the response containing the position status data or an error message.
      */
-    async getPositionStatus(_symbol) {
+    async getOpenPositionDetail(_symbol) {
         const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
         if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getPositionStatus -- ${response.source}`);
+            return createResponse(false, response.message, response.data, `paradex.getOpenPositionDetail -- ${response.source}`);
         }
         clearParadexHeaders(this.instance);
         this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetPositionStatus(this.instance, _symbol);
+        return await vmGetOpenPositionDetail(this.instance, _symbol);
     }
 
+    /**
+     * Retrieves the status of an order for the authenticated user on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to fetch the order status for the specified order ID.
+     * 
+     * @async
+     * @method getOrderStatus
+     * @param {string} _orderId - The ID of the order to retrieve the status for.
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the order status data or an error message.
+     */
+    async getOrderStatus(_orderId) {
+        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+        if (!response.success) {
+            return createResponse(false, response.message, response.data, `paradex.getOrderStatus -- ${response.source}`);
+        }
+        clearParadexHeaders(this.instance);
+        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+        return await vmGetOrderStatus(this.instance, _orderId);
+    }
 
-
-
-
-    async submitOrder(){
+    /**
+     * Submits an order for the authenticated user on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to submit an order with the specified parameters.
+     *
+     * @async
+     * @method submitOrder
+     * @param {string} _type - The type of the order (e.g., 'limit', 'market').
+     * @param {string} _symbol - The symbol of the asset to trade.
+     * @param {string} _side - The side of the order ('buy' or 'sell').
+     * @param {string} _marketUnit - The unit of the market (e.g., 'ETH', 'USD').
+     * @param {number|string} _orderQty - The quantity of the order.
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the order submission result or an error message.
+     */
+    async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty){
         const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
         if (!response.success) {
             return createResponse(false, response.message, response.data, `paradex.submitOrder -- ${response.source}`);
         }
         clearParadexHeaders(this.instance);
         this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await wmSubmitOrder(this.instance);
+        return await wmSubmitOrder(this.instance, this.chainId, this.account, _type, _symbol, _side, _marketUnit, _orderQty);
     }
 
-
-
-    async test(){
+    /**
+     * Cancels an order for the authenticated user on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to cancel the order with the specified order ID.
+     *
+     * @async
+     * @method submitCancelOrder
+     * @param {string} _orderId - The unique identifier of the order to cancel.
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the order cancellation result or an error message.
+     */
+    async submitCancelOrder(_orderId){
         const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
         if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.test -- ${response.source}`);
+            return createResponse(false, response.message, response.data, `paradex.submitCancelOrder -- ${response.source}`);
         }
         clearParadexHeaders(this.instance);
         this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await test(this.instance);
+        return await wmSubmitCancelOrder(this.instance, _orderId);
     }
+
+    /**
+     * Submits a close order for the authenticated user on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to submit a close order with the specified parameters.
+     *
+     * @async
+     * @method submitCloseOrder
+     * @param {string} _type - The type of the close order (e.g., 'limit', 'market').
+     * @param {string} _symbol - The symbol of the asset to close (e.g., 'BTCUSD').
+     * @param {string} _marketUnit - The unit of the market (e.g., 'ETH', 'USD').
+     * @param {number|string} _orderQty - The quantity to close.
+     * @param {boolean} _closeAll - Whether to close the entire position (true) or a partial amount (false).
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the close order submission result or an error message.
+     */
+    async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll){
+        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+        if (!response.success) {
+            return createResponse(false, response.message, response.data, `paradex.submitCloseOrder -- ${response.source}`);
+        }
+        clearParadexHeaders(this.instance);
+        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+        return await wmSubmitCloseOrder(this.instance, this.chainId, this.account, _type, _symbol, _orderQty, _marketUnit, _closeAll);
+    }
+
 }

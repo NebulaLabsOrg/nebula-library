@@ -44,7 +44,7 @@ export async function vmGetWalletBalances(_instance, _token = '') {
       const filteredResults = response.data.results.filter(
         item => item.token === _token
       );
-      return createResponse(true, 'success', filteredResults, 'paradex.getWalletBalances');
+      return createResponse(true, 'success', filteredResults[0].size, 'paradex.getWalletBalances');
     }
     return createResponse(true, 'success', response.data.results, 'paradex.getWalletBalances');
   } catch (error) {
@@ -204,22 +204,33 @@ export async function vmGetOpenPositions(_instance) {
  * Retrieves the status and details of a specific position for a given market symbol from the Paradex API.
  *
  * @async
- * @function vmGetPositionStatus
+ * @function vmGetOpenPositionDetail
  * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
  * @param {string} _symbol - The market symbol to query the position for.
  * @returns {Promise<Object>} A promise that resolves to a response object containing the position status and details (such as average entry price, PnL, side, quantity, and USD value), or an error message if no position is found or an error occurs.
  */
-export async function vmGetPositionStatus(_instance, _symbol) {
+export async function vmGetOpenPositionDetail(_instance, _symbol) {
   try {
     const marketDetail = await _instance.get(encodeGetUrl('/markets/summary', { market: _symbol }));
+    // Check if mark_price is present
+    if (
+      !marketDetail.data ||
+      !marketDetail.data.results ||
+      !marketDetail.data.results[0] ||
+      marketDetail.data.results[0].mark_price === undefined ||
+      marketDetail.data.results[0].mark_price === null
+    ) {
+      return createResponse(false, 'No price found for this market', null, 'paradex.getOpenPositionDetail');
+    }
+
     const positions = await _instance.get(encodeGetUrl('/positions', { market: _symbol }));
     const pos = positions.data.results.find(p => p.market === _symbol);
 
     if (!pos) {
-      return createResponse(false, 'No position found', null, 'paradex.getPositionStatus');
+      return createResponse(false, 'No position found', null, 'paradex.getOpenPositionDetail');
     }
     if (pos.status === 'CLOSED') {
-      return createResponse(true, 'Position closed', null, 'paradex.getPositionStatus');
+      return createResponse(true, 'Position closed', null, 'paradex.getOpenPositionDetail');
     }
 
     const {
@@ -243,36 +254,60 @@ export async function vmGetPositionStatus(_instance, _symbol) {
       qty: qty.toString(),
       qtyUsd: (qty * markPrice).toString()
     };
-    return createResponse(true, 'success', detail, 'paradex.getPositionStatus');
+    return createResponse(true, 'success', detail, 'paradex.getOpenPositionDetail');
   } catch (error) {
-    return createResponse(false, error.message, null, 'paradex.getPositionStatus');
+    return createResponse(false, error.message, null, 'paradex.getOpenPositionDetail');
   }
 }
 
- 
-
-
-export async function test(_instance) {
+/**
+ * Retrieves the status and details of a specific order by its ID from the Paradex API.
+ *
+ * @async
+ * @function vmGetOrderStatus
+ * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
+ * @param {string} _orderId - The unique identifier of the order to query.
+ * @returns {Promise<Object>} A promise that resolves to a response object containing the order status and details (such as symbol, order type, status, executed quantity, executed USD value, and average price), or an error message if the order is not found or an error occurs.
+ */
+export async function vmGetOrderStatus(_instance, _orderId) {
     try {
-        // morde detail on most of the respocnes: https://github.com/issues/assigned?issue=NebulaLabsOrg%7Cnebula-library%7C8
-        // account related stuff
-        //const response = await _instance.get('/account'); //account balacne and  margins
-        //const response = await _instance.get('/balance'); //balances list
-        //const response = await _instance.get('/positions'); //position list eeven closed
-        // markets related stuff
-        //const response = await _instance.get('/markets'); //market data : use a parameter ?market=ARB-USD-PERP tp get data of only a single perp
-        //const response = await _instance.get('/markets/summary?market=ARB-USD-PERP'); //market data (openinterest and fundign rate)
-        // orders related stuff
-        //const response = await _instance.get('/orders'); //get open orders
-        //const response = await _instance.post('/orders'); //set order parameters : https://docs.paradex.trade/api/prod/orders/new
-        //const response = await _instance.del('/orders'); //delete all orders: or use a parameter ?market=ARB-USD-PERP to delete data of only a single perp
-        //const response = await _instance.get('/orders-history'); //get ordere history
-        //const response = await _instance.get('/orders/{order_id}'); //get order by order id //only NEW and OPEN will return
-        //const response = await _instance.put('/orders/{order_id}'); //modify order by order id parameters : https://docs.paradex.trade/api/prod/orders/modify
-        //const response = await _instance.del('/orders/{order_id}'); //delete order by order id
-
-        return createResponse(true, 'success', response.data.results[0], 'paradex.getMarketData');
+        const responseOpenOrders = await _instance.get('/orders/' + _orderId);
+        if (responseOpenOrders.data) {
+            const detail = {
+                symbol: responseOpenOrders.data.market,
+                orderType: responseOpenOrders.data.type,
+                status: responseOpenOrders.data.status,
+                qty: responseOpenOrders.data.size,
+                qtyExe: (Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)).toFixed(),
+                qtyExeUsd: ((Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)) * Number(responseOpenOrders.data.avg_fill_price)).toFixed(),
+                avgPrice: responseOpenOrders.data.avg_fill_price
+            }
+            return createResponse(true, 'success', detail, 'paradex.getOrderStatus');
+        }
     } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.getMarketData');
+      try {
+        const responseClosedOrders = await _instance.get('/orders-history');
+        if (!responseClosedOrders.data || !responseClosedOrders.data.results || responseClosedOrders.data.results.length === 0) {
+            return createResponse(false, 'No order found', null, 'paradex.getOrderStatus');
+        }
+
+        for (let i = 0; i < responseClosedOrders.data.results.length; i++) {
+            if (responseClosedOrders.data.results[i].id === _orderId) {
+                const detail = {
+                    symbol: responseClosedOrders.data.results[i].market,
+                    orderType: responseClosedOrders.data.results[i].type,
+                    status: responseClosedOrders.data.results[i].cancel_reason === '' ? responseClosedOrders.data.results[i].status : responseClosedOrders.data.results[i].cancel_reason,
+                    qty: responseClosedOrders.data.results[i].size,
+                    qtyExe: (Number(responseClosedOrders.data.results[i].size) - Number(responseClosedOrders.data.results[i].remaining_size)).toString(),
+                    qtyExeUsd: ((Number(responseClosedOrders.data.results[i].size) - Number(responseClosedOrders.data.results[i].remaining_size)) * Number(responseClosedOrders.data.results[i].avg_fill_price)).toString(),
+                    avgPrice: responseClosedOrders.data.results[i].avg_fill_price
+                }
+                return createResponse(true, 'success', detail, 'paradex.getOrderStatus');
+            }
+        }
+        return createResponse(false, 'Order not found', null, 'paradex.getOrderStatus');
+      } catch (error) {
+        return createResponse(false, error.message, null, 'paradex.getOrderStatus'); 
+      }
     }
 }

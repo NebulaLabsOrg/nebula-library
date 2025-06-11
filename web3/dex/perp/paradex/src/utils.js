@@ -1,4 +1,5 @@
 import { DAY_MS, DOMAIN_TYPES } from './constants.js';
+import BigNumber from "bignumber.js";
 
 /**
  * @function clearParadexHeaders
@@ -22,6 +23,7 @@ export function generateParadexTimestamps() {
   const dateExpiration = new Date(dateNow.getTime() + DAY_MS);
   return {
     timestamp: Math.floor(dateNow.getTime() / 1000),
+    timestampMs: dateNow.getTime(),
     expiration: Math.floor(dateExpiration.getTime() / 1000),
   };
 }
@@ -65,8 +67,8 @@ export function buildOnboardingTypedData(_starknetChainId) {
  * @param {string|number} starknetChainId - The StarkNet chain ID to use in the domain.
  * @returns {Object} The typed data object for authentication, including domain, types, primaryType, and message.
  */
-export function buildAuthTypedData(message, starknetChainId) {
-  const paradexDomain = buildParadexDomain(starknetChainId);
+export function buildAuthTypedData(_message, _starknetChainId) {
+  const paradexDomain = buildParadexDomain(_starknetChainId);
   return {
     domain: paradexDomain,
     primaryType: 'Request',
@@ -80,6 +82,44 @@ export function buildAuthTypedData(message, starknetChainId) {
         { name: 'expiration', type: 'felt' }, // number
       ],
     },
-    message,
+    message: _message,
   };
+}
+/**
+ * @function buildOrderTypedData
+ * @description Constructs the EIP-712 typed data object for Paradex order signing requests.
+ * @param {Object} _message - The order message object containing order details such as timestamp, market, side, orderType, size, and price.
+ * @param {string|number} _starknetChainId - The StarkNet chain ID to use in the domain.
+ * @returns {Object} The typed data object for order signing, including domain, types, primaryType, and message.
+ */
+export function buildOrderTypedData(_message, _starknetChainId) {
+  const paradexDomain = buildParadexDomain(_starknetChainId);
+  return {
+    domain: paradexDomain,
+    primaryType: "Order",
+    types: {
+      ...DOMAIN_TYPES,
+      Order: [
+        { name: "timestamp", type: "felt" }, // UnixTimeMs; Acts as a nonce
+        { name: "market", type: "felt" }, // 'BTC-USD-PERP'
+        { name: "side", type: "felt" }, // '1': 'BUY'; '2': 'SELL'
+        { name: "orderType", type: "felt" }, // 'LIMIT';  'MARKET'
+        { name: "size", type: "felt" }, // Quantum value
+        { name: "price", type: "felt" }, // Quantum value; '0' for Market order
+      ],
+    },
+    message: _message,
+  };
+}
+/**
+ * @function toQuantums
+ * @description Converts a given amount to its quantum representation based on the specified precision.
+ * @param {string|BigNumber} amount - The amount to convert, as a string or BigNumber.
+ * @param {number} precision - The number of decimal places to consider for quantization.
+ * @returns {string} The quantum representation of the amount as a string.
+ */
+export function toQuantums(amount, precision) {
+  const bnAmount = typeof amount === "string" ? BigNumber(amount) : amount;
+  const bnQuantums = bnAmount.dividedBy(`1e-${precision}`);
+  return bnQuantums.integerValue(BigNumber.ROUND_FLOOR).toString();
 }
