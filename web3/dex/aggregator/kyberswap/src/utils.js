@@ -1,3 +1,9 @@
+/**
+ * @method getKyberChainName
+ * @description Returns the KyberSwap chain name corresponding to a given chain ID.
+ * @param {string|number} _chainID - The blockchain network chain ID.
+ * @returns {string|null} The KyberSwap chain name if found, otherwise null.
+ */
 export function getKyberChainName(_chainID) {
     const chainMap = {
         1: "ethereum",

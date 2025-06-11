@@ -1,3 +1,10 @@
+/**
+ * @function getBybitChainName
+ * @description Returns the Bybit chain name for a given settlement coin and chain ID.
+ * @param {string} _settleCoin - The settlement coin symbol (e.g., 'USDC', 'USDT').
+ * @param {string|number} _chainId - The blockchain network chain ID.
+ * @returns {Object} An object with a boolean 'success' and the corresponding 'chainName' string (empty if not found).
+ */
 export function getBybitChainName(_settleCoin, _chainId) {
     const chainMap = {
         USDC: {

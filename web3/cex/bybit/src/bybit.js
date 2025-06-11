@@ -5,7 +5,20 @@ import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetMaketOrder
 
 export { bybitEnum };
 
+/**
+ * @class bybit
+ * @description A class for interacting with the Bybit centralized exchange (CEX).
+ * Provides methods for account management, trading, transfers, and retrieving market and wallet information.
+ */
 export class bybit {
+    /**
+    * @constructor
+    * @param {string} _apiKey - The user's Bybit API key.
+    * @param {string} _apiSecret - The user's Bybit API secret.
+    * @param {string} [_settleCoin='USDT'] - The settlement coin to use for trading and transfers (default: 'USDT').
+    * @param {string} [inputCoin='USDC'] - The coin to use for input operations (default: 'USDC').
+    * @param {number} [_slippage=0.1] - The allowed slippage for market orders (default: 0.1).
+    */
     constructor(_apiKey, _apiSecret, _settleCoin = 'USDT', inputCoin = 'USDC', _slippage = 0.1) {
         this.client = new RestClientV5({
             key: _apiKey,
@@ -18,30 +31,27 @@ export class bybit {
         this.in = 'UNIFIED';
         this.out = 'FUND';
     }
-
     /**
      * @async
-     * @method getWalletStatus
+     * @function getWalletStatus
      * @description Retrieves the wallet status for the current client and settlement coin using the Bybit API.
      * @returns {Promise<Object>} A Promise that resolves with the wallet status object or an error message.
      */
     async getWalletStatus() {
         return await vmGetWalletStatus(this.client);
     }
-
     /**
      * @async
-     * @method getWalletBalance
+     * @function getWalletBalance
      * @description Retrieves the wallet balance for the current client and settlement coin using the Bybit API.
      * @returns {Promise<Object>} A Promise that resolves with the wallet balance object or an error message.
      */
     async getWalletBalance() {
         return await vmGetWalletBalance(this.client, this.inputCoin);
     }
-
     /**
      * @async
-     * @method getMarketData
+     * @function getMarketData
      * @description Retrieves market data for a specific symbol or all markets from Bybit's linear category.
      * @param {string} [_symbol=''] - The market symbol to query (e.g., 'BTCUSDT'). If empty, returns data for all markets.
      * @returns {Promise<Object>} A Promise that resolves with a response object containing market data or an error message.
@@ -49,10 +59,9 @@ export class bybit {
     async getMarketData(_symbol = '') {
         return await vmGetMarketData(this.client, _symbol);
     }
-    
     /**
      * @async
-     * @method getMaketOrderSize
+     * @function getMaketOrderSize
      * @description Retrieves the recommended market order size for a given trading symbol.
      * @param {string} _symbol - The trading symbol to query (e.g., 'BTCUSDT').
      * @returns {Promise<number>} A Promise that resolves to the recommended market order size for the specified symbol.
@@ -60,10 +69,9 @@ export class bybit {
     async getMaketOrderSize(_symbol) {
         return await vmGetMaketOrderSize(this.client, _symbol);
     }
-
     /**
      * @async
-     * @method getFundingRateHour
+     * @function getFundingRateHour
      * @description Retrieves the hourly funding rate for a given trading symbol.
      * Calls the view model to fetch and calculate the funding rate per hour.
      * @param {string} _symbol - The trading symbol to retrieve the funding rate for (e.g., 'BTCUSDT').
@@ -72,10 +80,9 @@ export class bybit {
     async getFundingRateHour(_symbol) {
         return await vmGetFundingRateHour(this.client, _symbol);
     }
-
     /**
      * @async
-     * @method getMarketOpenInterest
+     * @function getMarketOpenInterest
      * @description Retrieves the open interest for a specific market symbol from Bybit's linear category.
      * Calls the view model to fetch the open interest data for the given symbol.
      * @param {string} _symbol - The market symbol to query open interest for (e.g., 'BTCUSDT').
@@ -84,9 +91,8 @@ export class bybit {
     async getMarketOpenInterest(_symbol) {
         return await vmGetMarketOpenInterest(this.client, _symbol);
     }
-
     /**
-     * @method getOpenPositions
+     * @function getOpenPositions
      * @description Retrieves the list of currently open positions from Bybit using the configured client.
      * Calls the view model to fetch all open positions associated with the account.
      * @returns {Promise<Object>} A Promise that resolves to an object containing the open positions data or an error message.
@@ -94,9 +100,8 @@ export class bybit {
     async getOpenPositions(){
         return await vmGetOpenPositions(this.client, this.settleCoin);
     }
-
     /**
-     * @method getOpenPositionDetail
+     * @function getOpenPositionDetail
      * @description Retrieves the details of an open position for a specific symbol from Bybit using the configured client.
      * Calls the view model to fetch detailed information about the open position associated with the given symbol and settlement coin.
      * @param {string} _symbol - The trading symbol for which to retrieve the open position details (e.g., 'BTCUSDT').
@@ -105,9 +110,8 @@ export class bybit {
     async getOpenPositionDetail(_symbol){
         return await vmGetOpenPositionDetail(this.client, this.settleCoin, _symbol);
     }
-
     /**
-     * @method getOutWithdrawableAmount
+     * @function getOutWithdrawableAmount
      * @description Retrieves the withdrawable amount for the configured settlement coin from Bybit using the client instance.
      * Calls the view model to fetch the current withdrawable balance available for withdrawal.
      * @returns {Promise<Number>} A Promise that resolves to the withdrawable amount as a number.
@@ -115,9 +119,8 @@ export class bybit {
     async getOutWithdrawableAmount(){
         return await vmGetOutWithdrawableAmount(this.client, this.inputCoin);
     }
-
     /**
-     * @method getWithdrawStatus
+     * @function getWithdrawStatus
      * @description Retrieves the status of a withdrawal request from Bybit using the provided withdrawal ID.
      * Utilizes the client instance to call the view model and fetch the current status of the specified withdrawal.
      * @param {string} _withdrawId - The unique identifier of the withdrawal request to check the status for.
@@ -126,9 +129,8 @@ export class bybit {
     async getWithdrawStatus(_withdrawId) {
         return await vmGetWithdrawStatus(this.client, _withdrawId);
     }
-
     /**
-     * @method getOrderStatus
+     * @function getOrderStatus
      * @description Retrieves the status of an order from Bybit using the provided order ID and the configured client instance.
      * Calls the view model to fetch the current status of the specified order.
      * @param {string} _orderId - The unique identifier of the order whose status is to be retrieved.
@@ -137,9 +139,8 @@ export class bybit {
     async getOrderStatus(_orderId) {
         return await vmGetOrderStatus(this.client, _orderId);
     }
-
     /**
-     * @method setInternalTranfer
+     * @function setInternalTranfer
      * @description Initiates an internal transfer on Bybit using the configured client, settlement coin, and transfer parameters.
      * Calls the view model function to perform the transfer from the internal account to the specified destination.
      * @param {string} to - The destination account or wallet identifier to which the funds will be transferred.
@@ -152,7 +153,7 @@ export class bybit {
     }
 
     /**
-     * @method submitMarketOrder
+     * @function submitMarketOrder
      * @description Submits a market order on Bybit using the configured client and slippage settings.
      * Calls the view model function to execute a market order for the specified symbol, side, market unit, and order quantity.
      * @param {string} _symbol - The trading symbol (e.g., 'BTCUSDT') for which the market order will be placed.
@@ -164,9 +165,8 @@ export class bybit {
     async submitMarketOrder(_symbol, _side, _marketUnit, _orderQty) {
         return await wmSubmitMarketOrder(this.client, this.slippage, _symbol, _side, _marketUnit, _orderQty);
     }
-
     /**
-     * @method submitCancelOrder
+     * @function submitCancelOrder
      * @description Submits a request to cancel an existing order on Bybit using the configured client.
      * Calls the view model function to execute the cancellation for the specified trading symbol and order ID.
      * @param {string} _symbol - The trading symbol (e.g., 'BTCUSDT') for which the order cancellation will be requested.
@@ -176,9 +176,8 @@ export class bybit {
     async submitCancelOrder(_symbol, _orderId){
         return await wmSubmitCancelOrder(this.client, _symbol, _orderId);
     }
-
     /**
-     * @method submitCloseMarketOrder
+     * @function submitCloseMarketOrder
      * @description Submits a request to close a market order on Bybit using the configured client.
      * Calls the view model function to execute the close order for the specified trading symbol, quantity, and market unit.
      * Optionally, it can close all open positions for the given symbol.
@@ -191,9 +190,8 @@ export class bybit {
     async submitCloseMarketOrder(_symbol, _orderQty, _marketUnit, _closeAll = false) {
         return await wmSubmitCloseMarketOrder(this.client, this.settleCoin, this.slippage, _symbol, _orderQty, _marketUnit, _closeAll);
     }
-
     /**
-     * @method submitWithdraw
+     * @function submitWithdraw
      * @description Submits a withdrawal request to Bybit for the configured settlement coin using the provided client instance.
      * Calls the withdrawal model to initiate the withdrawal process with the specified chain, amount, address, and withdraw-all flag.
      * @param {string} _chain - The blockchain network to withdraw to (e.g., 1, 8453).
@@ -205,6 +203,4 @@ export class bybit {
     async submitWithdraw(_chain, _amount, _address, _withdrawAll) {
         return await wmSubmitWihdraw(this.client, this.inputCoin, _chain, _amount, _address, _withdrawAll);
     }
-
 }
-

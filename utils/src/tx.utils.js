@@ -1,16 +1,12 @@
 import { ethers } from 'ethers';
 import { createResponse } from './response.utils.js';
 /**
- * Generates transaction gas options based on the EIP-1559 standard.
- *
- * @param {boolean} _EIP1559 - Indicates whether the EIP-1559 standard is being used.
- * @param {Object} _gasLimit - An object containing the gas limit data.
- * @param {Object} _gasPrice - An object containing the gas price data. 
- *                             If EIP-1559 is used, it should include `maxFee` and `maxPriorityFee`.
- *                             Otherwise, it should include `gasPrice`.
- * @returns {Object} An object containing the gas options for the transaction.
- *                   If EIP-1559 is used, it includes `gasLimit`, `maxFeePerGas`, and `maxPriorityFeePerGas`.
- *                   Otherwise, it includes `gasLimit` and `gasPrice`.
+ * @function getTxGasOptions
+ * @description Constructs gas options for a transaction, supporting both EIP-1559 and legacy formats.
+ * @param {boolean} _EIP1559 - Indicates if EIP-1559 gas options should be used.
+ * @param {Object} _gasLimit - Object containing the gas limit value (expects .data property).
+ * @param {Object} _gasPrice - Object containing gas price data (expects .data property with maxFee, maxPriorityFee, or gasPrice).
+ * @returns {Object} Gas options object formatted for ethers.js transactions.
  */
 export function getTxGasOptions(_EIP1559, _gasLimit, _gasPrice) {
     if (_EIP1559) {
@@ -27,13 +23,13 @@ export function getTxGasOptions(_EIP1559, _gasLimit, _gasPrice) {
     }
 }
 /**
- * Signs and sends a transaction using the provided signer.
- *
  * @async
- * @param {object} _signer - The signer object to sign and send the transaction.
- * @param {object} _tx - The transaction object to be sent.
- * @param {number} [_numberConfirmation=1] - The number of confirmations to wait for after sending the transaction.
- * @returns {Promise<object>} A response object containing the transaction hash if successful, or an error message if failed.
+ * @function signAndSendTx
+ * @description Signs and sends a transaction using the provided signer, then waits for the specified number of confirmations. Returns a response object with the transaction hash on success or an error message on failure.
+ * @param {Object} _signer - ethers.js Signer instance used to sign and send the transaction.
+ * @param {Object} _tx - Transaction object to be sent.
+ * @param {number} [_numberConfirmation=1] - Number of confirmations to wait for before resolving.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the transaction hash or an error message.
  */
 export async function signAndSendTx(_signer, _tx, _numberConfirmation = 1) {
     try {

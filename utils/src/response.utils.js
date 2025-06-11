@@ -1,10 +1,11 @@
 /**
- * Creates a standardized response object for APIs or utility functions.
- * @param {boolean} success - Indicates whether the operation was successful.
- * @param {string} message - Descriptive message for the response.
- * @param {object} [data=null] - Optional data to include in the response.
- * @param {string} [source=null] - Optional identifier for the source function.
- * @returns {object} Standardized response object.
+ * @function createResponse
+ * @description Generates a standardized response object for API operations, including optional error tracing.
+ * @param {boolean} success - Indicates if the operation was successful.
+ * @param {string} message - A descriptive message about the operation result.
+ * @param {Object|null} [data=null] - Optional data payload to include in the response.
+ * @param {string|null} [source=null] - Optional source identifier for the response.
+ * @returns {Object} A response object containing success status, message, data, source, timestamp, and error trace if applicable.
  */
 export function createResponse(success, message, data = null, source = null) {
     const trace = !success
