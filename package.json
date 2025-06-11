@@ -1,0 +1,40 @@
+{
+  "name": "nebula-library",
+  "version": "1.0.0",
+  "description": "Javascript multipurposes library",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NebulaLabsOrg/nebula-library.git"
+  },
+  "keywords": [
+    "library",
+    "javascript",
+    "utility",
+    "web3",
+    "crypto"
+  ],
+  "author": "Nebula Labs",
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/NebulaLabsOrg/nebula-library/issues"
+  },
+  "homepage": "https://github.com/NebulaLabsOrg/nebula-library#readme",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "bignumber.js": "^9.3.0",
+    "bybit-api": "^4.1.7",
+    "chalk": "^5.4.1",
+    "ethers": "^6.13.7",
+    "node-telegram-bot-api": "^0.66.0",
+    "starknet": "^6.24.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.5.0",
+    "eslint": "^9.24.0",
+    "vitest": "^3.1.3"
+  }
+}
