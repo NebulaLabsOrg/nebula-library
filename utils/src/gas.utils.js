@@ -4,7 +4,7 @@ import { createResponse } from './response.utils.js';
 /**
  * @async
  * @function estimateGasLimit
- * @description Estimates the gas limit required to execute a specific contract function with given parameters.
+ * @description Estimates EVM the gas limit required to execute a specific contract function with given parameters.
  * @param {Object} _contract - An ethers.js contract instance.
  * @param {string} _function - The name of the contract function to estimate gas for.
  * @param {Array} [_params=[]] - The parameters to pass to the contract function.
@@ -31,7 +31,7 @@ export async function estimateGasLimit(_contract, _function, _params = []) {
 /**
  * @async
  * @function estimateTxGasLimit
- * @description Estimates the gas limit required for a transaction using the provided RPC provider and transaction object.
+ * @description Estimates the EVM gas limit required for a transaction using the provided RPC provider and transaction object.
  * @param {string} _rpcProvider - The RPC provider URL.
  * @param {Object} _tx - The transaction object containing at least `from`, `to`, and `data` fields.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the estimated gas limit or an error message.
@@ -58,7 +58,7 @@ export async function estimateTxGasLimit(_rpcProvider, _tx) {
 /**
  * @async
  * @function calculateGasPrice
- * @description Calculates the current gas price or EIP-1559 fee data from the given RPC provider, with an optional percentage increase.
+ * @description Calculates the current EVM gas price or EIP-1559 fee data from the given RPC provider, with an optional percentage increase.
  * @param {string} _rpcProvider - The RPC provider URL.
  * @param {number} [_increasePercent=0] - Optional percentage to increase the gas price or fees.
  * @param {boolean} [_EIP1559=true] - Whether to use EIP-1559 fee data (maxFeePerGas, maxPriorityFeePerGas) if available.

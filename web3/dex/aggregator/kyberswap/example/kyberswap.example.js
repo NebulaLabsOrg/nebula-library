@@ -1,10 +1,10 @@
-import { kyberswap, ERC20 } from '../../../../../index.js'
+import { Kyberswap, ERC20 } from '../../../../../index.js'
 import 'dotenv/config';
 
 const chainId = 42161; // Arbitrum Mainnet  
 const prvKey = process.env.PRV_KEY;
 const rpcProvider = process.env.RPC;
-const kyberswapInstance = new kyberswap(prvKey, chainId, 'test-client-id', rpcProvider);
+const kyberswapInstance = new Kyberswap(prvKey, chainId, 'test-client-id', rpcProvider);
 const erc20 = new ERC20(prvKey, rpcProvider, 1);
 
 // Parameters

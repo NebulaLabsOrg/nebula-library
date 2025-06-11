@@ -12,7 +12,7 @@ import { PARADEX_CHAIN_ID } from './constants.js';
  * @description A class for interacting with the Paradex decentralized exchange. 
  * Provides methods for onboarding, authenticating, and retrieving account information for users.
  */
-export class paradex {
+export class Paradex {
     /**
     * @constructor
     * @param {string} _accountAddress - The user's Paradex account address.

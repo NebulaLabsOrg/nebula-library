@@ -11,7 +11,7 @@ import { resolveSigner } from '../../../../../utils/src/ethers.utils.js';
  * @description A class for interacting with the Kyberswap decentralized exchange aggregator. 
  * Provides methods for querying token swap routes and executing token swaps on supported blockchains.
  */
-export class kyberswap {
+export class Kyberswap {
     /**
     * @constructor
     * @param {string|object} _signerOrKey - The private key or signer object for signing transactions.

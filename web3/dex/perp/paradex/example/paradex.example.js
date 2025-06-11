@@ -1,10 +1,10 @@
-import { paradex } from '../../../../../index.js'
+import { Paradex } from '../../../../../index.js'
 import { paradexEnum } from '../src/paradex.enum.js';
 import 'dotenv/config';
 
 // for processing status refer to enum : https://docs.paradex.trade/api/prod/orders/get
 
-const paradexInstance = new paradex(
+const paradexInstance = new Paradex(
     process.env.ACCOUNT_ADDRESS,
     process.env.PUBLIC_KEY,
     process.env.PRIVATE_KEY,

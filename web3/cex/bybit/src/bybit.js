@@ -10,7 +10,7 @@ export { bybitEnum };
  * @description A class for interacting with the Bybit centralized exchange (CEX).
  * Provides methods for account management, trading, transfers, and retrieving market and wallet information.
  */
-export class bybit {
+export class Bybit {
     /**
     * @constructor
     * @param {string} _apiKey - The user's Bybit API key.
