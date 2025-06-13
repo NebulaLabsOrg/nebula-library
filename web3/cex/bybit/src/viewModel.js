@@ -59,7 +59,7 @@ export async function vmGetWalletBalance(_restClientV5, _settleCoin) {
  * @param {string} [_symbol=''] - The market symbol to query (e.g., 'BTCUSDT'). If empty, returns data for all markets.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing market data or an error message.
  *
- * Example of returns .data.lost:
+ * Example of returns .data:
  * [
  *   {
  *     symbol: 'BIOUSDT',
@@ -96,7 +96,7 @@ export async function vmGetMarketData(_restClientV5, _symbol = '') {
     try {
         const response = await _restClientV5.getTickers({ category: 'linear', symbol: _symbol });
         return response.retCode === 0
-            ? createResponse(true, 'success', response.result, 'bybit.getMarketData')
+            ? createResponse(true, 'success', response.result.list, 'bybit.getMarketData')
             : createResponse(false, response.retMsg, null, 'bybit.getMarketData');
     } catch (error) {
         return createResponse(false, error.message, null, 'bybit.getMarketData');
