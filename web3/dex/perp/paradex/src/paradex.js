@@ -24,7 +24,7 @@ export class Paradex {
     * @param {string} _ethereumAccount - The user's associated Ethereum account.
     * 
     */
-    constructor(_accountAddress, _publicKey, _privateKey, _ethereumAccount) {
+    constructor(_accountAddress, _publicKey, _privateKey, _ethereumAccount, _enOnlyPerp = false) {
         this.account = {
             address: _accountAddress,
             publicKey: _publicKey,
@@ -33,6 +33,7 @@ export class Paradex {
         };
         this.chainId = shortString.encodeShortString(PARADEX_CHAIN_ID);
         this.instance = createInstance('https://api.prod.paradex.trade/v1');
+        this._enOnlyPerp = _enOnlyPerp; // Flag to enable only perpetual markets
     }
     /**
      * @async
@@ -86,18 +87,17 @@ export class Paradex {
      * 
      * @async
      * @method getMarketData
-     * @param {boolean} _onlyPerp - If true, retrieves only perpetual markets; otherwise retrieves all markets.
      * @param {string} _symbol - The symbol of the market to retrieve data for.
      * @returns {Promise<Object>} A Promise that resolves with the response containing market data or an error message.
      */
-    async getMarketData(_onlyPerp, _symbol) {
+    async getMarketData(_symbol) {
         const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
         if (!response.success) {
             return createResponse(false, response.message, response.data, `paradex.getMarketData -- ${response.source}`);
         }
         clearParadexHeaders(this.instance);
         this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetMarketData(this.instance, _onlyPerp, _symbol);
+        return await vmGetMarketData(this.instance, this._enOnlyPerp, _symbol);
     }
 
     /**
