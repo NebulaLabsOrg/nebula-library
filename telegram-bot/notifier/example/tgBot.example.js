@@ -1,5 +1,5 @@
-import { TgNotifier } from '../src/tgBot.js';
-import { shiftAlert, shiftWithraw } from '../shift-templates/messages.js';
+import { TgNotifier } from '../index.js';
+import { shiftAlert, shiftWithraw } from '../index.js';
 import 'dotenv/config';
 
 // Replace with your Telegram bot token and chat ID

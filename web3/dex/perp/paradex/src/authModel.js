@@ -1,4 +1,4 @@
-import { signOnboarding, signAuth } from './paradex.sign.js';
+import { signOnboarding, signAuth } from './sign.js';
 import { clearParadexHeaders } from './utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 

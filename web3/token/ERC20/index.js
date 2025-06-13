@@ -1,0 +1,1 @@
+export * from './src/erc20.js';

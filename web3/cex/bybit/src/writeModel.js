@@ -1,7 +1,7 @@
 import {v4 as uuidv4} from 'uuid';
 import { createResponse } from '../../../../utils/src/response.utils.js';
 import { vmGetMaketOrderSize, vmGetMarketData, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount } from './viewModel.js';
-import { bybitEnum } from './bybit.enum.js';
+import { bybitEnum } from './enum.js';
 import { getBybitChainName } from './utils.js';
 
 /**

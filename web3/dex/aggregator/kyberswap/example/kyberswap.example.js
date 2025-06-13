@@ -1,4 +1,4 @@
-import { Kyberswap, ERC20 } from '../../../../../index.js'
+import { Kyberswap, ERC20 } from '../index.js'
 import 'dotenv/config';
 
 const chainId = 42161; // Arbitrum Mainnet  

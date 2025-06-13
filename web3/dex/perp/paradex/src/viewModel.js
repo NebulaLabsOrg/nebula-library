@@ -1,6 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { paradexEnum } from './paradex.enum.js';
+import { paradexEnum } from './enum.js';
 
 /**
  * @async

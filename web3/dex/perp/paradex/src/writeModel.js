@@ -1,8 +1,8 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
 import { vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetMarketData } from './viewModel.js'
-import { signOrder } from './paradex.sign.js'
-import { paradexEnum } from './paradex.enum.js';
+import { signOrder } from './sign.js'
+import { paradexEnum } from './enum.js';
 
 /**
  * Submits a new order to the Paradex API after validating and formatting the order parameters.
