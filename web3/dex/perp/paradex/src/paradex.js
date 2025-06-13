@@ -6,6 +6,9 @@ import { vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrd
 import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './writeModel.js';
 import { clearParadexHeaders } from './utils.js';
 import { PARADEX_CHAIN_ID } from './constants.js';
+import { paradexEnum } from './paradex.enum.js';
+
+export { paradexEnum };
 
 /**
  * @class paradex

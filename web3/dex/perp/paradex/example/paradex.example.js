@@ -1,5 +1,4 @@
-import { Paradex } from '../../../../../index.js'
-import { paradexEnum } from '../src/paradex.enum.js';
+import { Paradex, paradexEnum } from '../../../../../index.js'
 import 'dotenv/config';
 
 // for processing status refer to enum : https://docs.paradex.trade/api/prod/orders/get
