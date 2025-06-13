@@ -16,7 +16,7 @@ console.log(walletBalance);
 
 console.log('Open a position with all available balance');
 console.log('Calling: bybit.submitMarketOrder');
-const order = await bybitInstance.submitMarketOrder('HYPEUSDT', bybitEnum.position.long, bybitEnum.position.quoteOnSecCoin, walletBalance.data.transferBalance);
+const order = await bybitInstance.submitMarketOrder('HYPEUSDT', bybitEnum.order.long, bybitEnum.order.quoteOnSecCoin, walletBalance.data.transferBalance);
 console.log(order);
 
 console.log('Check order status');
@@ -41,7 +41,7 @@ console.log(openPositionDetail);
 
 console.log('Close the full position');
 console.log('Calling: bybit.submitCloseMarketOrder');
-const closeOrder = await bybitInstance.submitCloseMarketOrder(openPositions.data.markets[0], '0', bybitEnum.position.quoteOnMainCoin, true);
+const closeOrder = await bybitInstance.submitCloseMarketOrder(openPositions.data.markets[0], '0', bybitEnum.order.quoteOnMainCoin, true);
 console.log(closeOrder);
 
 console.log('Check close order status');
@@ -120,7 +120,7 @@ console.log(transfer);
 /*cl
 console.log('View Only Calls');
 console.log('Calling: bybit.submitMarketOrder');
-const order = await bybitInstance.submitMarketOrder('DOGEUSDT', bybitEnum.position.long, bybitEnum.position.quoteOnSecCoin, 6);
+const order = await bybitInstance.submitMarketOrder('DOGEUSDT', bybitEnum.order.long, bybitEnum.order.quoteOnSecCoin, 6);
 console.log(order);
 */
 
@@ -148,7 +148,7 @@ console.log(openPositionDetail);
 /*
 console.log('View Only Calls');
 console.log('Calling: bybit.submitCloseMarketOrder');
-const closeOrder = await bybitInstance.submitCloseMarketOrder('DOGEUSDT', '10', bybitEnum.position.quoteOnMainCoin, false);
+const closeOrder = await bybitInstance.submitCloseMarketOrder('DOGEUSDT', '10', bybitEnum.order.quoteOnMainCoin, false);
 console.log(closeOrder);
 */
 

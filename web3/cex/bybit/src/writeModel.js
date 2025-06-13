@@ -82,7 +82,7 @@ export async function wmSubmitMarketOrder(_restClientV5, _slippage, _symbol, _si
         let qty = parseFloat(_orderQty);
 
         // If the market unit is quoted in the secondary coin, convert the quantity to base units using the last price
-        if (_marketUnit === bybitEnum.position.quoteOnSecCoin) {
+        if (_marketUnit === bybitEnum.order.quoteOnSecCoin) {
             // Usa vmGetMarketData invece di getTickers e prendi avgPrice
             const marketData = await vmGetMarketData(_restClientV5, _symbol);
             const lastPrice = parseFloat(marketData?.data?.list[0].lastPrice);
@@ -171,7 +171,7 @@ export async function wmSubmitCloseMarketOrder(_restClientV5, _settleCoin, _slip
             return createResponse(false, posRes.message || 'No open position found', null, 'bybit.submitCloseMarketOrder');
         const position = posRes.data;
         const positionSide = position.side; // 'Buy' or 'Sell'
-        const closeSide = positionSide === bybitEnum.position.long ? bybitEnum.position.short : bybitEnum.position.long;
+        const closeSide = positionSide === bybitEnum.order.long ? bybitEnum.order.short : bybitEnum.order.long;
         const positionQty = Math.abs(parseFloat(position.qty));
 
         if (positionQty === 0)
@@ -189,7 +189,7 @@ export async function wmSubmitCloseMarketOrder(_restClientV5, _settleCoin, _slip
         } else {
             qty = parseFloat(_orderQty);
             // If the market unit is quoted in the secondary coin, convert the quantity to base units using the last price
-            if (_marketUnit === bybitEnum.position.quoteOnSecCoin) {
+            if (_marketUnit === bybitEnum.order.quoteOnSecCoin) {
                 // Usa vmGetMarketData invece di getTickers e prendi avgPrice
                 const marketData = await vmGetMarketData(_restClientV5, _symbol);
                 const lastPrice = parseFloat(marketData?.data?.list[0].lastPrice);
