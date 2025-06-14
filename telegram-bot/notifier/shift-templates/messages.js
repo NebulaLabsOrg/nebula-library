@@ -65,3 +65,20 @@ export function shiftWithraw(_version, _address, _amount, _value){
             💸 <b>Value:</b> $<code>${_value}</code>
             `;
 }
+
+
+/**
+ * Generates a Telegram alert message for system errors.
+ * @param {string} _version - The version of the system.
+ * @param {string} _where - The location or component where the error occurred.
+ * @param {string} _issue - The description of the issue.
+ * @returns {string} - Formatted Telegram error message.
+ */
+export function shiftError(_version, _where, _issue) {
+    return `
+            🛑 <b>SHIFT System Error v${_version}</b> 🛑
+            📍 <b>Where:</b> ${_where} 📍
+
+            📋 <b>Issue:</b> <code>${_issue}</code>
+            `;
+}
