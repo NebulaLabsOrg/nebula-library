@@ -149,7 +149,7 @@ export async function vmGetFundingRateHour(_restClientV5, _symbol) {
         if (!fundingInterval) return createResponse(false, 'No funding interval', null, 'bybit.getFundingRateHour');
 
         const marketData = await vmGetMarketData(_restClientV5, _symbol);
-        const fundingRate = marketData?.data?.list?.[0]?.fundingRate;
+        const fundingRate = marketData?.data?.[0]?.fundingRate;
         if (!fundingRate) return createResponse(false, 'No funding rate', null, 'bybit.getFundingRateHour');
 
         const hourlyFundingRate = (fundingRate * 100) / (fundingInterval / 60);
