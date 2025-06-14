@@ -171,7 +171,7 @@ export async function vmGetFundingRateHour(_restClientV5, _symbol) {
 export async function vmGetMarketOpenInterest(_restClientV5, _symbol = '') {
     try {
         const marketData = await vmGetMarketData(_restClientV5, _symbol);
-        const lastPrice = marketData?.data?.list?.[0]?.lastPrice;
+        const lastPrice = marketData?.data?.[0]?.lastPrice;
         if (!lastPrice) return createResponse(false, 'No last price', null, 'bybit.getMarketOpenInterest');
         const response = await _restClientV5.getOpenInterest({symbol: _symbol, category: 'linear', intervalTime: '1h',limit: 1});
         return response.retCode === 0
@@ -235,7 +235,7 @@ export async function vmGetOpenPositionDetail(_restClientV5, _settleCoin, _symbo
 
         // Calcola lastPrice usando vmGetMarketData
         const marketData = await vmGetMarketData(_restClientV5, _symbol);
-        const lastPrice = parseFloat(marketData?.data?.list?.[0]?.lastPrice);
+        const lastPrice = parseFloat(marketData?.data?.[0]?.lastPrice);
         if (!lastPrice) {
             return createResponse(false, 'No last price', null, 'bybit.getOpenPositionDetail');
         }
