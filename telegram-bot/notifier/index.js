@@ -1,2 +1,2 @@
 export * from './src/tgBot.js';
-export * from './src/shift-templates/messages.js';
+export * from './shift-templates/messages.js';
