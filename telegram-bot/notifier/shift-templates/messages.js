@@ -20,10 +20,10 @@ export function shiftStrategy(_version, _decision, _tvl, _apyOverall, _market, _
             ⚙️ <b>State:</b> ${_decision} ⚙️
 
             💵 <b>TVL:</b> $<code>${_tvl}</code>
-            📈 <b>APY (actual):</b> <code>${_apyOverall.toFixed(2)}%</code>
+            📈 <b>APY (current):</b> <code>${_apyOverall.toFixed(2)}%</code>
             🔹 <b>Strategy:</b> <code>${_market} (${_percOnPerp}%)</code> & <code>sUSDe (${100 - _percOnPerp}%)</code>
 
-            📊 <b>Actual Strategy Details:</b>
+            📊 <b>Current Strategy Details:</b>
             📈 <b>APY ${_market}:</b> <code>${_apyMarket}%</code>
             📈 <b>APY sUSDe:</b> <code>${_apysUSDe}%</code>
 

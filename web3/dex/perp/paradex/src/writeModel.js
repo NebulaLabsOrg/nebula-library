@@ -87,8 +87,7 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
  */
 export async function wmSubmitCancelOrder(_instance, _orderId) {
     try {
-        const response = await _instance.delete('/orders/' +  _orderId);
-        console.log(response)
+        await _instance.delete('/orders/' +  _orderId);
         return createResponse(true, 'success', {orderId: _orderId}, 'paradex.submitCancelOrder')
     } catch (error) {
         return createResponse(false, error.message, null, 'paradex.submitCancelOrder');
