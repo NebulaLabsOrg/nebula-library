@@ -95,7 +95,7 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
         const url = encodeGetUrl('/markets/summary', params)
         const response = await _instance.get(url);
         const { mark_price } = response.data.results[0];
-        const { min_notional, order_size_increment, max_order_size } = marketData.data[0];
+        const { min_notional, order_size_increment, max_order_size, price_tick_size } = marketData.data[0];
         return createResponse(
             true,
             'success',
@@ -103,7 +103,8 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
                 symbol: _symbol,
                 minQty: (Number(min_notional) / Number(mark_price)).toString(),
                 qtyStep: order_size_increment,
-                maxQty: max_order_size
+                maxQty: max_order_size,
+                priceDecimals: (price_tick_size.toString().split('.')[1] || '').length
             },
             'paradex.getMarketOpenInterest'
         );

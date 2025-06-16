@@ -58,7 +58,7 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: Number(marketDetail.data.results[0].mark_price).toFixed(3),
+            price: Number(marketDetail.data.results[0].mark_price).toFixed(marketSize.data.priceDecimals),
             side: _side,
             size: qty,
             type: _type
@@ -172,7 +172,7 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: Number(marketDetail.data.results[0].mark_price).toFixed(3),
+            price: Number(marketDetail.data.results[0].mark_price).toFixed(marketOrderSize.data.priceDecimals),
             side: closeSide,
             size: qty,
             type: _type
