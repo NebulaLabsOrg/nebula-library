@@ -1,8 +1,8 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
 import { vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetMarketData } from './viewModel.js'
-import { signOrder } from './paradex.sign.js'
-import { paradexEnum } from './paradex.enum.js';
+import { signOrder } from './sign.js'
+import { paradexEnum } from './enum.js';
 
 /**
  * Submits a new order to the Paradex API after validating and formatting the order parameters.
@@ -58,7 +58,7 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: Number(marketDetail.data.results[0].mark_price).toFixed(3),
+            price: Number(marketDetail.data.results[0].mark_price).toFixed(marketSize.data.priceDecimals),
             side: _side,
             size: qty,
             type: _type
@@ -87,8 +87,7 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
  */
 export async function wmSubmitCancelOrder(_instance, _orderId) {
     try {
-        const response = await _instance.delete('/orders/' +  _orderId);
-        console.log(response)
+        await _instance.delete('/orders/' +  _orderId);
         return createResponse(true, 'success', {orderId: _orderId}, 'paradex.submitCancelOrder')
     } catch (error) {
         return createResponse(false, error.message, null, 'paradex.submitCancelOrder');
@@ -172,7 +171,7 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: Number(marketDetail.data.results[0].mark_price).toFixed(3),
+            price: Number(marketDetail.data.results[0].mark_price).toFixed(marketOrderSize.data.priceDecimals),
             side: closeSide,
             size: qty,
             type: _type

@@ -1,5 +1,5 @@
 import { RestClientV5 } from 'bybit-api';
-import { bybitEnum } from './bybit.enum.js';
+import { bybitEnum } from './enum.js';
 import { wmSetInternalTranfer, wmSubmitMarketOrder, wmSubmitCancelOrder, wmSubmitCloseMarketOrder, wmSubmitWihdraw } from './writeModel.js';
 import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetMaketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOutWithdrawableAmount, vmGetWithdrawStatus, vmGetOrderStatus } from './viewModel.js';
 

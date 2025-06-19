@@ -1,4 +1,4 @@
-import { ERC20 } from "../../../../index.js";
+import { ERC20 } from "../index.js";
 import 'dotenv/config';
 
 const prvKey = process.env.PRV_KEY;

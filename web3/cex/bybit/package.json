@@ -1,0 +1,12 @@
+{
+  "name": "bybit",
+  "main": "index.js",
+  "type": "module",
+  "devDependencies": {
+    "dotenv": "^16.5.0"
+  },
+  "dependencies": {
+    "bybit-api": "^4.1.10",
+    "uuid": "^11.1.0"
+  }
+}

@@ -5,7 +5,7 @@
  *   - toIn: Destination account type for incoming transfers.
  *   - toOut: Destination account type for outgoing transfers.
  * 
- * position:
+ * order:
  *   - long: Represents a long (buy) position.
  *   - short: Represents a short (sell) position.
  *   - quoteOnMainCoin: Indicates quoting on the main coin.
@@ -16,10 +16,14 @@ export const bybitEnum = Object.freeze({
         toIn: 'UNIFIED',
         toOut: 'FUND',
     },
-    position: {
+    order: {
         long: 'Buy',
         short: 'Sell',
         quoteOnMainCoin: 'main',
         quoteOnSecCoin: 'secondary',
+        type:{
+            market: '',
+            limit: ''
+        }
     }
 });

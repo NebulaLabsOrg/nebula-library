@@ -1,0 +1,13 @@
+{
+  "name": "paradex",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "bignumber.js": "^9.3.0",
+    "starknet": "^6.24.1"
+  },
+  "devDependencies": {
+    "dotenv": "^16.5.0"
+  }
+}

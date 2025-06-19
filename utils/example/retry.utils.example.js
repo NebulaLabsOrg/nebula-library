@@ -1,5 +1,5 @@
-import { retry } from "../src/retry.utils.js";
-import { createResponse } from "../src/response.utils.js";
+import { retry } from "../index.js";
+import { createResponse } from "../index.js";
 
 const fx = async () => {
     try {

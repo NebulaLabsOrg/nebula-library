@@ -17,9 +17,9 @@ Nebula Library delivers a comprehensive suite of tools tailored for modern block
 
 Automate communication and streamline notifications with seamless integrations.
 
-| **Module**           | **Purpose**                                         | **Dependencies**           |
-|----------------------|-----------------------------------------------------|----------------------------|
-| `TgNotifier`   | Telegram bot client for sending notifications       | `node-telegram-bot-api`    |
+| **Module**           | **Purpose**                                         | **Dependencies**           | **Path**                                |
+|----------------------|-----------------------------------------------------|----------------------------|-----------------------------------------|
+| `TgNotifier`   | Telegram bot client for sending notifications       | `node-telegram-bot-api`    | `nebula-library/telegram-bot/index.js`    |
 
 ---
 
@@ -27,18 +27,20 @@ Automate communication and streamline notifications with seamless integrations.
 
 Effortlessly integrate blockchain technology. Crypto operation modules include:
 
-| **Module**   | **Purpose**                                               | **Dependencies**                       |
-|--------------|-----------------------------------------------------------|----------------------------------------|
-| `ERC20`      | Interact with ERC20 tokens on Ethereum                    | `ethers`                               |
-| `Bybit`      | Interface with Bybit exchange                             | `bybit-api`, `uuid`                    |
-| `Kyberswap`  | Access Kyberswap DEX aggregator                           | `ethers`, `axios`                      |
-| `Paradex`    | Connect to Paradex perpetual exchange                     | `starknet`, `axios`, `bignumber.js`    |
+| **Module**   | **Purpose**                                               | **Dependencies**                       | **Path**                                                      |
+|--------------|-----------------------------------------------------------|----------------------------------------|---------------------------------------------------------------|
+| `ERC20`      | Interact with ERC20 tokens on Ethereum                    | `ethers`                               | `nebula-library/web3/token/ERC20/index.js`                    |
+| `Bybit`      | Interface with Bybit exchange                             | `bybit-api`, `uuid`                    | `nebula-library/web3/cex/bybit/index.js`                      |
+| `Kyberswap`  | Access Kyberswap DEX aggregator                           | `ethers`, `axios`                      | `nebula-library/web3/dex/aggregator/kyberswap/index.js`       |
+| `Paradex`    | Connect to Paradex perpetual exchange                     | `starknet`, `axios`, `bignumber.js`    | `nebula-library/web3/dex/perp/paradex/index.js`               |
 
 ---
 
 ### 🛠️ General Utility Modules
 
-🧰 A collection of helper functions to enhance your development workflow.  
+🧰 A collection of helper functions to enhance your development workflow.
+
+`nebula-library/utils/index.js`
 
 #### Key Utility Groups
 

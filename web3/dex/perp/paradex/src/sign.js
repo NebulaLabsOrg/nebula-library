@@ -1,5 +1,5 @@
 import { ec, shortString, typedData as starkTypedData } from 'starknet';
-import { buildOnboardingTypedData, buildAuthTypedData, buildOrderTypedData, generateParadexTimestamps, toQuantums } from '../src/utils.js';
+import { buildOnboardingTypedData, buildAuthTypedData, buildOrderTypedData, generateParadexTimestamps, toQuantums } from './utils.js';
 
 /**
  * @function signatureFromTypedData
