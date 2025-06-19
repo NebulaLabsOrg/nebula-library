@@ -23,7 +23,7 @@ export function shiftStrategy(_version, _decision, _tvl, _percLoss, _apyOverall,
             ⚙️ <b>State:</b> ${_decision} ⚙️
 
             💵 <b>TVL:</b> $<code>${_tvl}</code>
-            📉 <b>Loss:</b><code>${_percLoss}%</code>
+            📉 <b>Loss:</b> <code>${_percLoss}%</code>
             📈 <b>APY (current):</b> <code>${_apyOverall.toFixed(2)}%</code>
             🔹 <b>Strategy:</b> <code>${_market} (${_percOnPerp}%)</code> & <code>sUSDe (${100 - _percOnPerp}%)</code>
 
@@ -31,8 +31,8 @@ export function shiftStrategy(_version, _decision, _tvl, _percLoss, _apyOverall,
             📈 <b>APY ${_market}:</b> <code>${_apyMarket}%</code>
             📈 <b>APY sUSDe:</b> <code>${_apysUSDe}%</code>
 
-            ➡️ <b>${_provider1}</b> (<code>${_legProvider1}</code>) - <b>Loss:</b><code>${_percLossPerp1}%</code>
-            ➡️ <b>${_provider2}</b> (<code>${_legProvider2}</code>) - <b>Loss:</b><code>${_percLossPerp2}%</code>
+            ➡️ <b>${_provider1}</b> (<code>${_legProvider1}</code>) - <b>Loss:</b> <code>${_percLossPerp1}%</code>
+            ➡️ <b>${_provider2}</b> (<code>${_legProvider2}</code>) - <b>Loss:</b> <code>${_percLossPerp2}%</code>
 
             `;
 }
