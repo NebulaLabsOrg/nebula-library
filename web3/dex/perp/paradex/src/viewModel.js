@@ -250,7 +250,7 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
       symbol: _symbol,
       avgPrice: average_entry_price,
       unrealizedPnl: (Number(unrealized_pnl) + Number(unrealized_funding_pnl)).toString(),
-      cumRealizedPnl: (Number(realized_positional_pnl) + Number(realized_positional_funding_pnl)).toString(),
+      realizedPnl: (Number(realized_positional_pnl) + Number(realized_positional_funding_pnl)).toString(),
       side: side.toLowerCase(),
       qty: qty.toString(),
       qtyUsd: (qty * markPrice).toString()

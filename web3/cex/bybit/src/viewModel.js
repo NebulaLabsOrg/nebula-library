@@ -242,8 +242,8 @@ export async function vmGetOpenPositionDetail(_restClientV5, _settleCoin, _symbo
         const detail = {
             symbol: pos.symbol,
             avgPrice: pos.avgPrice,
-            unrealisedPnl: pos.unrealisedPnl,
-            cumRealisedPnl: pos.cumRealisedPnl,
+            unrealizedPnl: pos.unrealisedPnl,
+            realizedPnl: pos.curRealisedPnl,
             side: pos.side,
             qty: pos.size,
             qtyUsd: (Number(pos.size) * lastPrice).toString(),
