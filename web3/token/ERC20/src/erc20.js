@@ -151,7 +151,7 @@ export class ERC20 {
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
             const tx = await contract.approve(_spender, _amount);
             await tx.wait(this.numberConfirmation);
-            return createResponse(true, 'success', tx.hash, 'ERC20.feApprove');
+            return createResponse(true, 'success', { txHash: tx.hash }, 'ERC20.feApprove');
         } catch (error) {
             return createResponse(
                 false,
@@ -203,7 +203,7 @@ export class ERC20 {
             const tx = await contract.approve(_spender, _amount, txGasParams);
             await tx.wait(this.numberConfirmation);
 
-            return createResponse(true, 'success', { hash: tx.hash }, 'ERC20.bkApprove');
+            return createResponse(true, 'success', { txHash: tx.hash }, 'ERC20.bkApprove');
         } catch (error) {
             return createResponse(
                 false,
@@ -255,7 +255,7 @@ export class ERC20 {
             const tx = await contract.transfer(_to, _amount, txGasParams);
             await tx.wait(this.numberConfirmation);
     
-            return createResponse(true, 'success', { hash: tx.hash }, 'ERC20.bkTransfer');
+            return createResponse(true, 'success', { txHash: tx.hash }, 'ERC20.bkTransfer');
         } catch (error) {
             return createResponse(
                 false,

@@ -6,13 +6,13 @@ import { createResponse } from './response.utils.js';
  * @function estimateGasLimit
  * @description Estimates EVM the gas limit required to execute a specific contract function with given parameters.
  * @param {Object} _contract - An ethers.js contract instance.
- * @param {string} _function - The name of the contract function to estimate gas for.
+ * @param {string} _methodName - The name of the contract function to estimate gas for.
  * @param {Array} [_params=[]] - The parameters to pass to the contract function.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the estimated gas limit or an error message.
  */
-export async function estimateGasLimit(_contract, _function, _params = []) {
+export async function estimateGasLimit(_contract, _methodName, _params = []) {
     try {
-        const estimation = await _contract[_function].estimateGas(..._params);
+        const estimation = await _contract[_methodName].estimateGas(..._params);
         return createResponse(
             true,
             'success',
