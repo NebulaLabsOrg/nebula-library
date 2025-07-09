@@ -273,17 +273,20 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
 export async function vmGetOrderStatus(_instance, _orderId) {
     try {
         const responseOpenOrders = await _instance.get('/orders/' + _orderId);
-        if (responseOpenOrders.data) {
+        if (responseOpenOrders.data && Object.keys(responseOpenOrders.data).length > 0) {
             const detail = {
-                symbol: responseOpenOrders.data.market,
-                orderType: responseOpenOrders.data.type,
-                status: responseOpenOrders.data.status,
-                qty: responseOpenOrders.data.size,
-                qtyExe: (Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)).toFixed(),
-                qtyExeUsd: ((Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)) * Number(responseOpenOrders.data.avg_fill_price)).toFixed(),
-                avgPrice: responseOpenOrders.data.avg_fill_price
+              symbol: responseOpenOrders.data.market,
+              orderType: responseOpenOrders.data.type,
+              status: responseOpenOrders.data.status,
+              qty: responseOpenOrders.data.size,
+              qtyExe: (Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)).toString(),
+              qtyExeUsd: ((Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)) * Number(responseOpenOrders.data.avg_fill_price)).toString(),
+              avgPrice: responseOpenOrders.data.avg_fill_price
             }
             return createResponse(true, 'success', detail, 'paradex.getOrderStatus');
+        } else {
+            // If not found in open orders, throw to trigger catch and check history
+            throw new Error('Order not found in open orders');
         }
     } catch (error) {
       try {

@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -109,6 +109,17 @@ export class Extended {
      */
     async getOpenPositionDetail(_symbol) {
         return await vmGetOpenPositionDetail(this.instance, _symbol);
+    }
+
+    /**
+     * @async
+     * @method getOrderStatus
+     * @description Retrieves the status of an order with the specified order ID from the current instance.
+     * @param {string|number} _orderId - The unique identifier of the order whose status is to be retrieved.
+     * @returns {Promise<Object>} A Promise that resolves with the status details of the order.
+     */
+    async getOrderStatus(_orderId) {
+        return await vmGetOrderStatus(this.instance, _orderId);
     }
 
     async test(){

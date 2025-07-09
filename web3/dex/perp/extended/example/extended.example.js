@@ -54,9 +54,15 @@ console.log('Calling: extended.getOpenPositions');
 const openPositions = await extendedInstance.getOpenPositions();
 console.log(openPositions);
 */
+/*
 console.log('Get open position detail');
 console.log('Calling: extended.getOpenPositionDetail');
 const openPositionDetail = await extendedInstance.getOpenPositionDetail('HYPE-USD');
 console.log(openPositionDetail);
+*/
+console.log('Get order status');
+console.log('Calling: extended.getOrderStatus');
+const orderStatus = await extendedInstance.getOrderStatus('1234567890');
+console.log(orderStatus);
 
 //console.log(await extendedInstance.test())

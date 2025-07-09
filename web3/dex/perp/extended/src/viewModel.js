@@ -249,3 +249,36 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
         return createResponse(false, error.message, null, 'extended.getOpenPositionDetail');
     }
 }
+
+/**
+ * @async
+ * @function vmGetOrderStatus
+ * @description Retrieves the status and details of a specific order by its ID using the provided API client instance. Returns a standardized response object containing order details such as symbol, order type, status, quantity, executed quantity, executed value in USD, and average price, or an error message if no order is found.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @param {string|number} _orderId - The unique identifier of the order to retrieve.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the order details or an error message.
+ */
+export async function vmGetOrderStatus(_instance, _orderId) {
+    try {
+        const params = { id: _orderId }
+        const url = encodeGetUrl('/user/orders', params)
+        const response = await _instance.get(url);
+        const order = response.data.data;
+        if (!Array.isArray(order) || order.length === 0) {
+            return createResponse(false, 'No order found', null, 'extended.getOrderStatus');
+        }
+        const { market, type, status, qty, filledQty, averagePrice } = order;
+        const detail = {
+            symbol: market,
+            orderType: type,
+            status: status,
+            qty: qty,
+            qtyExe: filledQty,
+            qtyExeUsd: filledQty * averagePrice,
+            avgPrice: averagePrice,
+        }
+        return createResponse(true, 'success', detail, 'extended.getOrderStatus');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'extended.getOrderStatus');        
+    }
+}
