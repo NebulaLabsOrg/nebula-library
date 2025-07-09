@@ -78,3 +78,21 @@ export async function vmGetMarketData(_instance, _symbol = '') {
         return createResponse(false, error.message, null, 'extended.getMarketData');
     }
 }
+
+/**
+ * @async
+ * @function vmGetLatestMarketData
+ * @description Retrieves the latest market statistics for a given symbol from the API using the provided instance. Returns a standardized response object containing the market data or an error message.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @param {string} [_symbol] - The market symbol for which to retrieve the latest statistics.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the latest market data or an error message.
+ */
+export async function vmGetLatestMarketData(_instance, _symbol) {
+    try {
+        const url = encodeGetUrl(`/info/markets/${_symbol}/stats`);
+        const response = await _instance.get(url);
+        return createResponse(true, 'success', response.data.data, 'extended.getLatestMarketData');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'extended.getLatestMarketData');
+    }
+}

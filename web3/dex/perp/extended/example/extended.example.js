@@ -19,10 +19,15 @@ const walletBalance = await extendedInstance.getWalletBalance();
 console.log(walletBalance);
 
 */
-
+/*
 console.log('Get market data');
 console.log('Calling: extended.getMarketData');
 const marketData = await extendedInstance.getMarketData();
 console.log(marketData);
+*/
+console.log('Get latest market data');
+console.log('Calling: extended.getLatestMarketData');
+const latestMarketData = await extendedInstance.getLatestMarketData('BTC-USD');
+console.log(latestMarketData);
 
 //console.log(await extendedInstance.test())

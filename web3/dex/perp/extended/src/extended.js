@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -44,6 +44,17 @@ export class Extended {
      */
     async getMarketData(_symbol) {
         return await vmGetMarketData(this.instance, _symbol);
+    }
+
+    /**
+     * @async
+     * @method getLatestMarketData
+     * @description Retrieves the latest market data for the specified symbol.
+     * @param {string} _symbol - The symbol of the market to retrieve the latest data for.
+     * @returns {Promise<Object>} A Promise that resolves with the latest market data information.
+     */
+    async getLatestMarketData(_symbol) {
+        return await vmGetLatestMarketData(this.instance, _symbol);
     }
 
     async test(){
