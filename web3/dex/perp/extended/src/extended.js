@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -66,6 +66,10 @@ export class Extended {
      */
     async getMarketOrderSize(_symbol) {
         return await vmGetMarketOrderSize(this.instance, _symbol);
+    }
+
+    async getFundingRateHour(_symbol) {
+        return await vmGetFundingRateHour(this.instance, _symbol);
     }
 
     async test(){

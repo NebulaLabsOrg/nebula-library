@@ -30,8 +30,16 @@ console.log('Calling: extended.getLatestMarketData');
 const latestMarketData = await extendedInstance.getLatestMarketData('HYPE-USD');
 console.log(latestMarketData);
 */
+/*
 console.log('Get market order size');
 console.log('Calling: extended.getMarketOrderSize');
 const marketOrderSize = await extendedInstance.getMarketOrderSize('HYPE-USD');
 console.log(marketOrderSize);
+*/
+console.log('Get funding rate hour');
+console.log('Calling: extended.getFundingRateHour');
+const fundingRateHour = await extendedInstance.getFundingRateHour('HYPE-USD');
+console.log(fundingRateHour);
+
+
 //console.log(await extendedInstance.test())

@@ -107,11 +107,11 @@ export async function vmGetLatestMarketData(_instance, _symbol) {
  */
 export async function vmGetMarketOrderSize(_instance, _symbol){
     try {
-        const latestMarketData = await vmGetMarketData(_instance, _symbol);
-        if (!latestMarketData.success) {
-            return createResponse(false, latestMarketData.message, null, 'extended.getMarketOrderSize');
+        const marketData = await vmGetMarketData(_instance, _symbol);
+        if (!marketData.success) {
+            return createResponse(false, marketData.message, null, 'extended.getMarketOrderSize');
         }
-        const { minOrderSize, minOrderSizeChange, minPriceChange, maxMarketOrderValue, maxLimitOrderValue } = latestMarketData.data[0].tradingConfig;
+        const { minOrderSize, minOrderSizeChange, minPriceChange, maxMarketOrderValue, maxLimitOrderValue } = marketData.data[0].tradingConfig;
         return createResponse(
             true,
             'success',
@@ -127,5 +127,27 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
         );
     }catch (error) {
         return createResponse(false, error.message, null, 'extended.getMarketOrderSize');
+    }
+}
+
+
+export async function vmGetFundingRateHour(_instance, _symbol) {
+    try {
+        const latestMarketData = await vmGetLatestMarketData(_instance, _symbol);
+        if (!latestMarketData.success) {
+            return createResponse(false, latestMarketData.message, null, 'extended.getFundingRateHour');
+        }
+        const { fundingRate } = latestMarketData.data;
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                fundingRate: fundingRate * 100
+            },
+            'extended.getFundingRateHour'
+        );
+    } catch (error) {
+        return createResponse(false, error.message, null, 'extended.getFundingRateHour');
     }
 }
