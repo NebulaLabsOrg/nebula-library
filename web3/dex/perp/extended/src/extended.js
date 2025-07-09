@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -98,6 +98,17 @@ export class Extended {
      */
     async getOpenPositions() {
         return await vmGetOpenPositions(this.instance);
+    }
+
+    /**
+     * @async
+     * @method getOpenPositionDetail
+     * @description Retrieves the details of an open position for the specified symbol from the current instance.
+     * @param {string} _symbol - The symbol identifier for which to retrieve the open position details.
+     * @returns {Promise<Object>} A Promise that resolves with the details of the open position.
+     */
+    async getOpenPositionDetail(_symbol) {
+        return await vmGetOpenPositionDetail(this.instance, _symbol);
     }
 
     async test(){

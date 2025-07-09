@@ -216,3 +216,36 @@ export async function vmGetOpenPositions(_instance) {
         return createResponse(false, error.message, null, 'extended.getOpenPositions');
     }
 }
+
+/**
+ * @async
+ * @function vmGetOpenPositionDetail
+ * @description Retrieves the details of the user's open position for a specific market symbol using the provided API client instance. Returns a standardized response object containing position details such as average price, unrealised and realised PnL, side, size, and value, or an error message if no position is found.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @param {string} _symbol - The market symbol for which to retrieve the open position details.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the open position details or an error message.
+ */
+export async function vmGetOpenPositionDetail(_instance, _symbol) {
+    try {
+        const params = { market: _symbol }
+        const url = encodeGetUrl('/user/positions', params)
+        const response = await _instance.get(url);
+        const positionData = response.data.data;
+        if (!Array.isArray(positionData) || positionData.length === 0) {
+            return createResponse(false, 'No position found', null, 'extended.getOpenPositionDetail');
+        }
+        const { openPrice, unrealisedPnl, realisedPnl, side, size, value } = positionData[0];
+        const detail = {
+            symbol: _symbol,
+            avgPrice: openPrice,
+            unrealisedPnl: unrealisedPnl,
+            realisedPnl: realisedPnl,
+            side: side.toLowerCase(),
+            size: size,
+            value: value
+        };
+        return createResponse(true, 'success', detail, 'extended.getOpenPositionDetail');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'extended.getOpenPositionDetail');
+    }
+}

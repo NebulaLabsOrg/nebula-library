@@ -48,9 +48,15 @@ console.log('Calling: extended.getMarketOpenInterest');
 const marketOpenInterest = await extendedInstance.getMarketOpenInterest('HYPE-USD');
 console.log(marketOpenInterest);
 */
+/*
 console.log('Get open positions');
 console.log('Calling: extended.getOpenPositions');
 const openPositions = await extendedInstance.getOpenPositions();
 console.log(openPositions);
+*/
+console.log('Get open position detail');
+console.log('Calling: extended.getOpenPositionDetail');
+const openPositionDetail = await extendedInstance.getOpenPositionDetail('HYPE-USD');
+console.log(openPositionDetail);
 
 //console.log(await extendedInstance.test())
