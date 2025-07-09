@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -25,8 +25,29 @@ export class Extended {
         return await vmGetWalletStatus(this.instance);
     }
 
+    /**
+     * @async
+     * @method getWalletBalance
+     * @description Retrieves the current balance of the connected wallet instance.
+     * @returns {Promise<Object>} A Promise that resolves with the wallet balance information.
+     */
+    async getWalletBalance() {
+        return await vmGetWalletBalance(this.instance);
+    }
+
+    /**
+     * @async
+     * @method getMarketData
+     * @description Retrieves the market data for all active symbol or a specified symbol. For the latest data, use `getLatestMarketData`.
+     * @param {string} _symbol - The symbol of the market to retrieve data for.
+     * @returns {Promise<Object>} A Promise that resolves with the market data information.
+     */
+    async getMarketData(_symbol) {
+        return await vmGetMarketData(this.instance, _symbol);
+    }
+
     async test(){
-        const response = await this.instance.get('user/balance')
+        const response = await this.instance.get('/info/markets')
         return response.data
     }
 }
