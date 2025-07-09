@@ -42,9 +42,15 @@ console.log('Calling: extended.getFundingRateHour');
 const fundingRateHour = await extendedInstance.getFundingRateHour('HYPE-USD');
 console.log(fundingRateHour);
 */
+/*
 console.log('Get market open interest');
 console.log('Calling: extended.getMarketOpenInterest');
 const marketOpenInterest = await extendedInstance.getMarketOpenInterest('HYPE-USD');
 console.log(marketOpenInterest);
+*/
+console.log('Get open positions');
+console.log('Calling: extended.getOpenPositions');
+const openPositions = await extendedInstance.getOpenPositions();
+console.log(openPositions);
 
 //console.log(await extendedInstance.test())

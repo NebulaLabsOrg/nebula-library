@@ -190,3 +190,29 @@ export async function vmGetMarketOpenInterest(_instance, _symbol){
         return createResponse(false, error.message, null, 'extended.getMarketOpenInterest');
     }
 }
+
+/**
+ * @async
+ * @function vmGetOpenPositions
+ * @description Retrieves the user's open positions using the provided API client instance. Returns a standardized response object containing the number of open positions and the list of markets, or an error message.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the open positions data or an error message.
+ */
+export async function vmGetOpenPositions(_instance) {
+    try {
+        const response = await _instance.get('/user/positions');
+        const openPositionsData = response.data.data || [];
+        const openPositionsCount = openPositionsData.length;
+        const markets = openPositionsCount > 0
+            ? openPositionsData.map(item => item.market)
+            : [];
+        return createResponse(
+            true,
+            'success',
+            { openPositions: openPositionsCount, markets },
+            'extended.getOpenPositions'
+        );
+    } catch (error) {
+        return createResponse(false, error.message, null, 'extended.getOpenPositions');
+    }
+}

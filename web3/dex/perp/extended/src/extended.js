@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -88,6 +88,16 @@ export class Extended {
      */
     async getMarketOpenInterest(_symbol) {
         return await vmGetMarketOpenInterest(this.instance, _symbol);
+    }
+
+    /**
+     * @async
+     * @method getOpenPositions
+     * @description Retrieves the list of open positions for the current instance.
+     * @returns {Promise<Array>} A Promise that resolves with an array of open positions.
+     */
+    async getOpenPositions() {
+        return await vmGetOpenPositions(this.instance);
     }
 
     async test(){
