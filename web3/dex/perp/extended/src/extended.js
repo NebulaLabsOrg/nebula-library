@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -68,8 +68,26 @@ export class Extended {
         return await vmGetMarketOrderSize(this.instance, _symbol);
     }
 
+    /**
+     * @async
+     * @method getFundingRateHour
+     * @description Retrieves the hourly funding rate for the specified symbol.
+     * @param {string} _symbol - The symbol of the market to retrieve the funding rate for.
+     * @returns {Promise<number>} A Promise that resolves with the hourly funding rate.
+     */
     async getFundingRateHour(_symbol) {
         return await vmGetFundingRateHour(this.instance, _symbol);
+    }
+
+    /**
+     * @async
+     * @method getMarketOpenInterest
+     * @description Retrieves the open interest for the specified market symbol.
+     * @param {string} _symbol - The symbol of the market to retrieve open interest for.
+     * @returns {Promise<number>} A Promise that resolves with the open interest value.
+     */
+    async getMarketOpenInterest(_symbol) {
+        return await vmGetMarketOpenInterest(this.instance, _symbol);
     }
 
     async test(){

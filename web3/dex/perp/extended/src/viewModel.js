@@ -1,5 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
+import { calculateMidPrice } from './utils.js';
 
 /**
  * @async
@@ -130,7 +131,14 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
     }
 }
 
-
+/**
+ * @async
+ * @function vmGetFundingRateHour
+ * @description Retrieves the hourly funding rate for a given symbol using the provided API client instance. Returns a standardized response object containing the symbol and its funding rate (as a percentage), or an error message.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @param {string} _symbol - The market symbol for which to retrieve the funding rate.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the funding rate or an error message.
+ */
 export async function vmGetFundingRateHour(_instance, _symbol) {
     try {
         const latestMarketData = await vmGetLatestMarketData(_instance, _symbol);
@@ -149,5 +157,36 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
         );
     } catch (error) {
         return createResponse(false, error.message, null, 'extended.getFundingRateHour');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetMarketOpenInterest
+ * @description Retrieves the open interest for a given market symbol using the provided API client instance. Returns a standardized response object containing the symbol, open interest (normalized by the mid price), and open interest in USD, or an error message.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @param {string} _symbol - The market symbol for which to retrieve the open interest.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the open interest data or an error message.
+ */
+export async function vmGetMarketOpenInterest(_instance, _symbol){
+    try {
+        const latestMarketData = await vmGetLatestMarketData(_instance, _symbol);
+        if (!latestMarketData.success) {
+            return createResponse(false, latestMarketData.message, null, 'extended.getMarketOpenInterest');
+        }
+        const { openInterest, askPrice, bidPrice } = latestMarketData.data;
+        const midPrice = calculateMidPrice(askPrice, bidPrice);
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                openInterest: openInterest / midPrice,
+                openInterestUsd: openInterest
+            },
+            'extended.getMarketOpenInterest'
+        );
+    } catch (error) {
+        return createResponse(false, error.message, null, 'extended.getMarketOpenInterest');
     }
 }
