@@ -1,6 +1,6 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData } from './viewModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize } from './viewModel.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
@@ -55,6 +55,17 @@ export class Extended {
      */
     async getLatestMarketData(_symbol) {
         return await vmGetLatestMarketData(this.instance, _symbol);
+    }
+
+    /**
+     * @async
+     * @method getMarketOrderSize
+     * @description Retrieves the current market order size for the specified symbol.
+     * @param {string} _symbol - The symbol of the market to retrieve the order size for.
+     * @returns {Promise<number>} A Promise that resolves with the market order size.
+     */
+    async getMarketOrderSize(_symbol) {
+        return await vmGetMarketOrderSize(this.instance, _symbol);
     }
 
     async test(){

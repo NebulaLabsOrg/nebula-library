@@ -17,17 +17,21 @@ console.log('Get wallet balance');
 console.log('Calling: extended.getWalletBalance');
 const walletBalance = await extendedInstance.getWalletBalance();
 console.log(walletBalance);
-
 */
 /*
 console.log('Get market data');
 console.log('Calling: extended.getMarketData');
-const marketData = await extendedInstance.getMarketData();
+const marketData = await extendedInstance.getMarketData('BTC-USD');
 console.log(marketData);
 */
+/*
 console.log('Get latest market data');
 console.log('Calling: extended.getLatestMarketData');
-const latestMarketData = await extendedInstance.getLatestMarketData('BTC-USD');
+const latestMarketData = await extendedInstance.getLatestMarketData('HYPE-USD');
 console.log(latestMarketData);
-
+*/
+console.log('Get market order size');
+console.log('Calling: extended.getMarketOrderSize');
+const marketOrderSize = await extendedInstance.getMarketOrderSize('HYPE-USD');
+console.log(marketOrderSize);
 //console.log(await extendedInstance.test())

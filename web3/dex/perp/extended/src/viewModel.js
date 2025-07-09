@@ -96,3 +96,36 @@ export async function vmGetLatestMarketData(_instance, _symbol) {
         return createResponse(false, error.message, null, 'extended.getLatestMarketData');
     }
 }
+
+/**
+ * @async
+ * @function vmGetMarketOrderSize
+ * @description Retrieves the market order size configuration for a given symbol using the provided API client instance. Returns a standardized response object containing minimum and maximum order sizes, quantity steps, and price decimals, or an error message.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @param {string} _symbol - The market symbol for which to retrieve order size configuration.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing order size configuration or an error message.
+ */
+export async function vmGetMarketOrderSize(_instance, _symbol){
+    try {
+        const latestMarketData = await vmGetMarketData(_instance, _symbol);
+        if (!latestMarketData.success) {
+            return createResponse(false, latestMarketData.message, null, 'extended.getMarketOrderSize');
+        }
+        const { minOrderSize, minOrderSizeChange, minPriceChange, maxMarketOrderValue, maxLimitOrderValue } = latestMarketData.data[0].tradingConfig;
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                minQty: minOrderSize,
+                qtyStep: minOrderSizeChange,
+                maxMktQty: maxMarketOrderValue,
+                maxLimQty: maxLimitOrderValue,
+                priceDecimals: (minPriceChange.toString().split('.')[1] || '').length
+            },
+            'extended.getMarketOpenInterest'
+        );
+    }catch (error) {
+        return createResponse(false, error.message, null, 'extended.getMarketOrderSize');
+    }
+}
