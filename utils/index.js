@@ -1,4 +1,5 @@
 export * from './src/consoleColor.utils.js'
+export * from './src/contract.utils.js';
 export * from './src/ethers.utils.js';
 export * from './src/gas.utils.js';
 export * from './src/http.utils.js';
