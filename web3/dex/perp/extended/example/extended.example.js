@@ -5,15 +5,19 @@ import 'dotenv/config';
 const extendedThrottler = new TokenBucketThrottler(1000);
 const extendedInstance = new Extended(
     process.env.API_KEY,
+    process.env.STARK_KEY_PRIVATE,
+    process.env.STARK_KEY_PUBLIC,
+    process.env.L1_ADDRESS,
+    process.env.VAULT_NUMBER,
     extendedThrottler
 );
 
-
+/*
 console.log('Get wallet status');
 console.log('Calling: extended.getWalletStatus');
 const walletStatus = await extendedInstance.getWalletStatus();
 console.log(walletStatus);
-
+*/
 /*
 console.log('Get wallet balance');
 console.log('Calling: extended.getWalletBalance');
@@ -68,4 +72,15 @@ console.log('Calling: extended.getOrderStatus');
 const orderStatus = await extendedInstance.getOrderStatus('1234567890');
 console.log(orderStatus);
 */
+
+console.log('Submit order');
+console.log('Calling: extended.submitOrder');
+const orderResponse = await extendedInstance.submitOrder(
+    extendedEnum.order.type.market,
+    'HYPE-USD',
+    extendedEnum.order.long,
+    extendedEnum.order.quoteOnMainCoin,
+    10
+);
+console.log(orderResponse);
 //console.log(await extendedInstance.test())

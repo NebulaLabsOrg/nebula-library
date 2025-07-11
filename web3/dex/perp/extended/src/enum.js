@@ -17,8 +17,8 @@
  */
 export const extendedEnum = Object.freeze({
     order: {
-        long: 'Buy',
-        short: 'Sell',
+        long: 'BUY',
+        short: 'SELL',
         quoteOnMainCoin: 'main',
         quoteOnSecCoin: 'secondary',
         type:{
