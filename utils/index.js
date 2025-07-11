@@ -5,3 +5,4 @@ export * from './src/http.utils.js';
 export * from './src/response.utils.js';
 export * from './src/retry.utils.js';
 export * from './src/tx.utils.js';
+export * from './src/throttler.utils.js';

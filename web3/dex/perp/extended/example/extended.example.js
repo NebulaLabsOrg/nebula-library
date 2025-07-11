@@ -1,17 +1,19 @@
 import { Extended, extendedEnum } from '../index.js'
+import { TokenBucketThrottler } from '../../../../../utils/index.js';
 import 'dotenv/config';
 
-
+const extendedThrottler = new TokenBucketThrottler(1000);
 const extendedInstance = new Extended(
-    process.env.API_KEY
+    process.env.API_KEY,
+    extendedThrottler
 );
 
-/*
+
 console.log('Get wallet status');
 console.log('Calling: extended.getWalletStatus');
 const walletStatus = await extendedInstance.getWalletStatus();
 console.log(walletStatus);
-*/
+
 /*
 console.log('Get wallet balance');
 console.log('Calling: extended.getWalletBalance');
@@ -60,9 +62,10 @@ console.log('Calling: extended.getOpenPositionDetail');
 const openPositionDetail = await extendedInstance.getOpenPositionDetail('HYPE-USD');
 console.log(openPositionDetail);
 */
+/*
 console.log('Get order status');
 console.log('Calling: extended.getOrderStatus');
 const orderStatus = await extendedInstance.getOrderStatus('1234567890');
 console.log(orderStatus);
-
+*/
 //console.log(await extendedInstance.test())
