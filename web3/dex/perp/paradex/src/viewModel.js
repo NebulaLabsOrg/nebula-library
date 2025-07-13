@@ -1,5 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
+import { calculateMidPrice } from './utils.js';
 import { paradexEnum } from './enum.js';
 
 /**
@@ -91,17 +92,15 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
         if (!marketData.success) {
             return createResponse(false, 'Error getting market data', null, 'paradex.getMarketOrderSize');
         }
-        const params = { market: _symbol };
-        const url = encodeGetUrl('/markets/summary', params)
-        const response = await _instance.get(url);
-        const { mark_price } = response.data.results[0];
+        const response = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+        const { ask, bid } = response.data;
         const { min_notional, order_size_increment, max_order_size, price_tick_size } = marketData.data[0];
         return createResponse(
             true,
             'success',
             {
                 symbol: _symbol,
-                minQty: (Number(min_notional) / Number(mark_price)).toString(),
+                minQty: (Number(min_notional) / calculateMidPrice(ask, bid)).toString(),
                 qtyStep: order_size_increment,
                 maxQty: max_order_size,
                 priceDecimals: (price_tick_size.toString().split('.')[1] || '').length
@@ -155,24 +154,27 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
  * @param {string} _symbol - The market symbol for which to retrieve the open interest.
  * @returns {Promise<Object>} A promise that resolves to a response object containing the symbol, open interest, and its USD value, or an error message.
  */
-export async function vmGetMarketOpenInterest(_instance, _symbol){
-    try {
-        const params = { market: _symbol };
-        const url = encodeGetUrl('/markets/summary', params)
-        const response = await _instance.get(url);
+export async function vmGetMarketOpenInterest(_instance, _symbol) {
+  try {
+    const responsePrice = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+    const { ask, bid } = responsePrice.data;
+    
+    const params = { market: _symbol };
+    const url = encodeGetUrl('/markets/summary', params)
+    const response = await _instance.get(url);
     return createResponse(
       true,
       'success',
       {
         symbol: _symbol,
         openInterest: response.data.results[0].open_interest,
-        openInterestUsd: (Number(response.data.results[0].open_interest) * Number(response.data.results[0].mark_price)).toString()
+        openInterestUsd: (Number(response.data.results[0].open_interest) * calculateMidPrice(ask, bid)).toString()
       },
       'paradex.getMarketOpenInterest'
     );
-    } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.getMarketOpenInterest');
-    }
+  } catch (error) {
+    return createResponse(false, error.message, null, 'paradex.getMarketOpenInterest');
+  }
 }
 
 /**
@@ -212,17 +214,8 @@ export async function vmGetOpenPositions(_instance) {
  */
 export async function vmGetOpenPositionDetail(_instance, _symbol) {
   try {
-    const marketDetail = await _instance.get(encodeGetUrl('/markets/summary', { market: _symbol }));
-    // Check if mark_price is present
-    if (
-      !marketDetail.data ||
-      !marketDetail.data.results ||
-      !marketDetail.data.results[0] ||
-      marketDetail.data.results[0].mark_price === undefined ||
-      marketDetail.data.results[0].mark_price === null
-    ) {
-      return createResponse(false, 'No price found for this market', null, 'paradex.getOpenPositionDetail');
-    }
+    const response = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+    const { ask, bid } = response.data;
 
     const positions = await _instance.get(encodeGetUrl('/positions', { market: _symbol }));
     const pos = positions.data.results.find(p => p.market === _symbol);
@@ -244,7 +237,6 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
       size
     } = pos;
 
-    const markPrice = Number(marketDetail.data.results[0].mark_price);
     const qty = Math.abs(Number(size));
     const detail = {
       symbol: _symbol,
@@ -253,7 +245,7 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
       realizedPnl: (Number(realized_positional_pnl) + Number(realized_positional_funding_pnl)).toString(),
       side: side.toLowerCase(),
       qty: qty.toString(),
-      qtyUsd: (qty * markPrice).toString()
+      qtyUsd: (qty *  calculateMidPrice(ask, bid)).toString()
     };
     return createResponse(true, 'success', detail, 'paradex.getOpenPositionDetail');
   } catch (error) {

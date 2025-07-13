@@ -2,6 +2,7 @@ import { Extended, extendedEnum } from '../index.js'
 import { TokenBucketThrottler } from '../../../../../utils/index.js';
 import 'dotenv/config';
 
+// rate per minut for Extended API : 1000
 const extendedThrottler = new TokenBucketThrottler(1000);
 const extendedInstance = new Extended(
     process.env.API_KEY,
