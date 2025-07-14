@@ -1,7 +1,7 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './viewModel.js';
-import { wmSubmitOrder } from './writeModel.js';
+import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './view.model.js';
+import { wmSubmitOrder } from './write.model.js';
 import { EXTENDED_CHAIN_ID } from './constant.js';
 import { extendedEnum } from './enum.js';
 

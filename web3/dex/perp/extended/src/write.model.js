@@ -1,8 +1,8 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { vmGetMarketOrderSize, vmGetLatestMarketData } from './viewModel.js'
+import { vmGetMarketOrderSize, vmGetLatestMarketData } from './view.model.js'
 import { formatOrderQuantity, calculateMidPrice, generateNonce } from './utils.js';
-import { signOrder } from './sign.js';
+import { signOrder } from './sign.model.js';
 import { extendedEnum } from './enum.js';
 import { DAY_MS, marketTimeInForce, limitTimeInForce } from './constant.js';
 

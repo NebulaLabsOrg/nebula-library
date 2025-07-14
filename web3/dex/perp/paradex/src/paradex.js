@@ -1,9 +1,9 @@
 import { shortString } from 'starknet';
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { amOnboardUser, amAuthenticateUser } from './authModel.js';
-import { vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './viewModel.js';
-import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './writeModel.js';
+import { amOnboardUser, amAuthenticateUser } from './auth.model.js';
+import { vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './view.model.js';
+import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
 import { clearParadexHeaders } from './utils.js';
 import { PARADEX_CHAIN_ID } from './constants.js';
 import { paradexEnum } from './enum.js';

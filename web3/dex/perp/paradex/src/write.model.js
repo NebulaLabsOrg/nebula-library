@@ -1,7 +1,7 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetMarketData } from './viewModel.js'
-import { signOrder } from './sign.js'
+import { vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetMarketData } from './view.model.js'
+import { signOrder } from './sign.model.js'
 import { calculateMidPrice, formatOrderQuantity } from './utils.js';
 import { paradexEnum } from './enum.js';
 
