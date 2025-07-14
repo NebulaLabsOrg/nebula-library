@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "axios": "^1.9.0",
+    "bignumber.js": "^9.3.1",
     "starknet": "^7.6.2"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
-import { ec, typedData as starkTypedData, shortString } from 'starknet';
-import { buildOrderTypedData } from './utils.js';
+import { ec, typedData as starkTypedData } from 'starknet';
+import { buildOrderTypedData, toQuantums } from './utils.js';
 
 /**
  * @function signatureFromTypedData
@@ -15,8 +15,35 @@ function signatureFromTypedData(_account, _typedData) {
     return { r: '0x' + r.toString(16), s: '0x' + s.toString(16) };
 }
 
+function deducePrecision(value) {
+    if (typeof value === "string") {
+        const parts = value.split(".");
+        return parts.length > 1 ? parts[1].length : 0;
+    }
+    if (typeof value === "number") {
+        const str = value.toString();
+        const parts = str.split(".");
+        return parts.length > 1 ? parts[1].length : 0;
+    }
+    // Se è BigNumber o altro, gestisci come serve
+    return 0;
+}
+
 export function signOrder(_chainId, _account, _order) {
-    const typedData = buildOrderTypedData(_order, _chainId);
+    // Deduce la precisione direttamente dal valore in ingresso
+    const qtyPrecision = deducePrecision(_order.qty);
+    const pricePrecision = deducePrecision(_order.price);
+    const feePrecision = deducePrecision(_order.fee);
+
+    // Converte i valori necessari in quantoms prima di firmare
+    const orderToSign = {
+        ..._order,
+        qty: toQuantums(_order.qty, qtyPrecision),
+        price: toQuantums(_order.price, pricePrecision),
+        fee: toQuantums(_order.fee, feePrecision),
+    };
+
+    const typedData = buildOrderTypedData(orderToSign, _chainId);
     const signature = signatureFromTypedData(_account, typedData);
-    return signature
+    return signature;
 }

@@ -1,6 +1,7 @@
+import BigNumber from 'bignumber.js';
 import { DOMAIN_TYPES } from './constant.js';
 
-export function buildParadexDomain(_starknetChainId) {
+export function buildExtendedDomain(_starknetChainId) {
   return {
     name: 'Extended',
     chainId: _starknetChainId,
@@ -9,7 +10,7 @@ export function buildParadexDomain(_starknetChainId) {
 }
 
 export function buildOrderTypedData(_message, _starknetChainId) {
-    const extendedDomain = buildParadexDomain(_starknetChainId);
+    const extendedDomain = buildExtendedDomain(_starknetChainId);
     return {
         domain: extendedDomain,
         primaryType: 'Order',
@@ -31,8 +32,18 @@ export function buildOrderTypedData(_message, _starknetChainId) {
         message: _message
     };
 }
-
-
+/**
+ * @function toQuantums
+ * @description Converts a given amount to its quantum representation based on the specified precision.
+ * @param {string|BigNumber} amount - The amount to convert, as a string or BigNumber.
+ * @param {number} precision - The number of decimal places for quantization.
+ * @returns {string} The quantum representation of the amount as a string.
+ */
+export function toQuantums(amount, precision) {
+  const bnAmount = new BigNumber(amount); // sempre crea BigNumber
+  const bnQuantums = bnAmount.multipliedBy(`1e${precision}`);
+  return bnQuantums.integerValue(BigNumber.ROUND_FLOOR).toString();
+}
 /**
  * Returns the midpoint price between ask and bid, preserving the maximum decimal precision found in the inputs.
  * @param {number|string} _askPrice - The ask price.

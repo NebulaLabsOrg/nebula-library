@@ -6,7 +6,6 @@ import { signOrder } from './sign.js';
 import { extendedEnum } from './enum.js';
 import { DAY_MS, marketTimeInForce, limitTimeInForce } from './constant.js';
 
-
 export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbol, _side, _marketUnit, _orderQty) {
     try {
         const feeParams = { market: _symbol };
@@ -24,7 +23,9 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
             return createResponse(false, latestMarketData.message, null, 'extended.submitOrder');
         }
         const { askPrice, bidPrice } = latestMarketData.data;
+        console.log('Latest market data:', latestMarketData.data);
         const midPrice = calculateMidPrice(askPrice, bidPrice);
+        console.log('Calculated mid price:', midPrice);
 
         const qty = formatOrderQuantity(
             _orderQty,
@@ -40,16 +41,16 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const order = {
             id: crypto.randomUUID().replace(/-/g, '').substring(0, 16),
             type: _type,
-            market: _symbol,
-            qty: qty.toString(),
-            price: midPrice.toFixed(marketSize.data.priceDecimals),
+            market: _symbol, // stringa, es: "BTC-USD"
+            qty: qty, // qty
+            price: midPrice.toString(), // price
             side: _side,
             timeInForce: _type === extendedEnum.order.type.market ? marketTimeInForce : limitTimeInForce,
             expiryEpochMillis: Date.now() + DAY_MS,
-            fee: _type === extendedEnum.order.type.market ? takerFeeRate : makerFeeRate,
+            fee: _type === extendedEnum.order.type.market ? takerFeeRate : makerFeeRate, // quantum fee
             nonce: generateNonce().toString()
         };
-
+        
         const signature = signOrder(_chainId, _account, order)
 
         const body = {
@@ -66,8 +67,12 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const response = await _instance.post('/user/order', body);
         console.log('Response:', response.data);
     } catch (error) {
-        console.log(error.response.data)
-        return createResponse(false, error.message, null, 'extended.submitOrder');
+        return createResponse(
+            false,
+            error.response?.data ?? error.message,
+            null,
+            'extended.submitOrder'
+        );
     }
 }
 

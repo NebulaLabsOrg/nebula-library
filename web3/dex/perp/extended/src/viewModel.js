@@ -22,7 +22,7 @@ export async function vmGetWalletStatus(_instance) {
             'extended.getWalletStatus'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getWalletStatus');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getWalletStatus');
     }
 }
 
@@ -47,7 +47,7 @@ export async function vmGetWalletBalance(_instance) {
             'extended.getWalletBalance'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getWalletBalance');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getWalletBalance');
     }
 }
 
@@ -76,7 +76,7 @@ export async function vmGetMarketData(_instance, _symbol = '') {
             : [];
         return createResponse(true, 'success', markets, 'extended.getMarketData');
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getMarketData');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getMarketData');
     }
 }
 
@@ -94,7 +94,7 @@ export async function vmGetLatestMarketData(_instance, _symbol) {
         const response = await _instance.get(url);
         return createResponse(true, 'success', response.data.data, 'extended.getLatestMarketData');
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getLatestMarketData');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getLatestMarketData');
     }
 }
 
@@ -127,7 +127,7 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
             'extended.getMarketOpenInterest'
         );
     }catch (error) {
-        return createResponse(false, error.message, null, 'extended.getMarketOrderSize');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getMarketOrderSize');
     }
 }
 
@@ -156,7 +156,7 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
             'extended.getFundingRateHour'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getFundingRateHour');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getFundingRateHour');
     }
 }
 
@@ -187,7 +187,7 @@ export async function vmGetMarketOpenInterest(_instance, _symbol){
             'extended.getMarketOpenInterest'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getMarketOpenInterest');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getMarketOpenInterest');
     }
 }
 
@@ -213,7 +213,7 @@ export async function vmGetOpenPositions(_instance) {
             'extended.getOpenPositions'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getOpenPositions');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOpenPositions');
     }
 }
 
@@ -246,7 +246,7 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
         };
         return createResponse(true, 'success', detail, 'extended.getOpenPositionDetail');
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getOpenPositionDetail');
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOpenPositionDetail');
     }
 }
 
@@ -279,6 +279,6 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(true, 'success', detail, 'extended.getOrderStatus');
     } catch (error) {
-        return createResponse(false, error.message, null, 'extended.getOrderStatus');        
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOrderStatus');        
     }
 }
