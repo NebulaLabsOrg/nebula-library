@@ -8,9 +8,7 @@ import { DAY_MS, marketTimeInForce, limitTimeInForce } from './constant.js';
 import Decimal from 'decimal.js';
 
 // --- ENUMS (as in StarkEx SDK) ---
-const ORDER_TYPE_ENUM = { MARKET: 0, LIMIT: 1 };
 const SIDE_ENUM = { BUY: 0, SELL: 1 };
-const TIF_ENUM = { IOC: 0, GTC: 1, FOK: 2 };
 
 export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbol, _side, _marketUnit, _orderQty) {
   try {
@@ -77,14 +75,30 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
     console.debug("resolutionSynthetic:", resolutionSynthetic, "resolutionCollateral:", resolutionCollateral);
 
     let amountSynthetic, amountCollateral, maxFee;
+    const isBuyingSynthetic = (_side === "BUY" || _side === SIDE_ENUM.BUY);
+
     try {
+      if (isBuyingSynthetic) {
+        amountSynthetic = BigInt(
+          new Decimal(qty)
+            .mul(new Decimal(resolutionSynthetic))
+            .ceil()
+            .toString()
+        );
+        amountCollateral = BigInt(
+          new Decimal(qty)
+            .mul(new Decimal(midPrice))
+            .mul(new Decimal(resolutionCollateral))
+            .ceil()
+            .toString()
+        );
+      } else {
         amountSynthetic = BigInt(
           new Decimal(qty)
             .mul(new Decimal(resolutionSynthetic))
             .floor()
             .toString()
         );
-
         amountCollateral = BigInt(
           new Decimal(qty)
             .mul(new Decimal(midPrice))
@@ -92,21 +106,22 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
             .floor()
             .toString()
         );
+      }
 
-        maxFee = BigInt(
-          new Decimal(qty)
-            .mul(new Decimal(midPrice))
-            .mul(new Decimal(takerFeeRate))
-            .mul(new Decimal(resolutionCollateral))
-            .floor()
-            .toString()
-        );
+      maxFee = BigInt(
+        new Decimal(qty)
+          .mul(new Decimal(midPrice))
+          .mul(new Decimal(takerFeeRate))
+          .mul(new Decimal(resolutionCollateral))
+          .ceil()
+          .toString()
+      );
     } catch (e) {
       console.error("Error computing BigInt amounts. qty, midPrice, takerFeeRate:", qty, midPrice, takerFeeRate, e);
       return createResponse(false, "Error computing order amounts: " + e.message, null, 'extended.submitOrder');
     }
     console.debug("amountSynthetic:", amountSynthetic, "amountCollateral:", amountCollateral, "maxFee:", maxFee);
-    
+
     // Nonce e posizione
     let nonce, positionId;
     try {
@@ -130,7 +145,6 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
     console.debug("expirationTimestamp:", expirationTimestamp, "expiryEpochMillis:", expiryEpochMillis);
 
     // 7. Firma settlement
-    const isBuyingSynthetic = (_side === "BUY" || _side === SIDE_ENUM.BUY);
     let settlement;
     try {
       settlement = signSettlement({
@@ -179,7 +193,8 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
     // 9. Post order
     try {
       const response = await _instance.post('/user/order', body);
-      return createResponse(true, 'Order submitted!', response.data, 'extended.submitOrder');
+      console.log(response.data);
+      return createResponse(true, 'success', {symbol: _symbol, orderId: response.data.data.id}, 'extended.submitOrder');
     } catch (e) {
       console.error("Error submitting order:", e);
       return createResponse(false, e.response?.data ?? e.message, null, 'extended.submitOrder');
