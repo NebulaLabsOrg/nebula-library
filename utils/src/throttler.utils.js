@@ -1,16 +1,14 @@
 /**
  * @class TokenBucketThrottler
- * @description A class implementing the token bucket algorithm for rate-limiting asynchronous operations.
- * Limits the number of operations (e.g., API calls) per minute, queues excess requests, and processes them as tokens become available.
- * Provides methods to enable/disable throttling, enqueue operations, and manage the refill process.
+ * @description Implements the token bucket algorithm with support for variable call weights.
  */
 export class TokenBucketThrottler {
     /**
      * @constructor
-     * @param {number} limitPerMinute - Maximum number of allowed operations per minute.
+     * @param {number} limitPerMinute - Maximum number of operations per minute.
      * @param {boolean} [enabled=true] - Whether throttling is enabled.
-     * @param {number} [slippageFactor=0.9] - Safety margin (e.g., 0.9 = 90% of limit).
-     * @param {boolean} [debug=false] - Enables debug logging.
+     * @param {number} [slippageFactor=0.9] - Safety margin (e.g., 0.9 = 90% of the limit).
+     * @param {boolean} [debug=false] - Enables debug logs.
      */
     constructor(limitPerMinute, enabled = true, slippageFactor = 0.9, debug = false) {
         this.capacity = Math.floor(limitPerMinute * slippageFactor); // Safe max tokens per minute
@@ -42,21 +40,31 @@ export class TokenBucketThrottler {
         if (this.debug) console.log('.. new tokens available', this.tokens);
         this.processQueue();
         this.stopRefillIfIdle();
-
     }
 
     processQueue() {
-        while (this.tokens >= 1 && this.queue.length > 0) {
-            const { fn, resolve, reject } = this.queue.shift();
-            this.tokens -= 1;
-            fn().then(resolve).catch(reject);
+        while (this.queue.length > 0) {
+            const { fn, resolve, reject, weight } = this.queue[0];
+            if (this.tokens >= weight) {
+                this.queue.shift();
+                this.tokens -= weight;
+                fn().then(resolve).catch(reject);
+            } else {
+                break; // Not enough tokens for this call, exit
+            }
         }
     }
 
-    enqueue(fn) {
+    /**
+     * Queues a function to be executed when enough tokens are available.
+     * @param {Function} fn - The asynchronous operation to execute.
+     * @param {number} [weight=1] - How many tokens the call consumes.
+     * @returns {Promise}
+     */
+    enqueue(fn, weight = 1) {
         if (!this.enabled) return fn();
         return new Promise((resolve, reject) => {
-            this.queue.push({ fn, resolve, reject });
+            this.queue.push({ fn, resolve, reject, weight });
             this.startRefill();
             this.processQueue();
         });
