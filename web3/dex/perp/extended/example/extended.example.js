@@ -74,6 +74,7 @@ const orderStatus = await extendedInstance.getOrderStatus('1234567890');
 console.log(orderStatus);
 */
 
+
 console.log('Submit order');
 console.log('Calling: extended.submitOrder');
 const orderResponse = await extendedInstance.submitOrder(
@@ -84,4 +85,5 @@ const orderResponse = await extendedInstance.submitOrder(
     10
 );
 console.log(orderResponse);
+
 //console.log(await extendedInstance.test())
