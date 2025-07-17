@@ -33,7 +33,7 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 | `Bybit`      | Interface with Bybit exchange                             | `bybit-api`, `uuid`                    | `nebula-library/web3/cex/bybit/index.js`                      |
 | `Kyberswap`  | Access Kyberswap DEX aggregator                           | `ethers`, `axios`                      | `nebula-library/web3/dex/aggregator/kyberswap/index.js`       |
 | `Paradex`    | Connect to Paradex perpetual exchange                     | `starknet`, `axios`, `bignumber.js`    | `nebula-library/web3/dex/perp/paradex/index.js`               |
-| `Extended`   | Connect to Extended perpetual exchange                    | `axios`,                               | `nebula-library/web3/dex/perp/extended/index.js`              |
+| `Extended`   | Connect to Extended perpetual exchange                    | `starknet`, `axios`, 'decimal.js'      | `nebula-library/web3/dex/perp/extended/index.js`              |
 
 ---
 

@@ -10,6 +10,7 @@ const extendedInstance = new Extended(
     process.env.STARK_KEY_PUBLIC,
     process.env.L1_ADDRESS,
     process.env.VAULT_NUMBER,
+    0.1,
     extendedThrottler
 );
 
@@ -80,7 +81,7 @@ console.log('Calling: extended.submitOrder');
 const orderResponse = await extendedInstance.submitOrder(
     extendedEnum.order.type.market,
     'HYPE-USD',
-    extendedEnum.order.long,
+    extendedEnum.order.short,
     extendedEnum.order.quoteOnMainCoin,
     10
 );

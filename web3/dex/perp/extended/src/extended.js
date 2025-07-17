@@ -2,14 +2,13 @@ import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './view.model.js';
 import { wmSubmitOrder } from './write.model.js';
-import { EXTENDED_CHAIN_ID } from './constant.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
 
 
 export class Extended {
-    constructor(_apiKey, _starkKeyPrv, _starkKeyPub, _address, _vaultNr, throttler = { enqueue: fn => fn() }) {
+    constructor(_apiKey, _starkKeyPrv, _starkKeyPub, _address, _vaultNr, _slippage = 0.1, _throttler = { enqueue: fn => fn() }) {
         this.account = {
             address: _address,
             starkKeyPrv: _starkKeyPrv,
@@ -17,8 +16,8 @@ export class Extended {
             vaultNr: _vaultNr
         }
         this.instance = createInstance('https://api.extended.exchange/api/v1', { 'X-Api-Key': _apiKey });
-        this.chainId = EXTENDED_CHAIN_ID;
-        this.throttler = throttler;
+        this.slippage = _slippage
+        this.throttler = _throttler;
     }
 
     /**
@@ -151,23 +150,30 @@ export class Extended {
         return this.throttler.enqueue(() => vmGetOrderStatus(this.instance, _orderId));
     }
 
+    /**
+     * Submits a new order to the trading system with specified parameters.
+     * Utilizes a throttler to limit the rate of order submissions and calls the underlying order submission function.
+     *
+     * @async
+     * @method submitOrder
+     * @param {string} _type - The type of the order (e.g., 'limit', 'market').
+     * @param {string} _symbol - The trading symbol for the order (e.g., 'BTCUSD').
+     * @param {string} _side - The side of the order ('buy' or 'sell').
+     * @param {string} _marketUnit - The market unit for the order (e.g., 'contracts', 'coins').
+     * @param {number} _orderQty - The quantity for the order.
+     * @returns {Promise<Object>} A Promise that resolves with the result of the order submission.
+     */
     async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty) {
         return await this.throttler.enqueue(() => wmSubmitOrder(
             this.instance,
-            this.chainId,
+            this.slippage,
             this.account,
             _type,
             _symbol,
             _side,
             _marketUnit,
             _orderQty
-        ));
+        ), 5);
     }
 
-    async test() {
-        return this.throttler.enqueue(async () => {
-            const response = await this.instance.get('/info/markets');
-            return response.data;
-        });
-    }
 }
