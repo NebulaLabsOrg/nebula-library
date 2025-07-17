@@ -62,7 +62,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetWalletStatus(this.instance);
-        });
+        }, 2);
     }
 
     /**
@@ -85,7 +85,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetWalletBalances(this.instance, _token);
-        });
+        }, 2);
     }
 
     /**
@@ -106,7 +106,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetMarketData(this.instance, this._enOnlyPerp, _symbol);
-        });
+        }, 2);
     }
 
     /**
@@ -127,7 +127,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetMarketOrderSize(this.instance, _symbol);
-        });
+        }, 3);
     }
 
     /**
@@ -148,7 +148,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetFundingRateHour(this.instance, _symbol);
-        });
+        }, 3);
     }
 
     /**
@@ -169,7 +169,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetMarketOpenInterest(this.instance, _symbol);
-        });
+        }, 3);
     }
 
     /**
@@ -189,7 +189,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetOpenPositions(this.instance);
-        });
+        }, 2);
     }
 
     /**
@@ -210,7 +210,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetOpenPositionDetail(this.instance, _symbol);
-        });
+        }, 3);
     }
 
     /**
@@ -231,7 +231,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetOrderStatus(this.instance, _orderId);
-        });
+        }, 3);
     }
 
     /**
@@ -256,7 +256,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await wmSubmitOrder(this.instance, this.chainId, this.account, _type, _symbol, _side, _marketUnit, _orderQty);
-        });
+        }, 4);
     }
 
     /**
@@ -277,7 +277,7 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await wmSubmitCancelOrder(this.instance, _orderId);
-        });
+        }, 2);
     }
 
     /**
@@ -302,6 +302,6 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await wmSubmitCloseOrder(this.instance, this.chainId, this.account, _type, _symbol, _orderQty, _marketUnit, _closeAll);
-        });
+        }, 5);
     }
 }
