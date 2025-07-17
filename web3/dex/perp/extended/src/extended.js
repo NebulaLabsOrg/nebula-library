@@ -1,13 +1,28 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
-import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './view.model.js';
-import { wmSubmitOrder } from './write.model.js';
+import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
 import { extendedEnum } from './enum.js';
 
 export { extendedEnum };
 
 
+/**
+ * @class Extended
+ * @description A class for interacting with the Extended exchange API.
+ * Provides methods for onboarding, authenticating, retrieving account information, market data, balances, open positions, order management, and more for users.
+ * Utilizza un throttler per gestire la frequenza delle richieste e offre un'interfaccia estesa per operazioni di trading e gestione dell'account.
+ */
 export class Extended {
+    /**
+     * @constructor
+     * @param {string} _apiKey - The API key used to authenticate requests to the Extended exchange.
+     * @param {string} _starkKeyPrv - The user's private Stark key for signing transactions.
+     * @param {string} _starkKeyPub - The user's public Stark key for identification.
+     * @param {string} _address - The user's wallet address.
+     * @param {number} _vaultNr - The vault number associated with the user's account.
+     * @param {number} [_slippage=0.1] - Maximum allowed slippage for trades, as a decimal (e.g., 0.1 for 10%).
+     * @param {Object} [_throttler={ enqueue: fn => fn() }] - Throttler object to manage and queue API requests.
+     */
     constructor(_apiKey, _starkKeyPrv, _starkKeyPub, _address, _vaultNr, _slippage = 0.1, _throttler = { enqueue: fn => fn() }) {
         this.account = {
             address: _address,
@@ -176,4 +191,44 @@ export class Extended {
         ), 5);
     }
 
+    /**
+     * Cancella un ordine esistente nel sistema di trading utilizzando l'ID specificato.
+     * Utilizza un throttler per limitare la frequenza delle richieste di cancellazione e invoca la funzione sottostante per la cancellazione dell'ordine.
+     *
+     * @async
+     * @method submitCancelOrder
+     * @param {string} _orderId - L'ID dell'ordine da cancellare.
+     * @returns {Promise<Object>} Una Promise che si risolve con il risultato della cancellazione dell'ordine.
+     */
+    async submitCancelOrder(_orderId) {
+        return this.throttler.enqueue(() => wmSubmitCancelOrder(this.instance, _orderId));
+    }
+
+    /**
+     * Submits a close order to the trading system with the specified parameters.
+     * Uses a throttler to control the rate of close order submissions and invokes the underlying close order function.
+     *
+     * @async
+     * @method submitCloseOrder
+     * @param {string} _type - The type of the close order (e.g., 'limit', 'market').
+     * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTCUSD').
+     * @param {string} _side - The side of the close order ('buy' or 'sell').
+     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 'coins').
+     * @param {number} _orderQty - The quantity to close.
+     * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol and side.
+     * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
+     */
+    async submitCloseOrder(_type, _symbol, _side, _marketUnit, _orderQty, _closeAll = false) {
+        return this.throttler.enqueue(() => wmSubmitCloseOrder(
+            this.instance,
+            this.slippage,
+            this.account,
+            _type,
+            _symbol,
+            _side,
+            _marketUnit,
+            _orderQty,
+            _closeAll
+        ), 6);
+    }
 }

@@ -11,7 +11,7 @@ import { paradexEnum } from './enum.js';
 export { paradexEnum };
 
 /**
- * @class paradex
+ * @class Paradex
  * @description A class for interacting with the Paradex decentralized exchange. 
  * Provides methods for onboarding, authenticating, and retrieving account information for users.
  */
