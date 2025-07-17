@@ -241,8 +241,8 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
             unrealisedPnl: unrealisedPnl,
             realisedPnl: realisedPnl,
             side: side.toLowerCase(),
-            size: size,
-            value: value
+            qty: size,
+            qtyUsd: value
         };
         return createResponse(true, 'success', detail, 'extended.getOpenPositionDetail');
     } catch (error) {

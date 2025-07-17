@@ -90,12 +90,14 @@ export async function wmSubmitOrder(_instance, _slippage, _account, _type, _symb
             fee: actFeeRate,
             nonce: nonce.toString(),
             settlement,
+            postOnly: _type === extendedEnum.order.type.limit,
             selfTradeProtectionLevel: "ACCOUNT"
         };
 
         // Submit the order
         const response = await _instance.post('/user/order', body);
-        return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.id }, 'extended.submitOrder');
+        console.log('Order response:', response.data);
+        return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.externalId }, 'extended.submitOrder');
     } catch (error) {
         return createResponse(
             false,
@@ -117,9 +119,12 @@ export async function wmSubmitOrder(_instance, _slippage, _account, _type, _symb
  */
 export async function wmSubmitCancelOrder(_instance, _orderId) {
     try {
-        await _instance.delete('/user/order/' +  _orderId);
-        return createResponse(true, 'success', {orderId: _orderId}, 'extended.submitCancelOrder')
+        const params = { externalId: _orderId };
+        const url = encodeGetUrl('/user/order', params);
+        await _instance.delete(url);
+        return createResponse(true, 'success', { orderId: _orderId }, 'extended.submitCancelOrder');
     } catch (error) {
+        console.error('Error in wmSubmitCancelOrder:', error);
         return createResponse(false, error.response?.data ?? error.message, null, 'extended.submitCancelOrder');
     }
 }
@@ -149,7 +154,7 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
         const posRes = await vmGetOpenPositionDetail(_instance, _symbol);
         if (!posRes.success || !posRes.data)
             return createResponse(false, posRes.message || 'No open position found', null, 'extended.submitCloseOrder');
-        const position = posRes.data;
+        const position = posRes.data; 
         const positionSide = position.side; // 'Buy' or 'Sell'
         const closeSide = positionSide === 'long' ? extendedEnum.order.short : extendedEnum.order.long;
         const positionQty = Math.abs(parseFloat(position.qty));
@@ -178,7 +183,7 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
         }
         const { askPrice, bidPrice } = latestMarketData.data;
         const midPrice = calculateMidPrice(askPrice, bidPrice);
-        const actPrice = (_type === extendedEnum.order.type.market ? _side === extendedEnum.order.long ? midPrice + midPrice * (_slippage / 100) : midPrice - midPrice * (_slippage / 100) : midPrice).toFixed(priceDecimals);
+        const actPrice = (_type === extendedEnum.order.type.market ? closeSide === extendedEnum.order.long ? midPrice + midPrice * (_slippage / 100) : midPrice - midPrice * (_slippage / 100) : midPrice).toFixed(priceDecimals);
 
         // Determine qty to close
         let qty = _closeAll ? positionQty : _orderQty;
@@ -234,12 +239,13 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
             fee: actFeeRate,
             nonce: nonce.toString(),
             settlement,
+            postOnly: _type === extendedEnum.order.type.limit,
             selfTradeProtectionLevel: "ACCOUNT"
         };
 
         // Submit the order
         const response = await _instance.post('/user/order', body);
-        return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.id }, 'extended.submitCloseOrder');
+        return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.externalId }, 'extended.submitCloseOrder');
     } catch (error) {
         return createResponse(
             false,

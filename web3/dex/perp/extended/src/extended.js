@@ -212,22 +212,20 @@ export class Extended {
      * @method submitCloseOrder
      * @param {string} _type - The type of the close order (e.g., 'limit', 'market').
      * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTCUSD').
-     * @param {string} _side - The side of the close order ('buy' or 'sell').
-     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 'coins').
      * @param {number} _orderQty - The quantity to close.
-     * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol and side.
+     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 'coins').
+     * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol.
      * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
      */
-    async submitCloseOrder(_type, _symbol, _side, _marketUnit, _orderQty, _closeAll = false) {
+    async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll = false) {
         return this.throttler.enqueue(() => wmSubmitCloseOrder(
             this.instance,
             this.slippage,
             this.account,
             _type,
             _symbol,
-            _side,
-            _marketUnit,
             _orderQty,
+            _marketUnit,
             _closeAll
         ), 6);
     }
