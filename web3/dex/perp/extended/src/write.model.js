@@ -185,16 +185,7 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
         const actPrice = (_type === extendedEnum.order.type.market ? closeSide === extendedEnum.order.long ? midPrice + midPrice * (_slippage / 100) : midPrice - midPrice * (_slippage / 100) : midPrice).toFixed(priceDecimals);
 
         // Determine qty to close
-        console.log(`Position quantity: ${positionQty}`);
-        console.log(`Order quantity: ${_orderQty}`);
-        console.log(`Close all: ${_closeAll}`);
-
         let qty = _closeAll ? positionQty : _orderQty;
-
-        console.log(`Initial quantity: ${qty}`);
-        console.log(`Market unit: ${_marketUnit}`);
-        console.log(`Actual price: ${actPrice}`);
-        console.log(`Quantity step: ${qtyStep}`);
         qty = formatOrderQuantity(
             qty,
             _closeAll ? false : _marketUnit === extendedEnum.order.quoteOnSecCoin,
@@ -202,7 +193,6 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
             qtyStep
         );
 
-        console.log(`Formatted quantity: ${qty}`);
         if (qty > positionQty) { 
             qty = formatOrderQuantity(
                 positionQty,
