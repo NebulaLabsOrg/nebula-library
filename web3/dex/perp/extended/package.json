@@ -1,0 +1,13 @@
+{
+  "name": "extended",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.9.0",
+    "decimal.js": "^10.6.0",
+    "starknet": "^7.6.4"
+  },
+  "devDependencies": {
+    "dotenv": "^16.5.0"
+  }
+}
