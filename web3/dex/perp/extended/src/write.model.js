@@ -96,7 +96,6 @@ export async function wmSubmitOrder(_instance, _slippage, _account, _type, _symb
 
         // Submit the order
         const response = await _instance.post('/user/order', body);
-        console.log('Order response:', response.data);
         return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.externalId }, 'extended.submitOrder');
     } catch (error) {
         return createResponse(
@@ -186,17 +185,28 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
         const actPrice = (_type === extendedEnum.order.type.market ? closeSide === extendedEnum.order.long ? midPrice + midPrice * (_slippage / 100) : midPrice - midPrice * (_slippage / 100) : midPrice).toFixed(priceDecimals);
 
         // Determine qty to close
+        console.log(`Position quantity: ${positionQty}`);
+        console.log(`Order quantity: ${_orderQty}`);
+        console.log(`Close all: ${_closeAll}`);
+
         let qty = _closeAll ? positionQty : _orderQty;
+
+        console.log(`Initial quantity: ${qty}`);
+        console.log(`Market unit: ${_marketUnit}`);
+        console.log(`Actual price: ${actPrice}`);
+        console.log(`Quantity step: ${qtyStep}`);
         qty = formatOrderQuantity(
             qty,
-            _marketUnit === extendedEnum.order.quoteOnSecCoin,
+            _closeAll ? false : _marketUnit === extendedEnum.order.quoteOnSecCoin,
             actPrice,
             qtyStep
         );
+
+        console.log(`Formatted quantity: ${qty}`);
         if (qty > positionQty) { 
             qty = formatOrderQuantity(
                 positionQty,
-                _marketUnit === extendedEnum.order.quoteOnSecCoin,
+                _closeAll ? false : _marketUnit === extendedEnum.order.quoteOnSecCoin,
                 actPrice,
                 qtyStep
             );

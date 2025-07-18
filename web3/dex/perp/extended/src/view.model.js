@@ -260,11 +260,10 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
  */
 export async function vmGetOrderStatus(_instance, _orderId) {
     try {
-        const params = { id: _orderId }
-        const url = encodeGetUrl('/user/orders', params)
+        const url = encodeGetUrl('/user/orders/external/' + _orderId)
         const response = await _instance.get(url);
-        const order = response.data.data;
-        if (!Array.isArray(order) || order.length === 0) {
+        const order = response.data.data[0];
+        if (!order) {
             return createResponse(false, 'No order found', null, 'extended.getOrderStatus');
         }
         const { market, type, status, qty, filledQty, averagePrice } = order;
@@ -279,6 +278,6 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(true, 'success', detail, 'extended.getOrderStatus');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOrderStatus');        
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOrderStatus');  
     }
 }

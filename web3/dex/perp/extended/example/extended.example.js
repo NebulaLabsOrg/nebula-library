@@ -2,6 +2,7 @@ import { Extended, extendedEnum } from '../index.js'
 import { TokenBucketThrottler } from '../../../../../utils/index.js';
 import 'dotenv/config';
 
+// for processing status refer to enum : https://api.docs.extended.exchange/#get-order-by-id
 // rate per minut for Extended API : 1000
 const extendedThrottler = new TokenBucketThrottler(1000);
 const extendedInstance = new Extended(
@@ -14,77 +15,59 @@ const extendedInstance = new Extended(
     extendedThrottler
 );
 
-/*
-console.log('Get wallet status');
-console.log('Calling: extended.getWalletStatus');
-const walletStatus = await extendedInstance.getWalletStatus();
-console.log(walletStatus);
-*/
-/*
-console.log('Get wallet balance');
+console.log('Get token quantity');
 console.log('Calling: extended.getWalletBalance');
 const walletBalance = await extendedInstance.getWalletBalance();
 console.log(walletBalance);
-*/
-/*
-console.log('Get market data');
-console.log('Calling: extended.getMarketData');
-const marketData = await extendedInstance.getMarketData('BTC-USD');
-console.log(marketData);
-*/
-/*
-console.log('Get latest market data');
-console.log('Calling: extended.getLatestMarketData');
-const latestMarketData = await extendedInstance.getLatestMarketData('HYPE-USD');
-console.log(latestMarketData);
-*/
-/*
-console.log('Get market order size');
-console.log('Calling: extended.getMarketOrderSize');
-const marketOrderSize = await extendedInstance.getMarketOrderSize('HYPE-USD');
-console.log(marketOrderSize);
-*/
-/*
-console.log('Get funding rate hour');
-console.log('Calling: extended.getFundingRateHour');
-const fundingRateHour = await extendedInstance.getFundingRateHour('HYPE-USD');
-console.log(fundingRateHour);
-*/
-/*
-console.log('Get market open interest');
-console.log('Calling: extended.getMarketOpenInterest');
-const marketOpenInterest = await extendedInstance.getMarketOpenInterest('HYPE-USD');
-console.log(marketOpenInterest);
-*/
-/*
+
+console.log('Open a position with all available balance');
+console.log('Calling: extended.submitOrder');
+const orderResponse = await extendedInstance.submitOrder(
+    extendedEnum.order.type.limit,
+    'HYPE-USD',
+    extendedEnum.order.long,
+    extendedEnum.order.quoteOnSecCoin,
+    walletBalance.data.availableForTrade
+);
+console.log(orderResponse);
+
+console.log('Check order status');
+console.log('Calling: extended.getOrderStatus');
+let markets = await extendedInstance.getOrderStatus(orderResponse.data.orderId);
+while (markets.data.status !== 'FILLED') { //in case of REJECTED request is again!!
+    console.log(`Waiting for order to be filled...state `, markets.data.status);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before checking again
+    markets = await extendedInstance.getOrderStatus(orderResponse.data.orderId);
+}
+console.log(markets);
+
 console.log('Get open positions');
 console.log('Calling: extended.getOpenPositions');
 const openPositions = await extendedInstance.getOpenPositions();
 console.log(openPositions);
-*/
-/*
-console.log('Get open position detail');
+
+console.log('Get position status and market data');
 console.log('Calling: extended.getOpenPositionDetail');
-const openPositionDetail = await extendedInstance.getOpenPositionDetail('HYPE-USD');
+const openPositionDetail = await extendedInstance.getOpenPositionDetail(openPositions.data.markets[0]);
 console.log(openPositionDetail);
-*/
-/*
-console.log('Get order status');
-console.log('Calling: extended.getOrderStatus');
-const orderStatus = await extendedInstance.getOrderStatus('1234567890');
-console.log(orderStatus);
-*/
 
-
-console.log('Submit order');
-console.log('Calling: extended.submitOrder');
-const orderResponse = await extendedInstance.submitOrder(
-    extendedEnum.order.type.market,
-    'HYPE-USD',
-    extendedEnum.order.short,
-    extendedEnum.order.quoteOnMainCoin,
-    10
+console.log('Close the full position');
+console.log('Calling: extended.submitCloseOrder');
+const closeOrderResponse = await extendedInstance.submitCloseOrder(
+    extendedEnum.order.type.limit,
+    openPositionDetail.data.symbol,
+    '1',
+    extendedEnum.order.quoteOnSecCoin,
+    true
 );
-console.log(orderResponse);
+console.log(closeOrderResponse);
 
-//console.log(await extendedInstance.test())
+console.log('Check close order status');
+console.log('Calling: extended.getOrderStatus');
+let close = await extendedInstance.getOrderStatus(closeOrderResponse.data.orderId);
+while (close?.data?.status !== 'FILLED') {
+    console.log(`Waiting for order to be filled...state `, close.data.status);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before checking again
+    close = await extendedInstance.getOrderStatus(closeOrderResponse.data.orderId);
+}
+console.log(close);
