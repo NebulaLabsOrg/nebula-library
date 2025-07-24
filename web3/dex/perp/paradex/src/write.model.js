@@ -127,14 +127,14 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
             qty,
             _closeAll ? false : _marketUnit === paradexEnum.order.quoteOnSecCoin,
             midPrice,
-            marketSize.data.qtyStep
+            marketOrderSize.data.qtyStep
         );
         if (qty > positionQty) { 
             qty = formatOrderQuantity(
                 positionQty,
                 _closeAll ? false : _marketUnit === paradexEnum.order.quoteOnSecCoin,
                 midPrice,
-                marketSize.data.qtyStep
+                marketOrderSize.data.qtyStep
             );
         };
 
