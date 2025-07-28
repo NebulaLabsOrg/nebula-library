@@ -1,9 +1,10 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetMarketData } from './view.model.js'
+import { vmGetMarketOrderSize, vmGetOpenPositionDetail } from './view.model.js'
 import { signOrder } from './sign.model.js'
 import { calculateMidPrice, formatOrderQuantity } from './utils.js';
 import { paradexEnum } from './enum.js';
+import { MARKET_INSTRUCTION, LIMIT_INSTRUCTION, REDUCE_ONLY } from './constants.js';
 
 /**
  * Submits a new order to the Paradex API after validating and formatting the order parameters.
@@ -40,7 +41,7 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         if (parseFloat(qty) < marketSize.data.minOrderQty)
             return createResponse(false, `Order quantity must be greater than ${marketSize.data.minOrderQty}`, null, 'paradex.submitOrder');
 
-        const instruction = _type === paradexEnum.order.type.limit ? 'GTC': 'IOC'
+        const instruction = _type === paradexEnum.order.type.limit ? LIMIT_INSTRUCTION : MARKET_INSTRUCTION
         const message = {
             instruction: instruction,
             market: _symbol,
@@ -138,28 +139,34 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
                 midPrice,
                 marketOrderSize.data.qtyStep
             );
-        };
+        }
 
         if (parseFloat(qty) < marketOrderSize.data.minOrderQty)
             return createResponse(false, `Order quantity must be greater than ${marketOrderSize.data.minOrderQty}`, null, 'paradex.submitCloseMarketOrder');
 
-        const instruction = _type === paradexEnum.order.type.limit ? 'GTC': 'IOC'
+        const instruction = _type === paradexEnum.order.type.limit ? LIMIT_INSTRUCTION : MARKET_INSTRUCTION;
+
+        // Costruisci il messaggio per la firma (senza flags)
         const message = {
             instruction: instruction,
             market: _symbol,
             side: closeSide,
             size: qty,
-            type: _type
+            type: _type,
         };
-        if (_type === paradexEnum.order.type.limit) { //add price only for limit orders
+        if (_type === paradexEnum.order.type.limit) {
             message.price = midPrice.toFixed(marketOrderSize.data.priceDecimals);
         }
+
         const { signature, timestampMs } = signOrder(_chainId, _account, message);
+
         const params = {
             ...message,
             signature: signature,
             signature_timestamp: timestampMs,
+            flags: [REDUCE_ONLY],
         };
+
         const response = await _instance.post('/orders', params);
         return createResponse(true, 'success', {symbol: _symbol, orderId: response.data.id}, 'paradex.submitCloseMarketOrder');
     } catch (error) {

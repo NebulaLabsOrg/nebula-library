@@ -2,6 +2,12 @@
 export const DAY_MS = 24 * 60 * 60 * 1000;
 // Chain ID used for Paradex on the private StarkNet Paraclear mainnet
 export const PARADEX_CHAIN_ID = 'PRIVATE_SN_PARACLEAR_MAINNET';
+// The order must be filled entirely immediately or it is canceled.
+export const MARKET_INSTRUCTION = 'IOC'; // Fill Or Cancel
+// The order remains active until a specified time or until it is filled or canceled.
+export const LIMIT_INSTRUCTION = 'GTC'; // Good Till Canceled
+// The order is a limit order that can only reduce an existing position. for close orders.
+export const REDUCE_ONLY = 'REDUCE_ONLY';
 /**
  * Defines the EIP-712 domain types for StarkNet.
  *

@@ -239,6 +239,7 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
             fee: actFeeRate,
             nonce: nonce.toString(),
             settlement,
+            reduceOnly: true,
             postOnly: _type === extendedEnum.order.type.limit,
             selfTradeProtectionLevel: "ACCOUNT"
         };
