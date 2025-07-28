@@ -6,11 +6,11 @@ export class TokenBucketThrottler {
     /**
      * @constructor
      * @param {number} limitPerMinute - Maximum number of operations per minute.
-     * @param {boolean} [enabled=true] - Whether throttling is enabled.
      * @param {number} [slippageFactor=0.9] - Safety margin (e.g., 0.9 = 90% of the limit).
+     * @param {boolean} [enabled=true] - Whether throttling is enabled.
      * @param {boolean} [debug=false] - Enables debug logs.
      */
-    constructor(limitPerMinute, enabled = true, slippageFactor = 0.9, debug = false) {
+    constructor(limitPerMinute, slippageFactor = 0.9, enabled = true, debug = false) {
         this.capacity = Math.floor(limitPerMinute * slippageFactor); // Safe max tokens per minute
         this.refillRate = this.capacity / 60; // Safe tokens per second
         this.tokens = Math.floor(this.refillRate);

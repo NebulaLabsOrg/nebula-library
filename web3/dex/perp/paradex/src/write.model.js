@@ -44,11 +44,13 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: midPrice.toFixed(marketSize.data.priceDecimals),
             side: _side,
             size: qty,
             type: _type
         };
+        if (_type === paradexEnum.order.type.limit) { //add price only for limit orders
+            message.price = midPrice.toFixed(marketSize.data.priceDecimals);
+        }
         const { signature, timestampMs } = signOrder(_chainId, _account, message);
         const params = {
             ...message,
@@ -145,11 +147,13 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: midPrice.toFixed(marketOrderSize.data.priceDecimals),
             side: closeSide,
             size: qty,
             type: _type
         };
+        if (_type === paradexEnum.order.type.limit) { //add price only for limit orders
+            message.price = midPrice.toFixed(marketOrderSize.data.priceDecimals);
+        }
         const { signature, timestampMs } = signOrder(_chainId, _account, message);
         const params = {
             ...message,

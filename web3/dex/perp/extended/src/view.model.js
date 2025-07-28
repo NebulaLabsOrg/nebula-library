@@ -232,7 +232,14 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
         const response = await _instance.get(url);
         const positionData = response.data.data;
         if (!Array.isArray(positionData) || positionData.length === 0) {
-            return createResponse(false, 'No position found', null, 'extended.getOpenPositionDetail');
+            const params = { market: _symbol};
+            const url = encodeGetUrl('/user/positions/history', params);
+            const historyResponse = await _instance.get(url);
+            if (!Array.isArray(historyResponse.data.data) || historyResponse.data.data.length === 0) {
+                return createResponse(false, 'No position found', null, 'extended.getOpenPositionDetail');
+            }else{
+                return createResponse(true, 'Position closed', null, 'extended.getOpenPositionDetail');
+            }
         }
         const { openPrice, unrealisedPnl, realisedPnl, side, size, value } = positionData[0];
         const detail = {

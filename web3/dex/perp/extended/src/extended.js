@@ -149,7 +149,7 @@ export class Extended {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the position status data or an error message.
      */
     async getOpenPositionDetail(_symbol) {
-        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this.instance, _symbol));
+        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this.instance, _symbol), 2);
     }
 
     /**
