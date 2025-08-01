@@ -1,6 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { calculateMidPrice } from './utils.js';
+import { calculateMidPrice, fromAPRtoAPY, fromROI30dToAPR } from './utils.js';
 import { paradexEnum } from './enum.js';
 
 /**
@@ -306,4 +306,36 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getOrderStatus'); 
       }
     }
+}
+
+/**
+ * Retrieves the performance metrics of a specific vault from the Paradex API, including ROI, APR, and APY.
+ *
+ * @async
+ * @function vmGetVaultPerformance
+ * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
+ * @param {string} _vaultAddress - The address of the vault to retrieve performance data for.
+ * @returns {Promise<Object>} A promise that resolves to a response object containing vault performance metrics or an error message.
+ */
+export async function vmGetVaultPerformance(_instance, _vaultAddress){
+  try {
+    const params = { address: _vaultAddress };
+    const url = encodeGetUrl('/vaults/summary', params);
+    const responce = await _instance.get(url);
+    const apr = fromROI30dToAPR(responce.data.results[0].roi_30d);
+    const apy = fromAPRtoAPY(apr, 365);
+    return createResponse(
+        true,
+        'success',
+        {
+          vault: responce.data.results[0].address,
+          roi30d: Number(responce.data.results[0].roi_30d),
+          apr: apr,
+          apy: apy
+        },
+        'paradex.getVaultPerformance'
+    );
+  } catch (error) {
+    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getVaultPerformance');
+  }
 }
