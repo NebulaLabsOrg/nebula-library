@@ -169,3 +169,23 @@ export function formatOrderQuantity(_orderQty, _isQuoteOnSecCoin, _price, _qtySt
     const stepDecimals = (_qtyStep.toString().split('.')[1] || '').length;
     return qty.toFixed(stepDecimals);
 }
+
+/**
+ * Converts a 30-day ROI (Return on Investment) value to an APR (Annual Percentage Rate) percentage.
+ * @param {number} _roi30d - The 30-day ROI value (e.g., 0.05 for 5%).
+ * @returns {number} The equivalent APR as a percentage.
+ */
+export function fromROI30dToAPR(_roi30d) {
+  return _roi30d * 100 * 12; // Convert to APR as a percentage
+}
+
+/**
+ * Calculates the APY (Annual Percentage Yield) from APR and the number of compounding periods per year.
+ * @param {number} aprPercent - Annual Percentage Rate as a percent (e.g., 5 for 5%)
+ * @param {number} m - Number of compounding periods per year (e.g., 12 for monthly)
+ * @returns {number} APY as a percent (e.g., 5.12 for 5.12%)
+ */
+export function fromAPRtoAPY(_aprPercent, _m) {
+  const aprDecimal = _aprPercent / 100;
+  return (Math.pow(1 + aprDecimal / _m, _m) - 1) * 100;
+}
