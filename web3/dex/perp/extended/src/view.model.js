@@ -312,7 +312,7 @@ export async function vmGetEarnedRewards(_instance){
             total: total.toString(),
             latest: {
                 amount: latestEpoch.pointsReward,
-                date: latestEpoch.endDate
+                period: (latestEpoch.startDate).replace(/-/g, '/') + '-' + (latestEpoch.endDate).replace(/-/g, '/')
             }
         }, 'extended.getEarnedRewards');
     } catch (error) {
