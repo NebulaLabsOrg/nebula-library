@@ -23,3 +23,14 @@ export function calculateMidPrice(_askPrice, _bidPrice) {
     const midPrice = Number(midPriceRaw).toFixed(maxDecimals);
     return Number(midPrice);
 }
+
+/**
+ * Returns the current timestamp as a string representing the number of milliseconds elapsed since January 1, 1970 00:00:00 UTC.
+ * @returns {string} The current timestamp in milliseconds.
+ * @example
+ * const timestamp = getTimestamp();
+ * console.log(timestamp); // "1717691234567"
+ */
+export function getTimestamp() {
+    return Date.now().toString();
+}
