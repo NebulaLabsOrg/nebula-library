@@ -288,3 +288,34 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOrderStatus');  
     }
 }
+
+/**
+ * @async
+ * @function vmGetEarnedRewards
+ * @description Retrieves the total earned rewards and the latest reward details for a user by making a request to the API using the provided client instance. Returns a standardized response object containing the total points earned and the latest epoch's reward amount and date, or an error message if the request fails.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the total earned rewards, latest reward details, or an error message.
+ */
+export async function vmGetEarnedRewards(_instance){
+    try {
+        const response = await _instance.get('/user/rewards/earned');
+        const rewards = response.data.data;
+        let total = 0;
+        rewards.forEach(season => {
+            season.epochRewards.forEach(reward => {
+                total += Number(reward.pointsReward);
+            });
+        });
+        const latestSeason = rewards[rewards.length - 1];
+        const latestEpoch = latestSeason.epochRewards[latestSeason.epochRewards.length - 1];
+        return createResponse(true, 'success', { 
+            total: total.toString(),
+            latest: {
+                amount: latestEpoch.pointsReward,
+                date: latestEpoch.endDate
+            }
+        }, 'extended.getEarnedRewards');
+    } catch (error) {
+        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getEarnedRewards');
+    }
+}
