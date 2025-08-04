@@ -44,8 +44,8 @@ Automate data extraction from websites and APIs.
 
 | **Module**   | **Purpose**                                    | **Dependencies**         | **Path**                           |
 |--------------|------------------------------------------------|--------------------------|------------------------------------|
-| `Extended`    | Scrapes data from specified Extended pages    | `playwright`.            | `nebula-library/scraper/extended/index.js`  |
-| `DefX`    | Scrapes data from specified DefX pages    | `playwright`.            | `nebula-library/scraper/defx/index.js`  |
+| `Extended`    | Scrapes data from specified Extended pages    | `playwright`            | `nebula-library/scraper/extended/index.js`  |
+| `DefX`    | Scrapes data from specified DefX pages    | `playwright`            | `nebula-library/scraper/defx/index.js`  |
 
 #### Notice
  Make sure to install:
