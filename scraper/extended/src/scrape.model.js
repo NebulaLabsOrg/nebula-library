@@ -23,10 +23,10 @@ export async function sGetVaultPerformance(_url) {
         const value = await page.evaluate((labelToFind) => {
             const el = Array.from(document.querySelectorAll('label, div, span'))
                 .find(e => e.textContent.trim() === labelToFind);
-            if (!el) return null;
+            if (!el) return createResponse(false, 'Failed scraping to find element', null, 'extendedScraper.getVaultPerformance');
             let sibling = el.nextElementSibling;
             if (sibling && /\d/.test(sibling.textContent)) return sibling.textContent.trim();
-            return null;
+            return createResponse(false, 'Failed scraping to find sibling element', null, 'extendedScraper.getVaultPerformance');
         }, labelToFind);
 
         const apr = Number((value || '').replace(/[%\s]+/g, ''));
@@ -34,7 +34,8 @@ export async function sGetVaultPerformance(_url) {
             true,
             'success',
             {
-                vault: '0x7779Fea0755ce68b7EA096335144690Ed299b0C9',
+                vault: 'Extended Vault',
+                address: '0x7779Fea0755ce68b7EA096335144690Ed299b0C9',
                 roi30d: fromAPRtoROI30d(apr || 0),
                 apr,
                 apy: fromAPRtoAPY(apr, 365) || 0,
