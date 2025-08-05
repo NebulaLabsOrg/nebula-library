@@ -38,6 +38,33 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 
 ---
 
+### 📦 Scraper Module
+
+Automate data extraction from websites and APIs.
+
+| **Module**   | **Purpose**                                    | **Dependencies**         | **Path**                           |
+|--------------|------------------------------------------------|--------------------------|------------------------------------|
+| `Extended`    | Scrapes data from specified Extended pages    | `playwright`            | `nebula-library/scraper/extended/index.js`  |
+| `DefX`    | Scrapes data from specified DefX pages    | `playwright`            | `nebula-library/scraper/defx/index.js`  |
+
+#### Notice
+ Make sure to install:
+ ```bash
+  npx playwright install
+ ```
+ If is used on a cloud service like Render, make sure to folllow the steps below:
+ - Build Command: 
+ ```bash
+  npm install && npx playwright install
+ ```
+ - Start Command: 
+ ```bash
+  npm start
+ ```
+ - Add the following environment variable: `PLAYWRIGHT_BROWSERS_PATH=0`
+
+---
+
 ### 🛠️ General Utility Modules
 
 🧰 A collection of helper functions to enhance your development workflow.

@@ -328,7 +328,8 @@ export async function vmGetVaultPerformance(_instance, _vaultAddress){
         true,
         'success',
         {
-          vault: responce.data.results[0].address,
+          vault: 'Gigavault',
+          address: responce.data.results[0].address,
           roi30d: Number(responce.data.results[0].roi_30d),
           apr: apr,
           apy: apy
