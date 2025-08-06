@@ -13,5 +13,5 @@ export class Edgex {
         this.instance = createInstance('https://pro.edgex.exchange/api/v1');
         this.throttler = throttler;
     }
-    
+
 }
