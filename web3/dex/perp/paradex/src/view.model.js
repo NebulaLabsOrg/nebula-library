@@ -319,7 +319,7 @@ export async function vmGetOrderStatus(_instance, _orderId) {
  */
 export async function vmGetVaultPerformance(_instance, _vaultAddress){
   try {
-    const params = { address: _vaultAddress };
+    const params = { address: _vaultAddress }; // if not working the vault address try the token address for the vault
     const url = encodeGetUrl('/vaults/summary', params);
     const responce = await _instance.get(url);
     const apr = fromROI30dToAPR(responce.data.results[0].roi_30d);
@@ -328,11 +328,12 @@ export async function vmGetVaultPerformance(_instance, _vaultAddress){
         true,
         'success',
         {
-          vault: 'Gigavault',
+          vault: '-',
           address: responce.data.results[0].address,
           roi30d: Number(responce.data.results[0].roi_30d),
           apr: apr,
-          apy: apy
+          apy: apy,
+          tokenPrice: Number(responce.data.results[0].vtoken_price),
         },
         'paradex.getVaultPerformance'
     );
