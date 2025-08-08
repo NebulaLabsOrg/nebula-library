@@ -11,7 +11,7 @@ const defxInstance = new Defx(
     defxThrottler
 );
 
-console.log('Get earned rewards');
-console.log('Calling: defx.getEarnedRewards');
-const earnedRewards = await defxInstance.getEarnedRewards();
-console.log(earnedRewards);
+console.log('Get earned points');
+console.log('Calling: defx.getEarnedPoints');
+const earnedPoints = await defxInstance.getEarnedPoints();
+console.log(earnedPoints);

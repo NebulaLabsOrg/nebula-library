@@ -22,7 +22,7 @@ export async function vmGetWalletStatus(_instance) {
             'extended.getWalletStatus'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getWalletStatus');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getWalletStatus');
     }
 }
 
@@ -47,7 +47,7 @@ export async function vmGetWalletBalance(_instance) {
             'extended.getWalletBalance'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getWalletBalance');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getWalletBalance');
     }
 }
 
@@ -76,7 +76,7 @@ export async function vmGetMarketData(_instance, _symbol = '') {
             : [];
         return createResponse(true, 'success', markets, 'extended.getMarketData');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getMarketData');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getMarketData');
     }
 }
 
@@ -94,7 +94,7 @@ export async function vmGetLatestMarketData(_instance, _symbol) {
         const response = await _instance.get(url);
         return createResponse(true, 'success', response.data.data, 'extended.getLatestMarketData');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getLatestMarketData');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getLatestMarketData');
     }
 }
 
@@ -127,7 +127,7 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
             'extended.getMarketOpenInterest'
         );
     }catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getMarketOrderSize');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getMarketOrderSize');
     }
 }
 
@@ -156,7 +156,7 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
             'extended.getFundingRateHour'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getFundingRateHour');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getFundingRateHour');
     }
 }
 
@@ -187,7 +187,7 @@ export async function vmGetMarketOpenInterest(_instance, _symbol){
             'extended.getMarketOpenInterest'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getMarketOpenInterest');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getMarketOpenInterest');
     }
 }
 
@@ -213,7 +213,7 @@ export async function vmGetOpenPositions(_instance) {
             'extended.getOpenPositions'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOpenPositions');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getOpenPositions');
     }
 }
 
@@ -253,7 +253,7 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
         };
         return createResponse(true, 'success', detail, 'extended.getOpenPositionDetail');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOpenPositionDetail');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getOpenPositionDetail');
     }
 }
 
@@ -285,18 +285,18 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(true, 'success', detail, 'extended.getOrderStatus');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getOrderStatus');  
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getOrderStatus');  
     }
 }
 
 /**
  * @async
- * @function vmGetEarnedRewards
- * @description Retrieves the total earned rewards and the latest reward details for a user by making a request to the API using the provided client instance. Returns a standardized response object containing the total points earned and the latest epoch's reward amount and date, or an error message if the request fails.
+ * @function vmGetEarnedPoints
+ * @description Retrieves the total earned points and the latest point details for a user by making a request to the API using the provided client instance. Returns a standardized response object containing the total points earned and the latest epoch's point amount and date, or an error message if the request fails.
  * @param {Object} _instance - The API client instance used to perform the request.
- * @returns {Promise<Object>} A Promise that resolves with a response object containing the total earned rewards, latest reward details, or an error message.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the total earned points, latest point details, or an error message.
  */
-export async function vmGetEarnedRewards(_instance){
+export async function vmGetEarnedPoints(_instance){
     try {
         const response = await _instance.get('/user/rewards/earned');
         const rewards = response.data.data;
@@ -314,8 +314,8 @@ export async function vmGetEarnedRewards(_instance){
                 amount: latestEpoch.pointsReward,
                 period: (latestEpoch.startDate).replace(/-/g, '/') + '-' + (latestEpoch.endDate).replace(/-/g, '/')
             }
-        }, 'extended.getEarnedRewards');
+        }, 'extended.getEarnedPoints');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.getEarnedRewards');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.getEarnedPoints');
     }
 }
