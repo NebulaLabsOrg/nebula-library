@@ -1,5 +1,5 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
-import { vmGetEarnedRewards } from './view.model.js';
+import { vmGetEarnedPoints } from './view.model.js';
 import { defxEnum } from './enum.js';
 
 export { defxEnum };
@@ -26,16 +26,16 @@ export class Defx {
     }
 
     /**
-     * Retrieves the earned rewards for the authenticated user on Paradex.
+     * Retrieves the earned points for the authenticated user on Paradex.
      * Uses a throttler to enqueue the request, ensuring rate limits are respected.
-     * Calls the underlying function to fetch the earned rewards using the user's secret API key.
+     * Calls the underlying function to fetch the earned points using the user's secret API key.
      *
      * @async
-     * @method getEarnedRewards
-     * @returns {Promise<Object>} A Promise that resolves with the response containing the earned rewards data or an error message.
+     * @method getEarnedPoints
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the earned points data or an error message.
      */
-    getEarnedRewards(){
-        return this.throttler.enqueue(() => vmGetEarnedRewards(this.instance, this.account.secretApiKey), 2);
+    getEarnedPoints(){
+        return this.throttler.enqueue(() => vmGetEarnedPoints(this.instance, this.account.secretApiKey), 2);
     }
 
 }

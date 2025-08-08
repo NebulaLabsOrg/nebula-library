@@ -61,7 +61,7 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const response = await _instance.post('/orders', params);
         return createResponse(true, 'success', {symbol: _symbol, orderId: response.data.id}, 'paradex.submitOrder');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'paradex.submitOrder');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.submitOrder');
     }
 }
 
@@ -79,7 +79,7 @@ export async function wmSubmitCancelOrder(_instance, _orderId) {
         await _instance.delete('/orders/' +  _orderId);
         return createResponse(true, 'success', {orderId: _orderId}, 'paradex.submitCancelOrder')
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'paradex.submitCancelOrder');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.submitCancelOrder');
     }
 }
 
@@ -170,6 +170,6 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
         const response = await _instance.post('/orders', params);
         return createResponse(true, 'success', {symbol: _symbol, orderId: response.data.id}, 'paradex.submitCloseMarketOrder');
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'paradex.submitCloseMarketOrder');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.submitCloseMarketOrder');
     }
 }

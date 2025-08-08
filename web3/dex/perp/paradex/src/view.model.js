@@ -25,7 +25,7 @@ export async function vmGetWalletStatus(_instance) {
             'paradex.getWalletStatus'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getWalletStatus');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getWalletStatus');
     }
 }
 
@@ -49,7 +49,7 @@ export async function vmGetWalletBalances(_instance, _token = '') {
     }
     return createResponse(true, 'success', response.data.results, 'paradex.getWalletBalances');
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getWalletBalances');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getWalletBalances');
   }
 }
 
@@ -73,7 +73,7 @@ export async function vmGetMarketData(_instance, _onlyPerp = false, _symbol = ''
       : response.data.results;
     return createResponse(true, 'success', markets, 'paradex.getMarketData');
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getMarketData');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getMarketData');
   }
 }
 
@@ -108,7 +108,7 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
             'paradex.getMarketOpenInterest'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getMarketOrderSize');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getMarketOrderSize');
     }
 }
 
@@ -141,7 +141,7 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
       'paradex.getFundingRateHour'
     );
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getFundingRateHour');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getFundingRateHour');
   }
 }
 
@@ -173,7 +173,7 @@ export async function vmGetMarketOpenInterest(_instance, _symbol) {
       'paradex.getMarketOpenInterest'
     );
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getMarketOpenInterest');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getMarketOpenInterest');
   }
 }
 
@@ -199,7 +199,7 @@ export async function vmGetOpenPositions(_instance) {
       : [];
     return createResponse(true, 'success', { openPositions: openPositionsCount, markets }, 'paradex.getOpenPositions');
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getOpenPositions');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getOpenPositions');
   }
 }
 
@@ -249,7 +249,7 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
     };
     return createResponse(true, 'success', detail, 'paradex.getOpenPositionDetail');
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getOpenPositionDetail');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getOpenPositionDetail');
   }
 }
 
@@ -303,7 +303,7 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(false, 'Order not found', null, 'paradex.getOrderStatus');
       } catch (error) {
-        return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getOrderStatus'); 
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getOrderStatus'); 
       }
     }
 }
@@ -337,6 +337,6 @@ export async function vmGetVaultPerformance(_instance, _vaultAddress){
         'paradex.getVaultPerformance'
     );
   } catch (error) {
-    return createResponse(false, error.response?.data ?? error.message, null, 'paradex.getVaultPerformance');
+    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getVaultPerformance');
   }
 }

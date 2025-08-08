@@ -2,7 +2,7 @@ import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { 
     vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize,
     vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus,
-    vmGetEarnedRewards
+    vmGetEarnedPoints
 } from './view.model.js';
 import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
 import { extendedEnum } from './enum.js';
@@ -170,15 +170,15 @@ export class Extended {
     }
 
     /**
-     * Retrieves the earned rewards for the authenticated user on Paradex.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the earned rewards.
+     * Retrieves the earned points for the authenticated user on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to fetch the earned points.
      *
      * @async
-     * @method getEarnedRewards
-     * @returns {Promise<Object>} A Promise that resolves with the response containing the earned rewards data or an error message.
+     * @method getEarnedPoints
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the earned points data or an error message.
      */
-    async getEarnedRewards() {
-        return this.throttler.enqueue(() => vmGetEarnedRewards(this.instance));
+    async getEarnedPoints() {
+        return this.throttler.enqueue(() => vmGetEarnedPoints(this.instance));
     }
 
     /**

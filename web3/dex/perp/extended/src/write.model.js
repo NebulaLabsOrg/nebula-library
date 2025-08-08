@@ -100,7 +100,7 @@ export async function wmSubmitOrder(_instance, _slippage, _account, _type, _symb
     } catch (error) {
         return createResponse(
             false,
-            error.response?.data ?? error.message,
+            error.response?.data?.message ?? error.message,
             null,
             'extended.submitOrder'
         );
@@ -124,7 +124,7 @@ export async function wmSubmitCancelOrder(_instance, _orderId) {
         return createResponse(true, 'success', { orderId: _orderId }, 'extended.submitCancelOrder');
     } catch (error) {
         console.error('Error in wmSubmitCancelOrder:', error);
-        return createResponse(false, error.response?.data ?? error.message, null, 'extended.submitCancelOrder');
+        return createResponse(false, error.response?.data?.message ?? error.message, null, 'extended.submitCancelOrder');
     }
 }
 
@@ -250,7 +250,7 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
     } catch (error) {
         return createResponse(
             false,
-            error.response?.data ?? error.message,
+            error.response?.data?.message ?? error.message,
             null,
             'extended.submitCloseOrder'
         );
