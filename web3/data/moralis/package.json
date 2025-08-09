@@ -1,12 +1,11 @@
 {
-  "name": "kyberswap",
+  "name": "moralis",
   "main": "index.js",
   "type": "module",
   "dependencies": {
-    "axios": "^1.9.0",
-    "ethers": "^6.14.4"
+    "axios": "^1.11.0"
   },
   "devDependencies": {
-    "dotenv": "^16.5.0"
+    "dotenv": "^17.2.1"
   }
 }

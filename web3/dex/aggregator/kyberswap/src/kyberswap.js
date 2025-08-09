@@ -65,11 +65,11 @@ export class Kyberswap {
             if (data.code !== 0) {
                 return createResponse(false, data.message || 'Failed to get route', null, 'kyberswap.getRoute');
             }
-
             const { routeSummary, routerAddress } = data.data;
             return createResponse(true, 'success', { routeSummary, routerAddress, requestId: data.requestId }, 'kyberswap.getRoute');
         } catch (error) {
-            return createResponse(false, error.message || 'Failed to get route', null, 'kyberswap.getRoute');
+            const message = error.response?.data?.message || error.message || 'Failed to get route';
+            return createResponse(false, message, null, 'kyberswap.getRoute');
         }
     }
     /**
@@ -136,7 +136,8 @@ export class Kyberswap {
 
             return createResponse(true, 'success', { txHash: txResponse.data.txHash }, 'kyberswap.swap');
         } catch (error) {
-            return createResponse(false, error.message || 'Failed to swap', null, 'kyberswap.swap');
+            const message = error.response?.data?.message || error.message || 'Failed to swap';
+            return createResponse(false, message, null, 'kyberswap.swap');
         }
     }
 }
