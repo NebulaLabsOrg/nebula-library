@@ -22,7 +22,8 @@ export async function vmGetWalletStatus(_restClientV5) {
             return createResponse(false, response.retMsg, null, 'bybit.getWalletStatus');
         }
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getWalletStatus');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve wallet status';
+        return createResponse(false, message, null, 'bybit.getWalletStatus');
     }
 }
 /**
@@ -48,7 +49,8 @@ export async function vmGetWalletBalance(_restClientV5, _settleCoin) {
             return createResponse(false, response.retMsg, null, 'bybit.getWalletBalance');
         }
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getWalletBalance');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve wallet balance';
+        return createResponse(false, message, null, 'bybit.getWalletBalance');
     }
 }
 /**
@@ -99,7 +101,8 @@ export async function vmGetMarketData(_restClientV5, _symbol = '') {
             ? createResponse(true, 'success', response.result.list, 'bybit.getMarketData')
             : createResponse(false, response.retMsg, null, 'bybit.getMarketData');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getMarketData');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve market data';
+        return createResponse(false, message, null, 'bybit.getMarketData');
     }
 }
 /**
@@ -128,7 +131,8 @@ export async function vmGetMaketOrderSize(_restClientV5, _symbol = '') {
         )
         : createResponse(false, response.retMsg, null, 'bybit.getMaketOrderSize');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getMaketOrderSize');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve market order size';
+        return createResponse(false, message, null, 'bybit.getMaketOrderSize');
     }
 }
 /**
@@ -155,7 +159,8 @@ export async function vmGetFundingRateHour(_restClientV5, _symbol) {
         const hourlyFundingRate = (fundingRate * 100) / (fundingInterval / 60);
         return createResponse(true, 'success', { symbol: _symbol, fundingRate: hourlyFundingRate }, 'bybit.getFundingRateHour');
     } catch (error) {
-        return createResponse(false, error.message || 'Failed to get funding rate', null, 'bybit.getFundingRateHour');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve funding rate';
+        return createResponse(false, message, null, 'bybit.getFundingRateHour');
     }
 }
 /**
@@ -187,7 +192,8 @@ export async function vmGetMarketOpenInterest(_restClientV5, _symbol = '') {
                 )
             : createResponse(false, response.retMsg, null, 'bybit.getMarketOpenInterest');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getMarketOpenInterest');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve market open interest';
+        return createResponse(false, message, null, 'bybit.getMarketOpenInterest');
     }
 }
 /**
@@ -210,7 +216,8 @@ export async function vmGetOpenPositions(_restClientV5, _settleCoin) {
             ? createResponse(true, 'success', { openPositions: openPositions, markets: markets }, 'bybit.getOpenPositions')
             : createResponse(false, response.retMsg, null, 'bybit.getOpenPositions');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getOpenPositions');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve open positions';
+        return createResponse(false, message, null, 'bybit.getOpenPositions');
     }
 }
 /**
@@ -250,7 +257,8 @@ export async function vmGetOpenPositionDetail(_restClientV5, _settleCoin, _symbo
         };
         return createResponse(true, 'success', detail, 'bybit.getOpenPositionDetail');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getOpenPositionDetail');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve open position detail';
+        return createResponse(false, message, null, 'bybit.getOpenPositionDetail');
     }
 }
 /**
@@ -280,7 +288,8 @@ export async function vmGetOutWithdrawableAmount(_restClientV5, _settleCoin) {
             )
             : createResponse(false, response.retMsg, null, 'bybit.getOutWithdrawableAmount');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getOutWithdrawableAmount');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve withdrawable amount';
+        return createResponse(false, message, null, 'bybit.getOutWithdrawableAmount');
     }
 }
 /**
@@ -320,7 +329,8 @@ export async function vmGetOrderStatus(_restClientV5, _orderId) {
             )
             : createResponse(false, response.retMsg, null, 'bybit.getOrderStatus');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getOrderStatus');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve order status';
+        return createResponse(false, message, null, 'bybit.getOrderStatus');
     }
 }
 /**
@@ -365,6 +375,7 @@ export async function vmGetWithdrawStatus(_restClientV5, _withdrawId) {
             return createResponse(false, response.retMsg || 'No withdraw records found', null, 'bybit.getWithdrawStatus');
         }
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.getWithdrawStatus');
+        const message = error.response?.data?.message || error.message || 'Failed to retrieve withdraw status';
+        return createResponse(false, message, null, 'bybit.getWithdrawStatus');
     }
 }

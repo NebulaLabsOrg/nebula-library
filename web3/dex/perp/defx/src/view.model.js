@@ -38,6 +38,7 @@ export async function vmGetEarnedPoints(_instance, _apiSecret) {
             }
         }, 'defx.getEarnedPoints');
     } catch (error) {
-        return createResponse(false, error.response?.data?.message ?? error.message, null, 'defx.getEarnedPoints');
+        const message = error.response?.data?.message || error.message || 'Failed to get earned points';
+        return createResponse(false, message, null, 'defx.getEarnedPoints');
     }
 }

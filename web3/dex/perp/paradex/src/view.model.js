@@ -25,7 +25,8 @@ export async function vmGetWalletStatus(_instance) {
             'paradex.getWalletStatus'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getWalletStatus');
+        const message = error.response?.data?.message || error.message || 'Failed to get wallet status';
+        return createResponse(false, message, null, 'paradex.getWalletStatus');
     }
 }
 
@@ -49,7 +50,8 @@ export async function vmGetWalletBalances(_instance, _token = '') {
     }
     return createResponse(true, 'success', response.data.results, 'paradex.getWalletBalances');
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getWalletBalances');
+    const message = error.response?.data?.message || error.message || 'Failed to get wallet balances';
+    return createResponse(false, message, null, 'paradex.getWalletBalances');
   }
 }
 
@@ -73,7 +75,8 @@ export async function vmGetMarketData(_instance, _onlyPerp = false, _symbol = ''
       : response.data.results;
     return createResponse(true, 'success', markets, 'paradex.getMarketData');
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getMarketData');
+    const message = error.response?.data?.message || error.message || 'Failed to get market data';
+    return createResponse(false, message, null, 'paradex.getMarketData');
   }
 }
 
@@ -108,7 +111,8 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
             'paradex.getMarketOpenInterest'
         );
     } catch (error) {
-        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getMarketOrderSize');
+        const message = error.response?.data?.message || error.message || 'Failed to get market order size';
+        return createResponse(false, message, null, 'paradex.getMarketOrderSize');
     }
 }
 
@@ -141,7 +145,8 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
       'paradex.getFundingRateHour'
     );
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getFundingRateHour');
+    const message = error.response?.data?.message || error.message || 'Failed to get funding rate';
+    return createResponse(false, message, null, 'paradex.getFundingRateHour');
   }
 }
 
@@ -173,7 +178,8 @@ export async function vmGetMarketOpenInterest(_instance, _symbol) {
       'paradex.getMarketOpenInterest'
     );
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getMarketOpenInterest');
+    const message = error.response?.data?.message || error.message || 'Failed to get market open interest';
+    return createResponse(false, message, null, 'paradex.getMarketOpenInterest');
   }
 }
 
@@ -199,7 +205,8 @@ export async function vmGetOpenPositions(_instance) {
       : [];
     return createResponse(true, 'success', { openPositions: openPositionsCount, markets }, 'paradex.getOpenPositions');
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getOpenPositions');
+    const message = error.response?.data?.message || error.message || 'Failed to get open positions';
+    return createResponse(false, message, null, 'paradex.getOpenPositions');
   }
 }
 
@@ -249,7 +256,8 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
     };
     return createResponse(true, 'success', detail, 'paradex.getOpenPositionDetail');
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getOpenPositionDetail');
+    const message = error.response?.data?.message || error.message || 'Failed to get open position detail';
+    return createResponse(false, message, null, 'paradex.getOpenPositionDetail');
   }
 }
 
@@ -303,7 +311,8 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(false, 'Order not found', null, 'paradex.getOrderStatus');
       } catch (error) {
-        return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getOrderStatus'); 
+        const message = error.response?.data?.message || error.message || 'Failed to get order status';
+        return createResponse(false, message, null, 'paradex.getOrderStatus');
       }
     }
 }
@@ -338,6 +347,7 @@ export async function vmGetVaultPerformance(_instance, _vaultAddress){
         'paradex.getVaultPerformance'
     );
   } catch (error) {
-    return createResponse(false, error.response?.data?.message ?? error.message, null, 'paradex.getVaultPerformance');
+    const message = error.response?.data?.message || error.message || 'Failed to get vault performance';
+    return createResponse(false, message, null, 'paradex.getVaultPerformance');
   }
 }
