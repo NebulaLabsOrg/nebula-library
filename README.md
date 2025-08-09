@@ -30,6 +30,7 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 | **Module**   | **Purpose**                                               | **Dependencies**                       | **Path**                                                      |
 |--------------|-----------------------------------------------------------|----------------------------------------|---------------------------------------------------------------|
 | `ERC20`      | Interact with ERC20 tokens on Ethereum                    | `ethers`                               | `nebula-library/web3/token/ERC20/index.js`                    |
+| `Moralis`    | Interact with Moralis data                                | `axios`                                | `nebula-library/web3/data/moralis/index.js`                   |
 | `Bybit`      | Interface with Bybit exchange                             | `bybit-api`, `uuid`                    | `nebula-library/web3/cex/bybit/index.js`                      |
 | `Kyberswap`  | Access Kyberswap DEX aggregator                           | `ethers`, `axios`                      | `nebula-library/web3/dex/aggregator/kyberswap/index.js`       |
 | `Paradex`    | Connect to Paradex perpetual exchange                     | `starknet`, `axios`, `bignumber.js`    | `nebula-library/web3/dex/perp/paradex/index.js`               |

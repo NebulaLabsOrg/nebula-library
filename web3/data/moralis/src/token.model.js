@@ -10,6 +10,21 @@ import { PAGE_SIZE, ORDER } from './constants.js';
  * @param {string} _tokenAddress - The ERC20 token contract address.
  * @param {string} [_chain] - Blockchain network identifier.
  * @returns {Promise<Object>} A promise that resolves to a response object containing the list of holders or an error message.
+ * 
+ * Example of returns .data:
+ * [
+ *   {
+ *     balance: '1962704000000',
+ *     balance_formatted: '1.962704',
+ *     is_contract: false,
+ *     owner_address: '0x46762bde09c1a1c566c3efd959368455bf20c354',
+ *     owner_address_label: null,
+ *     entity: null,
+ *     entity_logo: null,
+ *     usd_value: null,
+ *     percentage_relative_to_total_supply: 89.67717666848304
+ *   }
+ * ]
  */
 export async function tmGetErc20Holders(_instance, _tokenAddress, _chain) {
     const holders = [];
