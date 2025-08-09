@@ -8,10 +8,10 @@ import { PAGE_SIZE, ORDER } from './constants.js';
  * @function tmGetErc20Holders
  * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
  * @param {string} _tokenAddress - The ERC20 token contract address.
- * @param {number} [_chain=1] - Blockchain network identifier (default: 1).
+ * @param {string} [_chain] - Blockchain network identifier.
  * @returns {Promise<Object>} A promise that resolves to a response object containing the list of holders or an error message.
  */
-export async function tmGetErc20Holders(_instance, _tokenAddress, _chain = 1) {
+export async function tmGetErc20Holders(_instance, _tokenAddress, _chain) {
     const holders = [];
     let cursor = null;
 
