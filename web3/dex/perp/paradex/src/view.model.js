@@ -351,3 +351,39 @@ export async function vmGetVaultPerformance(_instance, _vaultAddress){
     return createResponse(false, message, null, 'paradex.getVaultPerformance');
   }
 }
+
+/**
+ * Retrieves the performance metrics of the liquidity vault from the Paradex API, including ROI, APR, and APY.
+ *
+ * @async
+ * @function vmGetLiquidityVaultPerformance
+ * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
+ * @param {string} _vaultAddress - The address of the vault to retrieve performance data for.
+ * @returns {Promise<Object>} A promise that resolves to a response object containing vault performance metrics or an error message.
+ */
+export async function vmGetLiquidityVaultPerformance(_instance){
+  try {
+    const vaultAddress = '0x5f43c92dbe4e995115f351254407e7e84abf04cbe32a536345b9d6c36bc750f';
+    const params = { address: vaultAddress }; // if not working the vault address try the token address for the vault
+    const url = encodeGetUrl('/vaults/summary', params);
+    const responce = await _instance.get(url);
+    const apr = fromROI30dToAPR(responce.data.results[0].roi_30d);
+    const apy = fromAPRtoAPY(apr, 365);
+    return createResponse(
+        true,
+        'success',
+        {
+          vault: 'Gigavault',
+          address: responce.data.results[0].address,
+          roi30d: Number(responce.data.results[0].roi_30d),
+          apr: apr,
+          apy: apy,
+          tokenPrice: Number(responce.data.results[0].vtoken_price),
+        },
+        'paradex.getLiquidityVaultPerformance'
+    );
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || 'Failed to get liquidity vault performance';
+    return createResponse(false, message, null, 'paradex.getLiquidityVaultPerformance');
+  }
+}
