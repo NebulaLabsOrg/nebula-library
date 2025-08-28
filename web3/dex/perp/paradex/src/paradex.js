@@ -4,7 +4,8 @@ import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { amOnboardUser, amAuthenticateUser } from './auth.model.js';
 import {
     vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour,
-    vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus, vmGetVaultPerformance
+    vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus, vmGetVaultPerformance,
+    vmGetLiquidityVaultPerformance
 } from './view.model.js';
 import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
 import { clearParadexHeaders } from './utils.js';
@@ -240,12 +241,11 @@ export class Paradex {
     /**
      * Retrieves the performance data of a specific vault for the authenticated user on Paradex.
      * Authenticates the user, sets the authorization header, and calls the function to fetch the vault performance for the specified vault address.
-     * Utilizza un throttler per limitare il numero di richieste simultanee.
      *
      * @async
      * @method getVaultPerformance
-     * @param {string} _vaultAddress - L'indirizzo del vault di cui recuperare le performance.
-     * @returns {Promise<Object>} Una Promise che si risolve con la risposta contenente i dati di performance del vault o un messaggio di errore.
+     * @param {string} _vaultAddress - The address of the vault to retrieve performance data for.
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the vault performance data or an error message.
      */
     async getVaultPerformance(_vaultAddress) {
         return this.throttler.enqueue(async () => {
@@ -256,6 +256,25 @@ export class Paradex {
             clearParadexHeaders(this.instance);
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await vmGetVaultPerformance(this.instance, _vaultAddress);
+        }, 2);
+    }
+
+    /**
+     * Retrieves the performance data of the liquidity vault for the authenticated user on Paradex.
+     *
+     * @async
+     * @method getLiquidityVaultPerformance
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the liquidity vault performance data or an error message.
+     */
+    async getLiquidityVaultPerformance() {
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getLiquidityVaultPerformance -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetLiquidityVaultPerformance(this.instance);
         }, 2);
     }
 

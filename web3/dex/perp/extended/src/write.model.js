@@ -98,7 +98,7 @@ export async function wmSubmitOrder(_instance, _slippage, _account, _type, _symb
         const response = await _instance.post('/user/order', body);
         return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.externalId }, 'extended.submitOrder');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to submit order';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to submit order';
         return createResponse(
             false,
             message,
@@ -124,7 +124,7 @@ export async function wmSubmitCancelOrder(_instance, _orderId) {
         await _instance.delete(url);
         return createResponse(true, 'success', { orderId: _orderId }, 'extended.submitCancelOrder');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to cancel order';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to cancel order';
         return createResponse(false, message, null, 'extended.submitCancelOrder');
     }
 }
@@ -249,7 +249,7 @@ export async function wmSubmitCloseOrder(_instance, _slippage, _account, _type, 
         const response = await _instance.post('/user/order', body);
         return createResponse(true, 'success', { symbol: _symbol, orderId: response.data.data.externalId }, 'extended.submitCloseOrder');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to submit close order';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to submit close order';
         return createResponse(
             false,
             message,

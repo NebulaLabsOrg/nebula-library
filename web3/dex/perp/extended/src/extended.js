@@ -13,8 +13,8 @@ export { extendedEnum };
 /**
  * @class Extended
  * @description A class for interacting with the Extended exchange API.
- * Provides methods for onboarding, authenticating, retrieving account information, market data, balances, open positions, order management, and more for users.
- * Utilizza un throttler per gestire la frequenza delle richieste e offre un'interfaccia estesa per operazioni di trading e gestione dell'account.
+ * Provides methods for onboarding, authentication, retrieving account information, market data, balances, open positions, order management, and more for users.
+ * Uses a throttler to manage request frequency and offers an extended interface for trading and account management operations.
  */
 export class Extended {
     /**
@@ -34,7 +34,7 @@ export class Extended {
             starkKeyPub: _starkKeyPub,
             vaultNr: _vaultNr
         }
-        this.instance = createInstance('https://api.extended.exchange/api/v1', { 'X-Api-Key': _apiKey });
+        this.instance = createInstance('https://api.starknet.extended.exchange/api/v1', { 'X-Api-Key': _apiKey });
         this.slippage = _slippage
         this.throttler = _throttler;
     }

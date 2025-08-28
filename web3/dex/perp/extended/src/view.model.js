@@ -22,7 +22,7 @@ export async function vmGetWalletStatus(_instance) {
             'extended.getWalletStatus'
         );
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get wallet status';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get wallet status';
         return createResponse(false, message, null, 'extended.getWalletStatus');
     }
 }
@@ -48,7 +48,7 @@ export async function vmGetWalletBalance(_instance) {
             'extended.getWalletBalance'
         );
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get wallet balance';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get wallet balance';
         return createResponse(false, message, null, 'extended.getWalletBalance');
     }
 }
@@ -78,7 +78,7 @@ export async function vmGetMarketData(_instance, _symbol = '') {
             : [];
         return createResponse(true, 'success', markets, 'extended.getMarketData');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get market data';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get market data';
         return createResponse(false, message, null, 'extended.getMarketData');
     }
 }
@@ -97,7 +97,7 @@ export async function vmGetLatestMarketData(_instance, _symbol) {
         const response = await _instance.get(url);
         return createResponse(true, 'success', response.data.data, 'extended.getLatestMarketData');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get latest market data';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get latest market data';
         return createResponse(false, message, null, 'extended.getLatestMarketData');
     }
 }
@@ -161,7 +161,7 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
             'extended.getFundingRateHour'
         );
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get funding rate';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get funding rate';
         return createResponse(false, message, null, 'extended.getFundingRateHour');
     }
 }
@@ -193,7 +193,7 @@ export async function vmGetMarketOpenInterest(_instance, _symbol){
             'extended.getMarketOpenInterest'
         );
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get market open interest';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get market open interest';
         return createResponse(false, message, null, 'extended.getMarketOpenInterest');
     }
 }
@@ -220,7 +220,7 @@ export async function vmGetOpenPositions(_instance) {
             'extended.getOpenPositions'
         );
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get open positions';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get open positions';
         return createResponse(false, message, null, 'extended.getOpenPositions');
     }
 }
@@ -261,7 +261,7 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
         };
         return createResponse(true, 'success', detail, 'extended.getOpenPositionDetail');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get open position detail';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get open position detail';
         return createResponse(false, message, null, 'extended.getOpenPositionDetail');
     }
 }
@@ -294,7 +294,7 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(true, 'success', detail, 'extended.getOrderStatus');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get order status';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get order status';
         return createResponse(false, message, null, 'extended.getOrderStatus');
     }
 }
@@ -326,7 +326,7 @@ export async function vmGetEarnedPoints(_instance){
             }
         }, 'extended.getEarnedPoints');
     } catch (error) {
-        const message = error.response?.data?.message || error.message || 'Failed to get earned points';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get earned points';
         return createResponse(false, message, null, 'extended.getEarnedPoints');
     }
 }
