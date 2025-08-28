@@ -1,4 +1,5 @@
-import { Kyberswap, ERC20 } from '../index.js'
+import { Kyberswap } from '../index.js'
+import { ERC20 } from '../../../../token/ERC20/index.js';
 import 'dotenv/config';
 
 const chainId = 42161; // Arbitrum Mainnet  
@@ -8,7 +9,7 @@ const kyberswapInstance = new Kyberswap(prvKey, chainId, 'test-client-id', rpcPr
 const erc20 = new ERC20(prvKey, rpcProvider, 1);
 
 // Parameters
-const tokenIn = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'; // USDT-Arbitrum token address
+const tokenIn = '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb19'; // USDT-Arbitrum token address
 const amountIn = 3000000; // Amount to transfer (1 USDT = 1e6)
 const tokenOut = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'; // USDC.e-Arbitrum token address
 const isViewOnly = true;

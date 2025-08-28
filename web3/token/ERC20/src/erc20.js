@@ -81,7 +81,7 @@ export class ERC20 {
         try {
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
             const response = await contract.decimals();
-            return createResponse(true, 'success', response, 'ERC20.decimals');
+            return createResponse(true, 'success', response.toString(), 'ERC20.decimals');
         } catch (error) {
             return createResponse(
                 false,
@@ -105,7 +105,7 @@ export class ERC20 {
         try {
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
             const response = await contract.allowance(_owner, _spender);
-            return createResponse(true, 'success', response, 'ERC20.allowance');
+            return createResponse(true, 'success', response.toString(), 'ERC20.allowance');
         } catch (error) {
             return createResponse(
                 false,
@@ -127,13 +127,34 @@ export class ERC20 {
         try {
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
             const response = await contract.balanceOf(_account);
-            return createResponse(true, 'success', response, 'ERC20.balanceOf');
+            return createResponse(true, 'success', response.toString(), 'ERC20.balanceOf');
         } catch (error) {
             return createResponse(
                 false,
                 error.message || 'Failed to get balance',
                 null,
                 'ERC20.balanceOf'
+            );
+        }
+    }
+    /**
+     * @async
+     * @method totalSupply
+     * @description Retrieves the total supply of the specified ERC20 token.
+     * @param {string} _token - The address of the ERC20 token contract.
+     * @returns {Promise<Object>} A Promise that resolves with a response object containing the total token supply.
+     */
+    async totalSupply(_token) {
+        try {
+            const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
+            const response = await contract.totalSupply();
+            return createResponse(true, 'success', response.toString(), 'ERC20.totalSupply');
+        } catch (error) {
+            return createResponse(
+                false,
+                error.message || 'Failed to get total supply',
+                null,
+                'ERC20.totalSupply'
             );
         }
     }
@@ -151,7 +172,7 @@ export class ERC20 {
             const contract = new ethers.Contract(_token, this.erc20Abi, this.signer);
             const tx = await contract.approve(_spender, _amount);
             await tx.wait(this.numberConfirmation);
-            return createResponse(true, 'success', tx.hash, 'ERC20.feApprove');
+            return createResponse(true, 'success', { txHash: tx.hash }, 'ERC20.feApprove');
         } catch (error) {
             return createResponse(
                 false,
@@ -203,7 +224,7 @@ export class ERC20 {
             const tx = await contract.approve(_spender, _amount, txGasParams);
             await tx.wait(this.numberConfirmation);
 
-            return createResponse(true, 'success', { hash: tx.hash }, 'ERC20.bkApprove');
+            return createResponse(true, 'success', { txHash: tx.hash }, 'ERC20.bkApprove');
         } catch (error) {
             return createResponse(
                 false,
@@ -255,7 +276,7 @@ export class ERC20 {
             const tx = await contract.transfer(_to, _amount, txGasParams);
             await tx.wait(this.numberConfirmation);
     
-            return createResponse(true, 'success', { hash: tx.hash }, 'ERC20.bkTransfer');
+            return createResponse(true, 'success', { txHash: tx.hash }, 'ERC20.bkTransfer');
         } catch (error) {
             return createResponse(
                 false,

@@ -1,13 +1,17 @@
 import { Paradex, paradexEnum } from '../index.js'
+import { TokenBucketThrottler } from '../../../../../utils/index.js';
 import 'dotenv/config';
 
 // for processing status refer to enum : https://docs.paradex.trade/api/prod/orders/get
-
+// rate per minut for Paradex API : 1500
+const paradexThrottler = new TokenBucketThrottler(1500);
 const paradexInstance = new Paradex(
     process.env.ACCOUNT_ADDRESS,
-    process.env.PUBLIC_KEY,
-    process.env.PRIVATE_KEY,
-    process.env.ETHEREUM_ACCOUNT
+    process.env.STARK_KEY_PUBLIC,
+    process.env.STARK_KEY_PRIVATE,
+    process.env.L1_ADDRESS,
+    true,
+    paradexThrottler
 );
 
 console.log('Get token quantity');

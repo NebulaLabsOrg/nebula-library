@@ -1,0 +1,14 @@
+{
+  "name": "edgex",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@starkware-industries/starkware-crypto-utils": "^0.2.1",
+    "axios": "^1.10.0",
+    "elliptic": "^6.6.1",
+    "js-sha3": "^0.9.3"
+  },
+  "devDependencies": {
+    "dotenv": "^16.5.0"
+  }
+}

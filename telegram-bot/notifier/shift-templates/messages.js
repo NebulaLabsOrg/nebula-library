@@ -5,6 +5,7 @@
  * @param {number} _tvl - Total Value Locked in USD.
  * @param {number} _percLoss - Percentage loss of the vault.
  * @param {number} _apyOverall - Overall Annual Percentage Yield (APY).
+ * @param {number} _leverage - Leverage used in the strategy.
  * @param {string} _market - The market strategy name.
  * @param {number} _percOnPerp - Percentage allocated to the market strategy.
  * @param {number} _apyMarket - APY for the market strategy.
@@ -17,22 +18,23 @@
  * @param {number} _percLossPerp2 - Percentage loss for the second provider.
  * @returns {string} - Formatted Telegram message.
  */
-export function shiftStrategy(_version, _decision, _tvl, _percLoss, _apyOverall, _market, _percOnPerp, _apyMarket, _apysUSDe, _provider1, _provider2, _legProvider1, _legProvider2, _percLossPerp1, _percLossPerp2) {
+export function shiftStrategy(_version, _decision, _tvl, _percLoss, _apyOverall, _leverage,  _market, _percOnPerp, _apyMarket, _apysUSDe, _provider1, _provider2, _legProvider1, _legProvider2, _percLossPerp1, _percLossPerp2) {
     return `
             🏦 <b>SHIFTing Vault v${_version}</b> 🏦
             ⚙️ <b>State:</b> ${_decision} ⚙️
 
             💵 <b>TVL:</b> $<code>${_tvl}</code>
-            📉 <b>Loss:</b> <code>${_percLoss}%</code>
+            📉 <b>PnL:</b> <code>${_percLoss}%</code>
             📈 <b>APY (current):</b> <code>${_apyOverall.toFixed(2)}%</code>
+            ✖️ <b>Leverage :</b> <code>${_leverage}</code>
             🔹 <b>Strategy:</b> <code>${_market} (${_percOnPerp}%)</code> & <code>sUSDe (${100 - _percOnPerp}%)</code>
 
             📊 <b>Current Strategy Details:</b>
             📈 <b>APY ${_market}:</b> <code>${_apyMarket}%</code>
             📈 <b>APY sUSDe:</b> <code>${_apysUSDe}%</code>
 
-            ➡️ <b>${_provider1}</b> (<code>${_legProvider1}</code>) - <b>Loss:</b> <code>${_percLossPerp1}%</code>
-            ➡️ <b>${_provider2}</b> (<code>${_legProvider2}</code>) - <b>Loss:</b> <code>${_percLossPerp2}%</code>
+            ➡️ <b>${_provider1}</b> (<code>${_legProvider1}</code>) - <b>PnL:</b> <code>${_percLossPerp1}%</code>
+            ➡️ <b>${_provider2}</b> (<code>${_legProvider2}</code>) - <b>Pnl:</b> <code>${_percLossPerp2}%</code>
 
             `;
 }

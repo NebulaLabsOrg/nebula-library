@@ -1,0 +1,8 @@
+{
+  "name": "defx-scraper",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.54.2"
+  }
+}

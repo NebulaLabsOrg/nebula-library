@@ -28,6 +28,9 @@ console.log(await erc20.allowance(tokenAddress, fromAddress, toAddress));
 console.log("Calling: erc20.balanceOf");
 console.log(await erc20.balanceOf(tokenAddress, fromAddress));
 
+console.log("Calling: erc20.totalSupply");
+console.log(await erc20.totalSupply(tokenAddress));
+
 if (!isViewOnly) {
     console.log("Transaction Calls");
     console.log("Calling: erc20.bkApprove");

@@ -30,9 +30,39 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 | **Module**   | **Purpose**                                               | **Dependencies**                       | **Path**                                                      |
 |--------------|-----------------------------------------------------------|----------------------------------------|---------------------------------------------------------------|
 | `ERC20`      | Interact with ERC20 tokens on Ethereum                    | `ethers`                               | `nebula-library/web3/token/ERC20/index.js`                    |
+| `Moralis`    | Interact with Moralis data                                | `axios`                                | `nebula-library/web3/data/moralis/index.js`                   |
 | `Bybit`      | Interface with Bybit exchange                             | `bybit-api`, `uuid`                    | `nebula-library/web3/cex/bybit/index.js`                      |
 | `Kyberswap`  | Access Kyberswap DEX aggregator                           | `ethers`, `axios`                      | `nebula-library/web3/dex/aggregator/kyberswap/index.js`       |
 | `Paradex`    | Connect to Paradex perpetual exchange                     | `starknet`, `axios`, `bignumber.js`    | `nebula-library/web3/dex/perp/paradex/index.js`               |
+| `Extended`   | Connect to Extended perpetual exchange                    | `starknet`, `axios`, `decimal.js`      | `nebula-library/web3/dex/perp/extended/index.js`              |
+| `DefX`       | Connect to Defx perpetual exchange                        | `axios`                                | `nebula-library/web3/dex/perp/defx/index.js`                  |
+
+---
+
+### 📦 Scraper Module
+
+Automate data extraction from websites and APIs.
+
+| **Module**   | **Purpose**                                    | **Dependencies**         | **Path**                           |
+|--------------|------------------------------------------------|--------------------------|------------------------------------|
+| `Extended`    | Scrapes data from specified Extended pages    | `playwright`            | `nebula-library/scraper/extended/index.js`  |
+| `DefX`    | Scrapes data from specified DefX pages    | `playwright`            | `nebula-library/scraper/defx/index.js`  |
+
+#### Notice
+ Make sure to install:
+ ```bash
+  npx playwright install
+ ```
+ If is used on a cloud service like Render, make sure to folllow the steps below:
+ - Build Command: 
+ ```bash
+  npm install && npx playwright install
+ ```
+ - Start Command: 
+ ```bash
+  npm start
+ ```
+ - Add the following environment variable: `PLAYWRIGHT_BROWSERS_PATH=0`
 
 ---
 
@@ -50,6 +80,7 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 - `http`: Utility to manage http calls.
 - `response`: Standard response.
 - `retry`: Retries a function with customizable backoff strategy and attempt limits.
+- `throttler`: Controls the rate of function execution to prevent exceeding API limits or resource exhaustion.
 - `tx`: Utility to manage txs.
 
 Explore the full list in [`./utils/src`](./utils/src).

@@ -6,5 +6,8 @@
     "axios": "^1.9.0",
     "chalk": "^5.4.1",
     "ethers": "^6.14.4"
+  },
+  "devDependencies": {
+    "dotenv": "^17.0.1"
   }
 }

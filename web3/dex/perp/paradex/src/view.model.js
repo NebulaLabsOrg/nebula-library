@@ -1,5 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
+import { calculateMidPrice, fromAPRtoAPY, fromROI30dToAPR } from './utils.js';
 import { paradexEnum } from './enum.js';
 
 /**
@@ -24,7 +25,8 @@ export async function vmGetWalletStatus(_instance) {
             'paradex.getWalletStatus'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.getWalletStatus');
+        const message = error.response?.data?.message || error.message || 'Failed to get wallet status';
+        return createResponse(false, message, null, 'paradex.getWalletStatus');
     }
 }
 
@@ -48,7 +50,8 @@ export async function vmGetWalletBalances(_instance, _token = '') {
     }
     return createResponse(true, 'success', response.data.results, 'paradex.getWalletBalances');
   } catch (error) {
-    return createResponse(false, error.message, null, 'paradex.getWalletBalances');
+    const message = error.response?.data?.message || error.message || 'Failed to get wallet balances';
+    return createResponse(false, message, null, 'paradex.getWalletBalances');
   }
 }
 
@@ -72,7 +75,8 @@ export async function vmGetMarketData(_instance, _onlyPerp = false, _symbol = ''
       : response.data.results;
     return createResponse(true, 'success', markets, 'paradex.getMarketData');
   } catch (error) {
-    return createResponse(false, error.message, null, 'paradex.getMarketData');
+    const message = error.response?.data?.message || error.message || 'Failed to get market data';
+    return createResponse(false, message, null, 'paradex.getMarketData');
   }
 }
 
@@ -91,17 +95,15 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
         if (!marketData.success) {
             return createResponse(false, 'Error getting market data', null, 'paradex.getMarketOrderSize');
         }
-        const params = { market: _symbol };
-        const url = encodeGetUrl('/markets/summary', params)
-        const response = await _instance.get(url);
-        const { mark_price } = response.data.results[0];
+        const response = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+        const { ask, bid } = response.data;
         const { min_notional, order_size_increment, max_order_size, price_tick_size } = marketData.data[0];
         return createResponse(
             true,
             'success',
             {
                 symbol: _symbol,
-                minQty: (Number(min_notional) / Number(mark_price)).toString(),
+                minQty: (Number(min_notional) / calculateMidPrice(ask, bid)).toString(),
                 qtyStep: order_size_increment,
                 maxQty: max_order_size,
                 priceDecimals: (price_tick_size.toString().split('.')[1] || '').length
@@ -109,7 +111,8 @@ export async function vmGetMarketOrderSize(_instance, _symbol){
             'paradex.getMarketOpenInterest'
         );
     } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.getMarketOrderSize');
+        const message = error.response?.data?.message || error.message || 'Failed to get market order size';
+        return createResponse(false, message, null, 'paradex.getMarketOrderSize');
     }
 }
 
@@ -142,7 +145,8 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
       'paradex.getFundingRateHour'
     );
   } catch (error) {
-    return createResponse(false, error.message, null, 'paradex.getFundingRateHour');
+    const message = error.response?.data?.message || error.message || 'Failed to get funding rate';
+    return createResponse(false, message, null, 'paradex.getFundingRateHour');
   }
 }
 
@@ -155,24 +159,28 @@ export async function vmGetFundingRateHour(_instance, _symbol) {
  * @param {string} _symbol - The market symbol for which to retrieve the open interest.
  * @returns {Promise<Object>} A promise that resolves to a response object containing the symbol, open interest, and its USD value, or an error message.
  */
-export async function vmGetMarketOpenInterest(_instance, _symbol){
-    try {
-        const params = { market: _symbol };
-        const url = encodeGetUrl('/markets/summary', params)
-        const response = await _instance.get(url);
+export async function vmGetMarketOpenInterest(_instance, _symbol) {
+  try {
+    const responsePrice = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+    const { ask, bid } = responsePrice.data;
+    
+    const params = { market: _symbol };
+    const url = encodeGetUrl('/markets/summary', params)
+    const response = await _instance.get(url);
     return createResponse(
       true,
       'success',
       {
         symbol: _symbol,
         openInterest: response.data.results[0].open_interest,
-        openInterestUsd: (Number(response.data.results[0].open_interest) * Number(response.data.results[0].mark_price)).toString()
+        openInterestUsd: (Number(response.data.results[0].open_interest) * calculateMidPrice(ask, bid)).toString()
       },
       'paradex.getMarketOpenInterest'
     );
-    } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.getMarketOpenInterest');
-    }
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || 'Failed to get market open interest';
+    return createResponse(false, message, null, 'paradex.getMarketOpenInterest');
+  }
 }
 
 /**
@@ -197,7 +205,8 @@ export async function vmGetOpenPositions(_instance) {
       : [];
     return createResponse(true, 'success', { openPositions: openPositionsCount, markets }, 'paradex.getOpenPositions');
   } catch (error) {
-    return createResponse(false, error.message, null, 'paradex.getOpenPositions');
+    const message = error.response?.data?.message || error.message || 'Failed to get open positions';
+    return createResponse(false, message, null, 'paradex.getOpenPositions');
   }
 }
 
@@ -212,17 +221,8 @@ export async function vmGetOpenPositions(_instance) {
  */
 export async function vmGetOpenPositionDetail(_instance, _symbol) {
   try {
-    const marketDetail = await _instance.get(encodeGetUrl('/markets/summary', { market: _symbol }));
-    // Check if mark_price is present
-    if (
-      !marketDetail.data ||
-      !marketDetail.data.results ||
-      !marketDetail.data.results[0] ||
-      marketDetail.data.results[0].mark_price === undefined ||
-      marketDetail.data.results[0].mark_price === null
-    ) {
-      return createResponse(false, 'No price found for this market', null, 'paradex.getOpenPositionDetail');
-    }
+    const response = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+    const { ask, bid } = response.data;
 
     const positions = await _instance.get(encodeGetUrl('/positions', { market: _symbol }));
     const pos = positions.data.results.find(p => p.market === _symbol);
@@ -244,20 +244,20 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
       size
     } = pos;
 
-    const markPrice = Number(marketDetail.data.results[0].mark_price);
     const qty = Math.abs(Number(size));
     const detail = {
       symbol: _symbol,
       avgPrice: average_entry_price,
       unrealizedPnl: (Number(unrealized_pnl) + Number(unrealized_funding_pnl)).toString(),
-      cumRealizedPnl: (Number(realized_positional_pnl) + Number(realized_positional_funding_pnl)).toString(),
+      realizedPnl: (Number(realized_positional_pnl) + Number(realized_positional_funding_pnl)).toString(),
       side: side.toLowerCase(),
       qty: qty.toString(),
-      qtyUsd: (qty * markPrice).toString()
+      qtyUsd: (qty *  calculateMidPrice(ask, bid)).toString()
     };
     return createResponse(true, 'success', detail, 'paradex.getOpenPositionDetail');
   } catch (error) {
-    return createResponse(false, error.message, null, 'paradex.getOpenPositionDetail');
+    const message = error.response?.data?.message || error.message || 'Failed to get open position detail';
+    return createResponse(false, message, null, 'paradex.getOpenPositionDetail');
   }
 }
 
@@ -273,17 +273,20 @@ export async function vmGetOpenPositionDetail(_instance, _symbol) {
 export async function vmGetOrderStatus(_instance, _orderId) {
     try {
         const responseOpenOrders = await _instance.get('/orders/' + _orderId);
-        if (responseOpenOrders.data) {
+        if (responseOpenOrders.data && Object.keys(responseOpenOrders.data).length > 0) {
             const detail = {
-                symbol: responseOpenOrders.data.market,
-                orderType: responseOpenOrders.data.type,
-                status: responseOpenOrders.data.status,
-                qty: responseOpenOrders.data.size,
-                qtyExe: (Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)).toFixed(),
-                qtyExeUsd: ((Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)) * Number(responseOpenOrders.data.avg_fill_price)).toFixed(),
-                avgPrice: responseOpenOrders.data.avg_fill_price
+              symbol: responseOpenOrders.data.market,
+              orderType: responseOpenOrders.data.type,
+              status: responseOpenOrders.data.status,
+              qty: responseOpenOrders.data.size,
+              qtyExe: (Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)).toString(),
+              qtyExeUsd: ((Number(responseOpenOrders.data.size) - Number(responseOpenOrders.data.remaining_size)) * Number(responseOpenOrders.data.avg_fill_price)).toString(),
+              avgPrice: responseOpenOrders.data.avg_fill_price
             }
             return createResponse(true, 'success', detail, 'paradex.getOrderStatus');
+        } else {
+            // If not found in open orders, throw to trigger catch and check history
+            throw new Error('Order not found in open orders');
         }
     } catch (error) {
       try {
@@ -308,7 +311,79 @@ export async function vmGetOrderStatus(_instance, _orderId) {
         }
         return createResponse(false, 'Order not found', null, 'paradex.getOrderStatus');
       } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.getOrderStatus'); 
+        const message = error.response?.data?.message || error.message || 'Failed to get order status';
+        return createResponse(false, message, null, 'paradex.getOrderStatus');
       }
     }
+}
+
+/**
+ * Retrieves the performance metrics of a specific vault from the Paradex API, including ROI, APR, and APY.
+ *
+ * @async
+ * @function vmGetVaultPerformance
+ * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
+ * @param {string} _vaultAddress - The address of the vault to retrieve performance data for.
+ * @returns {Promise<Object>} A promise that resolves to a response object containing vault performance metrics or an error message.
+ */
+export async function vmGetVaultPerformance(_instance, _vaultAddress){
+  try {
+    const params = { address: _vaultAddress }; // if not working the vault address try the token address for the vault
+    const url = encodeGetUrl('/vaults/summary', params);
+    const responce = await _instance.get(url);
+    const apr = fromROI30dToAPR(responce.data.results[0].roi_30d);
+    const apy = fromAPRtoAPY(apr, 365);
+    return createResponse(
+        true,
+        'success',
+        {
+          vault: '-',
+          address: responce.data.results[0].address,
+          roi30d: Number(responce.data.results[0].roi_30d),
+          apr: apr,
+          apy: apy,
+          tokenPrice: Number(responce.data.results[0].vtoken_price),
+        },
+        'paradex.getVaultPerformance'
+    );
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || 'Failed to get vault performance';
+    return createResponse(false, message, null, 'paradex.getVaultPerformance');
+  }
+}
+
+/**
+ * Retrieves the performance metrics of the liquidity vault from the Paradex API, including ROI, APR, and APY.
+ *
+ * @async
+ * @function vmGetLiquidityVaultPerformance
+ * @param {Object} _instance - Axios instance or similar HTTP client for making API requests.
+ * @param {string} _vaultAddress - The address of the vault to retrieve performance data for.
+ * @returns {Promise<Object>} A promise that resolves to a response object containing vault performance metrics or an error message.
+ */
+export async function vmGetLiquidityVaultPerformance(_instance){
+  try {
+    const vaultAddress = '0x5f43c92dbe4e995115f351254407e7e84abf04cbe32a536345b9d6c36bc750f';
+    const params = { address: vaultAddress }; // if not working the vault address try the token address for the vault
+    const url = encodeGetUrl('/vaults/summary', params);
+    const responce = await _instance.get(url);
+    const apr = fromROI30dToAPR(responce.data.results[0].roi_30d);
+    const apy = fromAPRtoAPY(apr, 365);
+    return createResponse(
+        true,
+        'success',
+        {
+          vault: 'Gigavault',
+          address: responce.data.results[0].address,
+          roi30d: Number(responce.data.results[0].roi_30d),
+          apr: apr,
+          apy: apy,
+          tokenPrice: Number(responce.data.results[0].vtoken_price),
+        },
+        'paradex.getLiquidityVaultPerformance'
+    );
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || 'Failed to get liquidity vault performance';
+    return createResponse(false, message, null, 'paradex.getLiquidityVaultPerformance');
+  }
 }

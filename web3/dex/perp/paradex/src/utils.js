@@ -123,3 +123,69 @@ export function toQuantums(amount, precision) {
   const bnQuantums = bnAmount.dividedBy(`1e-${precision}`);
   return bnQuantums.integerValue(BigNumber.ROUND_FLOOR).toString();
 }
+/**
+ * Returns the midpoint price between ask and bid, preserving the maximum decimal precision found in the inputs.
+ * @param {number|string} _askPrice - The ask price.
+ * @param {number|string} _bidPrice - The bid price.
+ * @returns {number} The calculated mid price.
+ */
+export function calculateMidPrice(_askPrice, _bidPrice) {
+    // Convert input prices to numbers
+    const ask = Number(_askPrice);
+    const bid = Number(_bidPrice);
+
+    // Calculate the raw mid price
+    const midPriceRaw = (ask + bid) / 2;
+
+    // Determine the number of decimal places for each price
+    const askDecimals = (ask.toString().split('.')[1] || '').length;
+    const bidDecimals = (bid.toString().split('.')[1] || '').length;
+
+    // Use the maximum number of decimals from ask or bid
+    const maxDecimals = Math.max(askDecimals, bidDecimals);
+
+    // Format the mid price to the maximum decimals and convert back to number
+    const midPrice = Number(midPriceRaw).toFixed(maxDecimals);
+    return Number(midPrice);
+}
+/**
+ * Adjusts and formats the order quantity based on market unit, price, and step size.
+ * @param {number|string} _orderQty - The input order quantity.
+ * @param {boolean} isQuoteOnSecCoin - True if market unit is quoted on secondary coin.
+ * @param {number|string} price - The last price for conversion.
+ * @param {number|string} qtyStep - The valid step size for quantity.
+ * @returns {string} The formatted quantity.
+ */
+export function formatOrderQuantity(_orderQty, _isQuoteOnSecCoin, _price, _qtyStep) {
+    let qty = parseFloat(_orderQty);
+
+    if (_isQuoteOnSecCoin) {
+        qty = qty / parseFloat(_price);
+    }
+
+    const step = parseFloat(_qtyStep);
+    qty = Math.floor(qty / step) * step;
+
+    const stepDecimals = (_qtyStep.toString().split('.')[1] || '').length;
+    return qty.toFixed(stepDecimals);
+}
+
+/**
+ * Converts a 30-day ROI (Return on Investment) value to an APR (Annual Percentage Rate) percentage.
+ * @param {number} _roi30d - The 30-day ROI value (e.g., 0.05 for 5%).
+ * @returns {number} The equivalent APR as a percentage.
+ */
+export function fromROI30dToAPR(_roi30d) {
+  return _roi30d * 100 * 12; // Convert to APR as a percentage
+}
+
+/**
+ * Calculates the APY (Annual Percentage Yield) from APR and the number of compounding periods per year.
+ * @param {number} aprPercent - Annual Percentage Rate as a percent (e.g., 5 for 5%)
+ * @param {number} m - Number of compounding periods per year (e.g., 12 for monthly)
+ * @returns {number} APY as a percent (e.g., 5.12 for 5.12%)
+ */
+export function fromAPRtoAPY(_aprPercent, _m) {
+  const aprDecimal = _aprPercent / 100;
+  return (Math.pow(1 + aprDecimal / _m, _m) - 1) * 100;
+}

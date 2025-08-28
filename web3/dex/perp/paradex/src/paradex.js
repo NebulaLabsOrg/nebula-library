@@ -1,9 +1,13 @@
 import { shortString } from 'starknet';
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { amOnboardUser, amAuthenticateUser } from './authModel.js';
-import { vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus } from './viewModel.js';
-import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './writeModel.js';
+import { amOnboardUser, amAuthenticateUser } from './auth.model.js';
+import {
+    vmGetWalletStatus, vmGetWalletBalances, vmGetMarketData, vmGetMarketOrderSize, vmGetFundingRateHour,
+    vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus, vmGetVaultPerformance,
+    vmGetLiquidityVaultPerformance
+} from './view.model.js';
+import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
 import { clearParadexHeaders } from './utils.js';
 import { PARADEX_CHAIN_ID } from './constants.js';
 import { paradexEnum } from './enum.js';
@@ -11,7 +15,7 @@ import { paradexEnum } from './enum.js';
 export { paradexEnum };
 
 /**
- * @class paradex
+ * @class Paradex
  * @description A class for interacting with the Paradex decentralized exchange. 
  * Provides methods for onboarding, authenticating, and retrieving account information for users.
  */
@@ -22,9 +26,10 @@ export class Paradex {
     * @param {string} _publicKey - The user's public key.
     * @param {string} _privateKey - The user's private key.
     * @param {string} _ethereumAccount - The user's associated Ethereum account.
-    * 
+    * @param {boolean} [_enOnlyPerp=false] - Flag to enable only perpetual markets.
+    * @param {Object} [throttler={ enqueue: fn => fn() }] - Throttler object to manage request rate.
     */
-    constructor(_accountAddress, _publicKey, _privateKey, _ethereumAccount, _enOnlyPerp = false) {
+    constructor(_accountAddress, _publicKey, _privateKey, _ethereumAccount, _enOnlyPerp = false, throttler = { enqueue: fn => fn() }) {
         this.account = {
             address: _accountAddress,
             publicKey: _publicKey,
@@ -34,6 +39,7 @@ export class Paradex {
         this.chainId = shortString.encodeShortString(PARADEX_CHAIN_ID);
         this.instance = createInstance('https://api.prod.paradex.trade/v1');
         this._enOnlyPerp = _enOnlyPerp; // Flag to enable only perpetual markets
+        this.throttler = throttler;
     }
     /**
      * @async
@@ -42,8 +48,9 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the onboarding response object.
      */
     async onboardUser() {
-        return await amOnboardUser(this.instance, this.chainId, this.account);
+        return this.throttler.enqueue(() => amOnboardUser(this.instance, this.chainId, this.account));
     }
+
     /**
      * @async
      * @method getWalletStatus
@@ -51,13 +58,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the user's account information or an error response.
      */
     async getWalletStatus() {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getWalletStatus -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetWalletStatus(this.instance);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getWalletStatus -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetWalletStatus(this.instance);
+        }, 2);
     }
 
     /**
@@ -72,13 +81,15 @@ export class Paradex {
      * @returns {Promise<Object>} A promise that resolves to a response object containing the wallet balances or an error message.
      */
     async getWalletBalances(_token = '') {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getWalletBalances -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetWalletBalances(this.instance, _token);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getWalletBalances -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetWalletBalances(this.instance, _token);
+        }, 2);
     }
 
     /**
@@ -91,13 +102,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing market data or an error message.
      */
     async getMarketData(_symbol) {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getMarketData -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetMarketData(this.instance, this._enOnlyPerp, _symbol);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getMarketData -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetMarketData(this.instance, this._enOnlyPerp, _symbol);
+        }, 2);
     }
 
     /**
@@ -110,13 +123,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the market order size or an error message.
      */
     async getMarketOrderSize(_symbol) {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getMarketOrderSize -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetMarketOrderSize(this.instance, _symbol);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getMarketOrderSize -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetMarketOrderSize(this.instance, _symbol);
+        }, 3);
     }
 
     /**
@@ -129,13 +144,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the funding rate or an error message.
      */
     async getFundingRateHour(_symbol) {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getFundingRateHour -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetFundingRateHour(this.instance, _symbol);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getFundingRateHour -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetFundingRateHour(this.instance, _symbol);
+        }, 3);
     }
 
     /**
@@ -148,13 +165,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the open interest data or an error message.
      */
     async getMarketOpenInterest(_symbol) {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getMarketOpenInterest -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetMarketOpenInterest(this.instance, _symbol);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getMarketOpenInterest -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetMarketOpenInterest(this.instance, _symbol);
+        }, 3);
     }
 
     /**
@@ -166,13 +185,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the open positions data or an error message.
      */
     async getOpenPositions() {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getOpenPositions -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetOpenPositions(this.instance);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getOpenPositions -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetOpenPositions(this.instance);
+        }, 2);
     }
 
     /**
@@ -185,13 +206,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the position status data or an error message.
      */
     async getOpenPositionDetail(_symbol) {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getOpenPositionDetail -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetOpenPositionDetail(this.instance, _symbol);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getOpenPositionDetail -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetOpenPositionDetail(this.instance, _symbol);
+        }, 3);
     }
 
     /**
@@ -204,13 +227,55 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order status data or an error message.
      */
     async getOrderStatus(_orderId) {
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.getOrderStatus -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await vmGetOrderStatus(this.instance, _orderId);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getOrderStatus -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetOrderStatus(this.instance, _orderId);
+        }, 3);
+    }
+
+    /**
+     * Retrieves the performance data of a specific vault for the authenticated user on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to fetch the vault performance for the specified vault address.
+     *
+     * @async
+     * @method getVaultPerformance
+     * @param {string} _vaultAddress - The address of the vault to retrieve performance data for.
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the vault performance data or an error message.
+     */
+    async getVaultPerformance(_vaultAddress) {
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getVaultPerformance -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetVaultPerformance(this.instance, _vaultAddress);
+        }, 2);
+    }
+
+    /**
+     * Retrieves the performance data of the liquidity vault for the authenticated user on Paradex.
+     *
+     * @async
+     * @method getLiquidityVaultPerformance
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the liquidity vault performance data or an error message.
+     */
+    async getLiquidityVaultPerformance() {
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getLiquidityVaultPerformance -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await vmGetLiquidityVaultPerformance(this.instance);
+        }, 2);
     }
 
     /**
@@ -227,13 +292,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order submission result or an error message.
      */
     async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty){
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.submitOrder -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await wmSubmitOrder(this.instance, this.chainId, this.account, _type, _symbol, _side, _marketUnit, _orderQty);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.submitOrder -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await wmSubmitOrder(this.instance, this.chainId, this.account, _type, _symbol, _side, _marketUnit, _orderQty);
+        }, 4);
     }
 
     /**
@@ -246,13 +313,15 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order cancellation result or an error message.
      */
     async submitCancelOrder(_orderId){
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.submitCancelOrder -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await wmSubmitCancelOrder(this.instance, _orderId);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.submitCancelOrder -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await wmSubmitCancelOrder(this.instance, _orderId);
+        }, 2);
     }
 
     /**
@@ -269,13 +338,14 @@ export class Paradex {
      * @returns {Promise<Object>} A Promise that resolves with the response containing the close order submission result or an error message.
      */
     async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll){
-        const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
-        if (!response.success) {
-            return createResponse(false, response.message, response.data, `paradex.submitCloseOrder -- ${response.source}`);
-        }
-        clearParadexHeaders(this.instance);
-        this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
-        return await wmSubmitCloseOrder(this.instance, this.chainId, this.account, _type, _symbol, _orderQty, _marketUnit, _closeAll);
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.submitCloseOrder -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await wmSubmitCloseOrder(this.instance, this.chainId, this.account, _type, _symbol, _orderQty, _marketUnit, _closeAll);
+        }, 5);
     }
-
 }

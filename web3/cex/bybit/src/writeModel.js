@@ -52,7 +52,8 @@ export async function wmSetInternalTranfer(_restClientV5, _settleCoin, _inAcc, _
             ? createResponse(true, 'success', {coin: _settleCoin, amount: transferAmount, from: from, to: toAcc, transferId: response.result.transferId}, 'bybit.setInternalTransfer')
             : createResponse(false, response.retMsg, null, 'bybit.setInternalTransfer');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.setInternalTransfer');
+        const message = error.response?.data?.message || error.message || 'Failed to set internal transfer';
+        return createResponse(false, message, null, 'bybit.setInternalTransfer');
     }
 }
 /**
@@ -118,7 +119,8 @@ export async function wmSubmitMarketOrder(_restClientV5, _slippage, _symbol, _si
             ? createResponse(true, 'success', {symbol: _symbol, orderId: response.result.orderId}, 'bybit.submitMarketOrder')
             : createResponse(false, response.retMsg, null, 'bybit.submitMarketOrder');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.submitMarketOrder');
+        const message = error.response?.data?.message || error.message || 'Failed to submit market order';
+        return createResponse(false, message, null, 'bybit.submitMarketOrder');
     }
 }
 /**
@@ -147,7 +149,8 @@ export async function wmSubmitCancelOrder(_restClientV5, _symbol, _orderId) {
             ? createResponse(true, 'success', {symbol: _symbol, orderId: response.result.orderId}, 'bybit.submitCancelOrder')
             : createResponse(false, response.retMsg, null, 'bybit.submitCancelOrder');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.submitCancelOrder');
+        const message = error.response?.data?.message || error.message || 'Failed to cancel order';
+        return createResponse(false, message, null, 'bybit.submitCancelOrder');
     }
 }
 /**
@@ -229,7 +232,8 @@ export async function wmSubmitCloseMarketOrder(_restClientV5, _settleCoin, _slip
             ? createResponse(true, 'success', {symbol: _symbol, orderId: response.result.orderId, closedQty: qty}, 'bybit.submitCloseMarketOrder')
             : createResponse(false, response.retMsg, null, 'bybit.submitCloseMarketOrder');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.submitCloseMarketOrder');
+        const message = error.response?.data?.message || error.message || 'Failed to submit close market order';
+        return createResponse(false, message, null, 'bybit.submitCloseMarketOrder');
     }
 }
 /**
@@ -287,6 +291,7 @@ export async function wmSubmitWihdraw(_restClientV5, _settleCoin, _chain, _amoun
             ? createResponse(true, 'success', {coin: _settleCoin, id: response.result.id} , 'bybit.submitWithdraw')
             : createResponse(false, response.retMsg, null, 'bybit.submitWithdraw');
     } catch (error) {
-        return createResponse(false, error.message, null, 'bybit.submitWithdraw');
+        const message = error.response?.data?.message || error.message || 'Failed to submit withdrawal';
+        return createResponse(false, message, null, 'bybit.submitWithdraw');
     }
 }

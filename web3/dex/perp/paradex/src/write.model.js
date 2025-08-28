@@ -1,8 +1,10 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetMarketData } from './viewModel.js'
-import { signOrder } from './sign.js'
+import { vmGetMarketOrderSize, vmGetOpenPositionDetail } from './view.model.js'
+import { signOrder } from './sign.model.js'
+import { calculateMidPrice, formatOrderQuantity } from './utils.js';
 import { paradexEnum } from './enum.js';
+import { MARKET_INSTRUCTION, LIMIT_INSTRUCTION, REDUCE_ONLY } from './constants.js';
 
 /**
  * Submits a new order to the Paradex API after validating and formatting the order parameters.
@@ -24,45 +26,32 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const marketSize = await vmGetMarketOrderSize(_instance, _symbol)
         if(!marketSize.success){ return createResponse(false, 'No size found for this market', null, 'paradex.submitOrder'); }
 
-        const marketDetail = await _instance.get(encodeGetUrl('/markets/summary', { market: _symbol }));
-        if (
-            !marketDetail.data ||
-            !marketDetail.data.results ||
-            !marketDetail.data.results[0] ||
-            marketDetail.data.results[0].mark_price === undefined ||
-            marketDetail.data.results[0].mark_price === null
-        ) {
-            return createResponse(false, 'No price found for this market', null, 'paradex.submitOrder');
-        }
+        const responsePrice = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+        const { ask, bid } = responsePrice.data;
+        const midPrice = calculateMidPrice(ask, bid);
 
         // Parse the order quantity as a float
-        let qty = parseFloat(_orderQty);
-
-        // If the market unit is quoted in the secondary coin, convert the quantity to base units using the last price
-        if (_marketUnit === paradexEnum.order.quoteOnSecCoin) {
-            qty = qty / marketDetail.data.results[0].mark_price;
-        }
-
-        // Adjust the quantity to the nearest valid step size
-        const qtyStep = parseFloat(marketSize.data.qtyStep);
-        qty = Math.floor(qty / qtyStep) * qtyStep;
-
-        // Format the quantity to the correct number of decimal places based on the step size
-        const stepDecimals = (marketSize.data.qtyStep.toString().split('.')[1] || '').length;
-        qty = qty.toFixed(stepDecimals);
-
+        let qty = formatOrderQuantity(
+            _orderQty,
+            _marketUnit === paradexEnum.order.quoteOnSecCoin,
+            midPrice,
+            marketSize.data.qtyStep
+        );
+        
         if (parseFloat(qty) < marketSize.data.minOrderQty)
             return createResponse(false, `Order quantity must be greater than ${marketSize.data.minOrderQty}`, null, 'paradex.submitOrder');
 
-        const instruction = _type === paradexEnum.order.type.limit ? 'GTC': 'IOC'
+        const instruction = _type === paradexEnum.order.type.limit ? LIMIT_INSTRUCTION : MARKET_INSTRUCTION
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: Number(marketDetail.data.results[0].mark_price).toFixed(marketSize.data.priceDecimals),
             side: _side,
             size: qty,
             type: _type
         };
+        if (_type === paradexEnum.order.type.limit) { //add price only for limit orders
+            message.price = midPrice.toFixed(marketSize.data.priceDecimals);
+        }
         const { signature, timestampMs } = signOrder(_chainId, _account, message);
         const params = {
             ...message,
@@ -72,7 +61,8 @@ export async function wmSubmitOrder(_instance, _chainId, _account, _type, _symbo
         const response = await _instance.post('/orders', params);
         return createResponse(true, 'success', {symbol: _symbol, orderId: response.data.id}, 'paradex.submitOrder');
     } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.submitOrder');
+        const message = error.response?.data?.message || error.message || 'Failed to submit order';
+        return createResponse(false, message, null, 'paradex.submitOrder');
     }
 }
 
@@ -90,7 +80,8 @@ export async function wmSubmitCancelOrder(_instance, _orderId) {
         await _instance.delete('/orders/' +  _orderId);
         return createResponse(true, 'success', {orderId: _orderId}, 'paradex.submitCancelOrder')
     } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.submitCancelOrder');
+        const message = error.response?.data?.message || error.message || 'Failed to cancel order';
+        return createResponse(false, message, null, 'paradex.submitCancelOrder');
     }
 }
 
@@ -131,60 +122,57 @@ export async function wmSubmitCloseOrder(_instance, _chainId, _account, _type, _
         if (!marketOrderSize.success)
             return createResponse(false, marketOrderSize.message, null, 'paradex.submitCloseMarketOrder');
 
-        const marketDetail = await _instance.get(encodeGetUrl('/markets/summary', { market: _symbol }));
-        if (
-            !marketDetail.data ||
-            !marketDetail.data.results ||
-            !marketDetail.data.results[0] ||
-            marketDetail.data.results[0].mark_price === undefined ||
-            marketDetail.data.results[0].mark_price === null
-        ) {
-            return createResponse(false, 'No price found for this market', null, 'paradex.submitOrder');
-        }
+        const responsePrice = await _instance.get(encodeGetUrl(`/bbo/${_symbol}`));
+        const { ask, bid } = responsePrice.data;
+        const midPrice = calculateMidPrice(ask, bid);
 
         // Determine qty to close
-        let qty;
-        if (_closeAll) {
-            qty = positionQty;
-        } else {
-            // Parse the order quantity as a float
-            qty = parseFloat(_orderQty);
-            // If the market unit is quoted in the secondary coin, convert the quantity to base units using the last price
-            if (_marketUnit === paradexEnum.order.quoteOnSecCoin) {
-                qty = qty / marketDetail.data.results[0].mark_price;
-            }
-            if (qty > positionQty) { qty = positionQty };
+        let qty = _closeAll ? positionQty : _orderQty;
+        qty = formatOrderQuantity(
+            qty,
+            _closeAll ? false : _marketUnit === paradexEnum.order.quoteOnSecCoin,
+            midPrice,
+            marketOrderSize.data.qtyStep
+        );
+        if (qty > positionQty) { 
+            qty = formatOrderQuantity(
+                positionQty,
+                _closeAll ? false : _marketUnit === paradexEnum.order.quoteOnSecCoin,
+                midPrice,
+                marketOrderSize.data.qtyStep
+            );
         }
-
-        // Adjust qty to step size
-        const qtyStep = parseFloat(marketOrderSize.data.qtyStep);
-        qty = Math.floor(qty / qtyStep) * qtyStep;
-
-        // Format the quantity to the correct number of decimal places based on the step size
-        const stepDecimals = (qtyStep.toString().split('.')[1] || '').length;
-        qty = qty.toFixed(stepDecimals);
 
         if (parseFloat(qty) < marketOrderSize.data.minOrderQty)
             return createResponse(false, `Order quantity must be greater than ${marketOrderSize.data.minOrderQty}`, null, 'paradex.submitCloseMarketOrder');
 
-        const instruction = _type === paradexEnum.order.type.limit ? 'GTC': 'IOC'
+        const instruction = _type === paradexEnum.order.type.limit ? LIMIT_INSTRUCTION : MARKET_INSTRUCTION;
+
+        // Costruisci il messaggio per la firma (senza flags)
         const message = {
             instruction: instruction,
             market: _symbol,
-            price: Number(marketDetail.data.results[0].mark_price).toFixed(marketOrderSize.data.priceDecimals),
             side: closeSide,
             size: qty,
-            type: _type
+            type: _type,
         };
+        if (_type === paradexEnum.order.type.limit) {
+            message.price = midPrice.toFixed(marketOrderSize.data.priceDecimals);
+        }
+
         const { signature, timestampMs } = signOrder(_chainId, _account, message);
+
         const params = {
             ...message,
             signature: signature,
             signature_timestamp: timestampMs,
+            flags: [REDUCE_ONLY],
         };
+
         const response = await _instance.post('/orders', params);
         return createResponse(true, 'success', {symbol: _symbol, orderId: response.data.id}, 'paradex.submitCloseMarketOrder');
     } catch (error) {
-        return createResponse(false, error.message, null, 'paradex.submitCloseMarketOrder');
+        const message = error.response?.data?.message || error.message || 'Failed to submit close market order';
+        return createResponse(false, message, null, 'paradex.submitCloseMarketOrder');
     }
 }

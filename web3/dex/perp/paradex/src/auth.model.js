@@ -1,4 +1,4 @@
-import { signOnboarding, signAuth } from './sign.js';
+import { signOnboarding, signAuth } from './sign.model.js';
 import { clearParadexHeaders } from './utils.js';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 
@@ -23,7 +23,7 @@ export async function amOnboardUser(_instance, _chainId, _account) {
         _instance.defaults.headers['PARADEX-STARKNET-ACCOUNT'] = _account.address;
         _instance.defaults.headers['PARADEX-STARKNET-SIGNATURE'] = signature;
         await _instance.post('/onboarding', param);
-        return createResponse(true, 'User onboarded successfully', null, 'paradex.onboardUser');
+        return createResponse(true, 'success', null, 'paradex.onboardUser');
     } catch (error) {
         return createResponse(false, error.message || 'Failed to onboard user', null, 'paradex.onboardUser');
     }
@@ -49,7 +49,7 @@ export async function amAuthenticateUser(_instance, _chainId, _account) {
         _instance.defaults.headers['PARADEX-SIGNATURE-EXPIRATION'] = expiration;
 
         const response = await _instance.post('/auth');
-        return createResponse(true, 'User authenticated successfully', response.data, 'paradex.authenticateUser');
+        return createResponse(true, 'success', response.data, 'paradex.authenticateUser');
     } catch (error) {
         return createResponse(false, error.message || 'Failed to authenticate user', null, 'paradex.authenticateUser');
     }
