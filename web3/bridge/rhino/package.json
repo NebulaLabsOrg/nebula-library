@@ -1,0 +1,10 @@
+{
+  "name": "rhino",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@paradex/sdk": "^0.6.0",
+    "@rhino.fi/sdk": "^1.5.1",
+    "ethers": "^6.15.0"
+  }
+}
