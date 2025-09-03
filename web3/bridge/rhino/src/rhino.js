@@ -6,7 +6,21 @@ import { Account, Config, ParaclearProvider, Signer } from '@paradex/sdk';
 import { createResponse } from '../../../../utils/src/response.utils.js';
 import { ChainType } from './chainType.enum.js';
 
+/**
+ * @class Rhino
+ * @description A class for interacting with the Rhino bridge SDK.
+ * Provides methods for bridging assets between supported chains using EVM and Paradex adapters.
+ */
 export class Rhino {
+    /**
+    * @constructor
+    * @param {string} _apiKey - The API key for Rhino SDK.
+    * @param {string} _prvKey - The private key for signing transactions.
+    * @param {string} _fromChainType - The type of the source chain (EVM or PARADEX).
+    * @param {number} _maxFeeUSD - The maximum allowed fee in USD for bridging.
+    * @param {string} [_mode='pay'] - The bridge mode.
+    * @param {object|null} [_rpcProvider=null] - (Optional) The RPC provider for blockchain interaction only for PARADEX.
+    */
     constructor(_apiKey, _prvKey, _fromChainType, _maxFeeUSD, _mode = 'pay', _rpcProvider = null) {
         this.privateKey = _prvKey; // For Both EVM and Paradex is enough the Evm Private Key
         this.fromChainType = _fromChainType;
@@ -17,8 +31,16 @@ export class Rhino {
             apiKey: _apiKey,
         });
     }
-
-    
+    /**
+     * @async
+     * @method #manageChainAdapter
+     * @description Returns the appropriate chain adapter based on the source chain type.
+     * For EVM chains, it uses the private key to create an EVM adapter.
+     * For Paradex, it creates an account using the private key and RPC provider, then returns a Paradex adapter.
+     * @param {object} _chainConfig - The configuration object for the target chain.
+     * @returns {Promise<object>} A Promise that resolves with the chain adapter instance.
+     * @throws {Error} If the chain type is not supported.
+     */
     async #manageChainAdapter(_chainConfig) {
         if (this.fromChainType === ChainType.EVM) {
             return getEvmChainAdapterFromPrivateKey(this.privateKey, _chainConfig);
@@ -27,7 +49,7 @@ export class Rhino {
             const provider = new ethers.JsonRpcProvider(this.rpcProvider);
             const ethersSigner = new ethers.Wallet(this.privateKey, provider);
             const config = await Config.fetchConfig('prod');
-            
+
             const paradexAccount = await Account.fromEthSigner({
                 provider: new ParaclearProvider.DefaultProvider(config),
                 config,
@@ -39,7 +61,20 @@ export class Rhino {
         throw new Error('Chain type not supported');
     }
 
-
+    /**
+     * @async
+     * @method bridge
+     * @description Bridges assets between chains using the Rhino SDK.
+     * Initiates a bridge transaction with the provided parameters and handles status updates and fee checks.
+     * @param {string|number|BigNumber} _amount - The amount of the asset to bridge in ethers (1 USDC).
+     * @param {string} _token - The address or symbol of the token to bridge.
+     * @param {string} _chainIn - The source chain identifier.
+     * @param {string} _chainOut - The destination chain identifier.
+     * @param {string} _depositor - The address initiating the bridge.
+     * @param {string} _recipient - The address receiving the bridged asset.
+     * @param {boolean} _logStatusChange - Whether to log bridge status changes.
+     * @returns {Promise<Object>} A Promise that resolves with a response object containing the bridge result or error.
+     */
     async bridge(_amount, _token, _chainIn, _chainOut, _depositor, _recipient, _logStatusChange) {
         try {
             const bridgeResult = await this.rhinoSdk.bridge({
@@ -52,6 +87,7 @@ export class Rhino {
                 recipient: _recipient,
                 mode: this.mode,
             }, {
+                //Callbacks
                 getChainAdapter: async chainConfig => await this.#manageChainAdapter(chainConfig),
                 hooks: {
                     checkQuote: quote => Promise.resolve(quote.fees.feeUsd < this.maxFeeUSD),
@@ -61,11 +97,11 @@ export class Rhino {
                 },
             });
 
-            
+
             if (bridgeResult.data) {
                 return createResponse(true, 'success', bridgeResult.data, 'rhino.bridge');
             } else {
-                return createResponse(false,  bridgeResult.error, null, 'rhino.bridge');
+                return createResponse(false, bridgeResult.error, null, 'rhino.bridge');
             }
         } catch (error) {
             const message = error.message || 'Failed to bridge';

@@ -17,7 +17,7 @@ const logON = true;
 const rhinoEvm = new Rhino(apiKey, privateKey, ChainType.EVM, maxFeeUSD, mode);
 console.log('Calling: rhino.bridge from EVM to PARADEX');
 const bridgeResult = await rhinoEvm.bridge(
-  '1', // amount
+  '1', // amount = 1 USDC
   SupportedTokens.USDC, //token
   SupportedChains.ARBITRUM_ONE, //chainIn
   SupportedChains.PARADEX, //chainOut
@@ -29,7 +29,7 @@ console.log(bridgeResult);
 // Wait some time to wait tx
 await new Promise(resolve => setTimeout(resolve, 10000));
 
-// === FROM EVM CHAIN ===
+// === FROM PARADEX CHAIN ===
 const rhinoParadex = new Rhino(apiKey, privateKey, ChainType.PARADEX, maxFeeUSD, mode, rpcProvider);
 console.log('Calling: rhino.bridge from PARADEX to EVM');
 const bridgeResult2 = await rhinoParadex.bridge(
