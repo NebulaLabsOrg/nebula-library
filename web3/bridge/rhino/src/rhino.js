@@ -70,11 +70,11 @@ export class Rhino {
      * @param {string} _chainOut - The destination chain identifier.
      * @param {string} _depositor - The address initiating the bridge.
      * @param {string} _recipient - The address receiving the bridged asset.
-     * @param {number} [_maxFeeUSD=0] - Maximum allowed fee in USD (optional).
+     * @param {string} [_maxFeeUSD='0'] - Maximum allowed fee in USD (optional).
      * @param {boolean} _logStatusChange - Whether to log bridge status changes.
      * @returns {Promise<Object>} A Promise that resolves with a response object containing the bridge result or error.
      */
-    async bridge(_amount, _token, _chainIn, _chainOut, _depositor, _recipient, _maxFeeUSD = 0, _logStatusChange) {
+    async bridge(_amount, _token, _chainIn, _chainOut, _depositor, _recipient, _maxFeeUSD = '0', _logStatusChange) {
         try {
             const bridgeResult = await this.rhinoSdk.bridge({
                 type: 'bridge',
@@ -90,7 +90,7 @@ export class Rhino {
                 getChainAdapter: async chainConfig => await this.#manageChainAdapter(chainConfig),
                 hooks: {
                     checkQuote: quote => {
-                        if (_maxFeeUSD === 0) return Promise.resolve(true);
+                        if (_maxFeeUSD === '0') return Promise.resolve(true);
                         return Promise.resolve(quote.fees.feeUsd < _maxFeeUSD);
                     },
                     onBridgeStatusChange: status => {
