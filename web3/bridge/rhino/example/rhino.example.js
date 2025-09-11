@@ -14,7 +14,7 @@ const evmAccount = process.env.EVM_ACCOUNT;
 const logON = true;
 
 // === FROM EVM CHAIN ===
-const rhinoEvm = new Rhino(apiKey, privateKey, ChainType.EVM, maxFeeUSD, mode);
+const rhinoEvm = new Rhino(apiKey, privateKey, ChainType.EVM, mode);
 console.log('Calling: rhino.bridge from EVM to PARADEX');
 const bridgeResult = await rhinoEvm.bridge(
   '1', // amount = 1 USDC
@@ -23,6 +23,7 @@ const bridgeResult = await rhinoEvm.bridge(
   SupportedChains.PARADEX, //chainOut
   evmAccount, // depositor
   paradexAccount, // recipient
+  maxFeeUSD, // max fee in USD
   logON // log bridge status changes
 );
 console.log(bridgeResult);
@@ -30,7 +31,7 @@ console.log(bridgeResult);
 await new Promise(resolve => setTimeout(resolve, 10000));
 
 // === FROM PARADEX CHAIN ===
-const rhinoParadex = new Rhino(apiKey, privateKey, ChainType.PARADEX, maxFeeUSD, mode, rpcProvider);
+const rhinoParadex = new Rhino(apiKey, privateKey, ChainType.PARADEX, mode, rpcProvider);
 console.log('Calling: rhino.bridge from PARADEX to EVM');
 const bridgeResult2 = await rhinoParadex.bridge(
   '1', // amount
@@ -39,6 +40,7 @@ const bridgeResult2 = await rhinoParadex.bridge(
   SupportedChains.ARBITRUM_ONE, //chainOut
   paradexAccount, // depositor
   evmAccount, // recipient
+  maxFeeUSD, // max fee in USD
   logON // log bridge status changes
 );
 console.log(bridgeResult2);

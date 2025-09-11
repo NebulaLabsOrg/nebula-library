@@ -17,14 +17,12 @@ export class Rhino {
     * @param {string} _apiKey - The API key for Rhino SDK.
     * @param {string} _prvKey - The private key for signing transactions.
     * @param {string} _fromChainType - The type of the source chain (EVM or PARADEX).
-    * @param {number} _maxFeeUSD - The maximum allowed fee in USD for bridging.
     * @param {string} [_mode='pay'] - The bridge mode.
     * @param {object|null} [_rpcProvider=null] - (Optional) The RPC provider for blockchain interaction only for PARADEX.
     */
-    constructor(_apiKey, _prvKey, _fromChainType, _maxFeeUSD, _mode = 'pay', _rpcProvider = null) {
+    constructor(_apiKey, _prvKey, _fromChainType, _mode = 'pay', _rpcProvider = null) {
         this.privateKey = _prvKey; // For Both EVM and Paradex is enough the Evm Private Key
         this.fromChainType = _fromChainType;
-        this.maxFeeUSD = _maxFeeUSD;
         this.mode = _mode;
         this.rpcProvider = _rpcProvider;
         this.rhinoSdk = RhinoSdk({
@@ -65,17 +63,18 @@ export class Rhino {
      * @async
      * @method bridge
      * @description Bridges assets between chains using the Rhino SDK.
-     * Initiates a bridge transaction with the provided parameters and handles status updates and fee checks.
-     * @param {string|number|BigNumber} _amount - The amount of the asset to bridge in ethers (1 USDC).
+     * Initiates a bridge transaction with the provided parameters, supports fee limits, and logs status updates if requested.
+     * @param {string|number|BigNumber} _amount - The amount of the asset to bridge (e.g., 1 USDC).
      * @param {string} _token - The address or symbol of the token to bridge.
      * @param {string} _chainIn - The source chain identifier.
      * @param {string} _chainOut - The destination chain identifier.
      * @param {string} _depositor - The address initiating the bridge.
      * @param {string} _recipient - The address receiving the bridged asset.
+     * @param {number} [_maxFeeUSD=0] - Maximum allowed fee in USD (optional).
      * @param {boolean} _logStatusChange - Whether to log bridge status changes.
      * @returns {Promise<Object>} A Promise that resolves with a response object containing the bridge result or error.
      */
-    async bridge(_amount, _token, _chainIn, _chainOut, _depositor, _recipient, _logStatusChange) {
+    async bridge(_amount, _token, _chainIn, _chainOut, _depositor, _recipient, _maxFeeUSD = 0, _logStatusChange) {
         try {
             const bridgeResult = await this.rhinoSdk.bridge({
                 type: 'bridge',
@@ -90,7 +89,10 @@ export class Rhino {
                 //Callbacks
                 getChainAdapter: async chainConfig => await this.#manageChainAdapter(chainConfig),
                 hooks: {
-                    checkQuote: quote => Promise.resolve(quote.fees.feeUsd < this.maxFeeUSD),
+                    checkQuote: quote => {
+                        if (_maxFeeUSD === 0) return Promise.resolve(true);
+                        return Promise.resolve(quote.fees.feeUsd < _maxFeeUSD);
+                    },
                     onBridgeStatusChange: status => {
                         if (_logStatusChange) console.log('--> Rhino bridge status changed: ', status);
                     },
