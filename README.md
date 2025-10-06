@@ -59,6 +59,7 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 |--------------|------------------------------------------------------------------|------------------|--------------------------------------------|
 | `ERC20`      | Interact with ERC20 tokens                                       | `ethers`         | `nebula-library/web3/token/ERC20/index.js` |
 | `Moralis`    | Web3 data provider (token, wallet, nft, price, DeFi, blockchain) | `axios`          | `nebula-library/web3/data/moralis/index.js`|
+| `Defillama`  | Web3 data provider (token, market, price, DeFi) | `axios`          | `nebula-library/web3/data/defillama/index.js`|
 
 ---
 
