@@ -1,7 +1,9 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createInstance } from '../../../../../utils/index.js';
 import { extendedEnum } from './enum.js';
+import { MAINNET_API_URL, TESTNET_API_URL } from './constant.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +32,7 @@ export class Extended {
             starkKeyPub: _starkKeyPub,
             vaultNr: _vaultNr
         }
+        this.instance = createInstance(_environment === "mainnet" ? MAINNET_API_URL : TESTNET_API_URL, { 'X-Api-Key': _apiKey });
         this.apiKey = _apiKey;
         this.slippage = _slippage;
         this.throttler = _throttler;
@@ -56,7 +59,6 @@ export class Extended {
             environment: this.environment,
             pythonPath: this.pythonPath,
             scriptPath: this.scriptPath,
-            // Metodo per chiamare il servizio
             call: this._callPythonService.bind(this)
         };
     }
@@ -247,7 +249,7 @@ export class Extended {
      */
     async getEarnedPoints() {
         const { vmGetEarnedPoints } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetEarnedPoints(this.pythonService));
+        return this.throttler.enqueue(() => vmGetEarnedPoints(this.instance));
     }
 
     /**

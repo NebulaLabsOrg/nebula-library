@@ -44,7 +44,7 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 | **Module**   | **Purpose**                              | **Dependencies**                  | **Path**                                               |
 |--------------|------------------------------------------|-----------------------------------|--------------------------------------------------------|
 | `Paradex`    | Connect to Paradex perpetual exchange    | `starknet`, `axios`, `bignumber.js` | `nebula-library/web3/dex/perp/paradex/index.js`         |
-| `Extended`   | **Extended DEX with Python SDK** - StarkNet perpetuals with automated signatures | `x10-python-trading-starknet`   | `nebula-library/web3/dex/perp/extended/index.js`        |
+| `Extended`   | **Extended DEX with Python SDK** - StarkNet perpetuals with automated signatures | `axios`,`x10-python-trading-starknet`   | `nebula-library/web3/dex/perp/extended/index.js`        |
 | `DefX`       | Connect to Defx perpetual exchange       | `axios`                             | `nebula-library/web3/dex/perp/defx/index.js`            |
 
 #### 🌉 Bridges

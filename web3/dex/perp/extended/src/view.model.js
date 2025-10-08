@@ -256,7 +256,7 @@ export async function vmGetOpenPositionDetail(_pythonService, _symbol) {
     }
 }
 
-/**
+/** TO UPDATE
  * @async
  * @function vmGetOrderStatus
  * @description Retrieves the status and details of a specific order by its ID using Python service
@@ -295,21 +295,31 @@ export async function vmGetOrderStatus(callPythonService, _orderId) {
 /**
  * @async
  * @function vmGetEarnedPoints
- * @description METODO NON DISPONIBILE - L'SDK Python di Extended non ha un endpoint per i rewards/punti
- * L'AccountModule nell'SDK ufficiale non include metodi per ottenere rewards o punti utente
- * @param {Object} _pythonService - Configured Python service method
- * @returns {Promise<Object>} A Promise that resolves with an error message since this endpoint doesn't exist
+ * @description Retrieves the total earned points and the latest point details for a user by making a request to the API using the provided client instance. Returns a standardized response object containing the total points earned and the latest epoch's point amount and date, or an error message if the request fails.
+ * @param {Object} _instance - The API client instance used to perform the request.
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the total earned points, latest point details, or an error message.
  */
-export async function vmGetEarnedPoints(_pythonService) {
+export async function vmGetEarnedPoints(_instance){
     try {
-        // NOTA: Dopo aver controllato l'SDK ufficiale di Extended (https://github.com/x10xchange/python_sdk)
-        // NON ESISTE un metodo per ottenere rewards/punti nell'AccountModule
-        // I metodi disponibili sono: get_balance, get_positions, get_orders, get_trades, etc.
-        // Ma NON c'è get_rewards, get_points, get_earned_points o simili
-        
-        return createResponse(false, 'Rewards/Points endpoint not available in Extended SDK - no such method exists in AccountModule', null, 'extended.getEarnedPoints');
+        const response = await _instance.get('/user/rewards/earned');
+        const rewards = response.data.data;
+        let total = 0;
+        rewards.forEach(season => {
+            season.epochRewards.forEach(reward => {
+                total += Number(reward.pointsReward);
+            });
+        });
+        const latestSeason = rewards[rewards.length - 1];
+        const latestEpoch = latestSeason.epochRewards[latestSeason.epochRewards.length - 1];
+        return createResponse(true, 'success', { 
+            total: total.toString(),
+            latest: {
+                amount: latestEpoch.pointsReward,
+                period: (latestEpoch.startDate).replace(/-/g, '/') + '-' + (latestEpoch.endDate).replace(/-/g, '/')
+            }
+        }, 'extended.getEarnedPoints');
     } catch (error) {
-        const message = error.message || 'Failed to get earned points - method not available in SDK';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get earned points';
         return createResponse(false, message, null, 'extended.getEarnedPoints');
     }
 }

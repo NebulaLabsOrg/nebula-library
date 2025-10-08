@@ -23,6 +23,6 @@ const extendedInstance = new Extended(
 );
 
 
-console.log('Calling: extended.getAccount');
-const response = await extendedInstance.getAccountInfo();
+console.log('Calling: extended.getEarnedPoints');
+const response = await extendedInstance.getEarnedPoints();
 console.log(response);
