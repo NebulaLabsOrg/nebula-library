@@ -1,13 +1,25 @@
 {
   "name": "extended",
+  "version": "2.0.0",
+  "description": "Extended DEX trading client with Python SDK backend for StarkNet perpetuals",
   "main": "index.js",
   "type": "module",
-  "dependencies": {
-    "axios": "^1.9.0",
-    "decimal.js": "^10.6.0",
-    "starknet": "^7.6.4"
-  },
+  "keywords": ["extended", "dex", "starknet", "trading", "perpetuals", "python-sdk"],
   "devDependencies": {
     "dotenv": "^16.5.0"
-  }
+  },
+  "scripts": {
+    "test.pyservice:": "cd test && node py-service.test.js",
+    "setup": "sh ./setup.sh",
+    "example": "cd example && node extended.example.js"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "python": ">=3.11.0"
+  },
+  "python": {
+    "requirements": ["x10-python-trading-starknet"]
+  },
+  "author": "Nebula Labs",
+  "license": "MIT"
 }

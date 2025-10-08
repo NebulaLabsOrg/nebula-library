@@ -10,7 +10,6 @@ const extendedInstance = new Extended(
     process.env.API_KEY,
     process.env.STARK_KEY_PRIVATE,
     process.env.STARK_KEY_PUBLIC,
-    process.env.L1_ADDRESS,
     process.env.VAULT_NUMBER,
     0.1,
     extendedThrottler
