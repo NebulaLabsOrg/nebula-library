@@ -148,8 +148,8 @@ export async function vmGetFundingRateHour(_pythonService, _symbol) {
             true,
             'success',
             {
-                symbol: _symbol,
-                fundingRate: (market.market_stats?.funding_rate * 100) / 8
+            symbol: _symbol,
+            fundingRate: ((market.market_stats?.funding_rate * 100) / 8).toString()
             },
             'extended.getFundingRateHour'
         );
@@ -163,30 +163,27 @@ export async function vmGetFundingRateHour(_pythonService, _symbol) {
  * @async
  * @function vmGetMarketOpenInterest
  * @description Retrieves the open interest for a given market symbol using Python service
- * @param {Function} callPythonService - Python service call function
+ * @param {Function} _pythonService - Configured Python service method
  * @param {string} _symbol - The market symbol for which to retrieve the open interest.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open interest data or an error message.
  */
-export async function vmGetMarketOpenInterest(callPythonService, _symbol){
+export async function vmGetMarketOpenInterest(_pythonService, _symbol){
     try {
         // Use standardized get_markets method and filter
-        const markets = await callPythonService('get_markets');
+        const markets = await _pythonService.call('get_markets');
         const market = markets.find(m => m.name === _symbol);
         
         if (!market) {
             return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getMarketOpenInterest');
         }
         
-        const midPrice = market.market_stats?.mark_price || market.market_stats?.last_price || 1;
-        const openInterest = market.market_stats?.open_interest || 0;
-        
         return createResponse(
             true,
             'success',
             {
                 symbol: _symbol,
-                openInterest: openInterest / midPrice,
-                openInterestUsd: openInterest
+                openInterest: market.market_stats.open_interest_base,
+                openInterestUsd: market.market_stats.open_interest
             },
             'extended.getMarketOpenInterest'
         );
@@ -200,17 +197,15 @@ export async function vmGetMarketOpenInterest(callPythonService, _symbol){
  * @async
  * @function vmGetOpenPositions
  * @description Retrieves the user's open positions using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @param {Object} _pythonService - Configured Python service method
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open positions data or an error message.
  */
-export async function vmGetOpenPositions(callPythonService) {
+export async function vmGetOpenPositions(_pythonService) {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const positions = await callPythonService('get_positions');
+        const positions = await _pythonService.call('get_positions');
         
-        // Mappiamo al formato Extended originale
         const openPositions = positions.filter(pos => pos.size && parseFloat(pos.size) !== 0);
-        const markets = openPositions.map(pos => pos.market_name);
+        const markets = openPositions.map(pos => pos.market);
         
         return createResponse(
             true,
@@ -231,29 +226,27 @@ export async function vmGetOpenPositions(callPythonService) {
  * @async
  * @function vmGetOpenPositionDetail
  * @description Retrieves the details of the user's open position for a specific market symbol using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @param {Object} _pythonService - Configured Python service method
  * @param {string} _symbol - The market symbol for which to retrieve the open position details.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open position details or an error message.
  */
-export async function vmGetOpenPositionDetail(callPythonService, _symbol) {
+export async function vmGetOpenPositionDetail(_pythonService, _symbol) {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const positions = await callPythonService('get_positions');
-        const position = positions.find(p => p.market_name === _symbol);
-        
+        const positions = await _pythonService.call('get_positions');
+        const position = positions.find(p => p.market === _symbol);
+
         if (!position || !position.size || parseFloat(position.size) === 0) {
             return createResponse(false, 'No position found', null, 'extended.getOpenPositionDetail');
         }
 
-        // Mappiamo al formato Extended originale
         const detail = {
             symbol: _symbol,
-            avgPrice: position.entry_price || position.avg_price || 0,
-            unrealisedPnl: position.unrealized_pnl || position.pnl || 0,
-            realisedPnl: position.realized_pnl || 0,
-            side: position.side === "BUY" ? "long" : "short",
-            qty: Math.abs(parseFloat(position.size)),
-            qtyUsd: position.notional || (Math.abs(parseFloat(position.size)) * (position.entry_price || 0))
+            avgPrice: position.open_price,
+            unrealisedPnl: position.unrealised_pnl,
+            realisedPnl: position.realised_pnl,
+            side: position.side.toLowerCase(),
+            qty: Math.abs(position.size),
+            qtyUsd: position.value
         };
         
         return createResponse(true, 'success', detail, 'extended.getOpenPositionDetail');
@@ -302,25 +295,21 @@ export async function vmGetOrderStatus(callPythonService, _orderId) {
 /**
  * @async
  * @function vmGetEarnedPoints
- * @description Retrieves the total earned points using Python service account info
- * @param {Object} extendedInstance - Extended instance with configured Python service
- * @returns {Promise<Object>} A Promise that resolves with a response object containing the total earned points, latest point details, or an error message.
+ * @description METODO NON DISPONIBILE - L'SDK Python di Extended non ha un endpoint per i rewards/punti
+ * L'AccountModule nell'SDK ufficiale non include metodi per ottenere rewards o punti utente
+ * @param {Object} _pythonService - Configured Python service method
+ * @returns {Promise<Object>} A Promise that resolves with an error message since this endpoint doesn't exist
  */
-export async function vmGetEarnedPoints(callPythonService) {
+export async function vmGetEarnedPoints(_pythonService) {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const accountInfo = await callPythonService('get_account_info');
+        // NOTA: Dopo aver controllato l'SDK ufficiale di Extended (https://github.com/x10xchange/python_sdk)
+        // NON ESISTE un metodo per ottenere rewards/punti nell'AccountModule
+        // I metodi disponibili sono: get_balance, get_positions, get_orders, get_trades, etc.
+        // Ma NON c'è get_rewards, get_points, get_earned_points o simili
         
-        // Mappiamo al formato Extended originale
-        return createResponse(true, 'success', { 
-            total: (accountInfo.points || 0).toString(),
-            latest: {
-                amount: accountInfo.latest_points || 0,
-                period: new Date().toISOString().split('T')[0].replace(/-/g, '/') + '-' + new Date().toISOString().split('T')[0].replace(/-/g, '/')
-            }
-        }, 'extended.getEarnedPoints');
+        return createResponse(false, 'Rewards/Points endpoint not available in Extended SDK - no such method exists in AccountModule', null, 'extended.getEarnedPoints');
     } catch (error) {
-        const message = error.message || 'Failed to get earned points';
+        const message = error.message || 'Failed to get earned points - method not available in SDK';
         return createResponse(false, message, null, 'extended.getEarnedPoints');
     }
 }

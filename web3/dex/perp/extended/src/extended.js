@@ -192,41 +192,38 @@ export class Extended {
     }
 
     /**
-     * Retrieves market data for open interest using view model aggiornato
-     * 
      * @async
      * @method getMarketOpenInterest
      * @param {string} _symbol - The symbol of the market to retrieve the open interest for.
+     * @description Retrieves market open interest
      * @returns {Promise<Object>} A Promise that resolves with the response containing the open interest data or an error message.
      */
     async getMarketOpenInterest(_symbol) {
         const { vmGetMarketOpenInterest } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketOpenInterest(this._callPythonService.bind(this), _symbol));
+        return this.throttler.enqueue(() => vmGetMarketOpenInterest(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves the open positions using view model aggiornato
-     * 
      * @async
      * @method getOpenPositions
+     * @description Retrieves the open positions
      * @returns {Promise<Object>} A Promise that resolves with the response containing the open positions data or an error message.
      */
     async getOpenPositions() {
         const { vmGetOpenPositions } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetOpenPositions(this._callPythonService.bind(this)));
+        return this.throttler.enqueue(() => vmGetOpenPositions(this.pythonService));
     }
 
     /**
-     * Retrieves specific position details using view model aggiornato
-     *
      * @async
      * @method getOpenPositionDetail
      * @param {string} _symbol - The symbol of the position to retrieve the status for.
+     * @description Retrieves specific position details
      * @returns {Promise<Object>} A Promise that resolves with the response containing the position status data or an error message.
      */
     async getOpenPositionDetail(_symbol) {
         const { vmGetOpenPositionDetail } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this._callPythonService.bind(this), _symbol), 2);
+        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this.pythonService, _symbol));
     }
 
     /**
@@ -243,15 +240,14 @@ export class Extended {
     }
 
     /**
-     * Retrieves account info using view model aggiornato
-     *
      * @async
      * @method getEarnedPoints
+     * @description Retrieves account point earned
      * @returns {Promise<Object>} A Promise that resolves with the response containing account data.
      */
     async getEarnedPoints() {
         const { vmGetEarnedPoints } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetEarnedPoints(this._callPythonService.bind(this)));
+        return this.throttler.enqueue(() => vmGetEarnedPoints(this.pythonService));
     }
 
     /**
