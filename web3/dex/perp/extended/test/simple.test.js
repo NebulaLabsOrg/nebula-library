@@ -23,6 +23,6 @@ const extendedInstance = new Extended(
 );
 
 
-console.log('Calling: extended.getWalletStatus');
-const response = await extendedInstance.getWalletStatus();
+console.log('Calling: extended.getFundingRateHour');
+const response = await extendedInstance.getFundingRateHour('HYPE-USD');
 console.log(response);

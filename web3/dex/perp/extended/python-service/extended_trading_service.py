@@ -285,24 +285,6 @@ class ExtendedTradingService:
         except Exception as e:
             return {"error": f"Failed to close position: {str(e)}"}
     
-    async def get_market_data(self, market_name: str) -> Dict[str, Any]:
-        """Get market data from SDK - Returns ONLY raw data"""
-        if not SDK_AVAILABLE:
-            return {"error": "X10 SDK not available - install x10-python-trading-starknet"}
-        
-        if not self.data_client:
-            return {"error": "Data client not initialized - check API credentials"}
-            
-        try:
-            # Use markets_info module to get market data
-            market_data_response = await self.data_client.markets_info.get_market_data(market_name)
-            market_data = market_data_response.data if hasattr(market_data_response, 'data') else market_data_response
-            
-            # Return ONLY raw data without any wrapper
-            return self._serialize_object(market_data)
-        except Exception as e:
-            return {"error": f"Failed to get market data: {str(e)}"}
-    
     async def get_orderbook(self, market_name: str) -> Dict[str, Any]:
         """Get orderbook from SDK - Returns ONLY raw data"""
         if not SDK_AVAILABLE or not self.data_client:
@@ -350,7 +332,7 @@ def main():
         # Asynchronous commands that use the complete SDK
         if command in ["get_markets", "get_account_info", "get_positions", "get_orders", 
                       "place_order", "cancel_order", "cancel_all_orders", "close_position",
-                      "get_market_data", "get_orderbook", "get_trades", "test_params"]:
+                      "get_orderbook", "get_trades", "test_params"]:
             
             args = json.loads(sys.argv[2])
             
@@ -390,8 +372,6 @@ def main():
                         market_name=args["market_name"],
                         percentage=args.get("percentage", 100.0)
                     )
-                elif command == "get_market_data":
-                    return await service.get_market_data(args["market_name"])
                 elif command == "get_orderbook":
                     return await service.get_orderbook(args["market_name"])
                 elif command == "get_trades":

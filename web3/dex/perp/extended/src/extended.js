@@ -138,7 +138,6 @@ export class Extended {
      * @returns {Promise<Object>} A Promise that resolves with the user's account information or an error response.
      */
     async getWalletStatus() {
-        // Importa dinamicamente per evitare problemi circolari
         const { vmGetWalletStatus } = await import('./view.model.js');
         return this.throttler.enqueue(() => vmGetWalletStatus(this._callPythonService.bind(this)));
     }
@@ -150,9 +149,7 @@ export class Extended {
      * @returns {Promise<Object>} A promise that resolves to the wallet balance object.
      */
     async getWalletBalance() {
-        // Importa dinamicamente per evitare problemi circolari
         const { vmGetWalletBalance } = await import('./view.model.js');
-        // Passa il servizio Python inizializzato invece di callPythonService
         return this.throttler.enqueue(() => vmGetWalletBalance(this.pythonService));
     }
 
@@ -162,50 +159,36 @@ export class Extended {
      * @async
      * @method getMarketData
      * @param {string} _symbol - The symbol of the market to retrieve data for.
+     * @description Retrieves market data for a specific symbol using view model aggiornato
      * @returns {Promise<Object>} A Promise that resolves with the response containing the market data or an error message.
      */
     async getMarketData(_symbol) {
         const { vmGetMarketData } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketData(this._callPythonService.bind(this), _symbol));
+        return this.throttler.enqueue(() => vmGetMarketData(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves the latest market data for a specific symbol using view model aggiornato
-     *
-     * @async
-     * @method getLatestMarketData
-     * @param {string} _symbol - The symbol of the market to retrieve the latest data for.
-     * @returns {Promise<Object>} A Promise that resolves with the latest market data or an error message.
-     */
-    async getLatestMarketData(_symbol) {
-        const { vmGetLatestMarketData } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetLatestMarketData(this._callPythonService.bind(this), _symbol));
-    }
-
-    /**
-     * Retrieves all markets using view model aggiornato
-     *
      * @async
      * @method getMarketOrderSize
      * @param {string} _symbol - The symbol of the market to query.
+     * @description Retrieves market order size configuration
      * @returns {Promise<*>} A Promise that resolves to the markets list.
      */
     async getMarketOrderSize(_symbol) {
         const { vmGetMarketOrderSize } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketOrderSize(this._callPythonService.bind(this), _symbol));
+        return this.throttler.enqueue(() => vmGetMarketOrderSize(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves market data for funding rate using view model aggiornato
-     *
      * @async
      * @method getFundingRateHour
      * @param {string} _symbol - The symbol of the market to retrieve the funding rate for.
+     * @description Retrieves market hourly funding rate
      * @returns {Promise<Object>} A Promise that resolves with the funding rate data for the specified symbol.
      */
     async getFundingRateHour(_symbol) {
         const { vmGetFundingRateHour } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetFundingRateHour(this._callPythonService.bind(this), _symbol));
+        return this.throttler.enqueue(() => vmGetFundingRateHour(this.pythonService, _symbol));
     }
 
     /**

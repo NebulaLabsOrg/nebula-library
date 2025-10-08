@@ -1,25 +1,23 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
-import { calculateMidPrice } from './utils.js';
 
 /**
  * @async
  * @function vmGetWalletStatus
  * @description Retrieves the wallet status using Python service
- * @param {Function} callPythonService - Configured Python service method
+ * @param {Function} _pythonService - Configured Python service method
  * @returns {Promise<Object>} A Promise that resolves with a response object containing wallet status data or an error message.
  */
-export async function vmGetWalletStatus(callPythonService) {
+export async function vmGetWalletStatus(_pythonService) {
     try {
         // Use the already configured and initialized Python service
-        const accountInfo = await callPythonService('get_account_info');
+        const accountInfo = await _pythonService('get_account_info');
 
         return createResponse(
             true,
             'success',
             {
-                balance: accountInfo.balance || 0,
-                equity: accountInfo.equity || 0,
+                balance: accountInfo.balance,
+                equity: accountInfo.equity,
             },
             'extended.getWalletStatus'
         );
@@ -33,21 +31,21 @@ export async function vmGetWalletStatus(callPythonService) {
  * @async
  * @function vmGetWalletBalance
  * @description Retrieves the wallet balance using Python service
- * @param {Object} pythonService - Configured Python service with all parameters
+ * @param {Object} _pythonService - Configured Python service method
  * @returns {Promise<Object>} A Promise that resolves with a response object containing wallet balance data or an error message.
  */
-export async function vmGetWalletBalance(pythonService) {
+export async function vmGetWalletBalance(_pythonService) {
     try {
         // Use the already configured and initialized Python service
-        const accountInfo = await pythonService.call('get_account_info');
+        const accountInfo = await _pythonService.call('get_account_info');
 
         return createResponse(
             true,
             'success',
             {
-                availableForTrade: accountInfo.available_for_trade || 0,
-                availableForWithdrawal: accountInfo.available_for_withdrawal || 0,
-                unrealisedPnl: accountInfo.unrealised_pnl || 0
+                availableForTrade: accountInfo.available_for_trade,
+                availableForWithdrawal: accountInfo.available_for_withdrawal,
+                unrealisedPnl: accountInfo.unrealised_pnl
             },
             'extended.getWalletBalance'
         );
@@ -61,44 +59,29 @@ export async function vmGetWalletBalance(pythonService) {
  * @async
  * @function vmGetMarketData
  * @description Retrieves market data using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @param {Object} _pythonService - Configured Python service method
  * @param {string} [_symbol=''] - (Optional) The market symbol to filter the results. If not provided, retrieves all markets.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the filtered market data or an error message.
  */
-export async function vmGetMarketData(callPythonService, _symbol = '') {
+export async function vmGetMarketData(_pythonService, _symbol = '') {
     try {
-        // Use the already configured and initialized Python service
+        // Use the standardized get_markets method and filter on JavaScript side
+        const markets = await _pythonService.call('get_markets');
+        
         if (_symbol) {
-            const marketData = await callPythonService('get_market_data', {
-                market_name: _symbol
-            });
+            // Filter for specific market
+            const market = markets.find(m => m.name === _symbol);
             
-            // Mappiamo al formato Extended originale
-            const market = {
-                name: _symbol,
-                symbol: _symbol,
-                status: 'ACTIVE',
-                active: true,
-                ...marketData
-            };
+            if (!market) {
+                return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getMarketData');
+            }
             
+            // Return single market as array for consistency
             return createResponse(true, 'success', [market], 'extended.getMarketData');
         } else {
-            // Tutti i mercati
-            const markets = await callPythonService('get_markets');
-            
-            // Mappiamo al formato Extended originale
-            const formattedMarkets = markets
-                .filter(market => market.active !== false)
-                .map(market => ({
-                    name: market.name,
-                    symbol: market.name,
-                    status: 'ACTIVE',
-                    active: true,
-                    ...market
-                }));
-                
-            return createResponse(true, 'success', formattedMarkets, 'extended.getMarketData');
+            // Return all active markets
+            const activeMarkets = markets.filter(market => market.active !== false);
+            return createResponse(true, 'success', activeMarkets, 'extended.getMarketData');
         }
     } catch (error) {
         const message = error.message || 'Failed to get market data';
@@ -108,56 +91,32 @@ export async function vmGetMarketData(callPythonService, _symbol = '') {
 
 /**
  * @async
- * @function vmGetLatestMarketData
- * @description Retrieves the latest market statistics for a given symbol using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
- * @param {string} [_symbol] - The market symbol for which to retrieve the latest statistics.
- * @returns {Promise<Object>} A Promise that resolves with a response object containing the latest market data or an error message.
- */
-export async function vmGetLatestMarketData(callPythonService, _symbol) {
-    try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const marketData = await callPythonService('get_market_data', {
-            market_name: _symbol
-        });
-        
-        // Mappiamo al formato Extended originale
-        return createResponse(true, 'success', marketData, 'extended.getLatestMarketData');
-    } catch (error) {
-        const message = error.message || 'Failed to get latest market data';
-        return createResponse(false, message, null, 'extended.getLatestMarketData');
-    }
-}
-
-/**
- * @async
  * @function vmGetMarketOrderSize
  * @description Retrieves the market order size configuration for a given symbol using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @param {Object} _pythonService - Configured Python service method
  * @param {string} _symbol - The market symbol for which to retrieve order size configuration.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing order size configuration or an error message.
  */
-export async function vmGetMarketOrderSize(callPythonService, _symbol){
+export async function vmGetMarketOrderSize(_pythonService, _symbol) {
     try {
         // Usa il servizio Python configurato nell'istanza Extended
-        const markets = await callPythonService('get_markets');
+        const markets = await _pythonService.call('get_markets');
         const market = markets.find(m => m.name === _symbol);
-        
+
         if (!market) {
             return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getMarketOrderSize');
         }
 
-        // Mappiamo al formato Extended originale con valori di default
         return createResponse(
             true,
             'success',
             {
-                symbol: _symbol,
-                minQty: market.min_order_size || 0.001,
-                qtyStep: market.qty_step || 0.001,
-                maxMktQty: market.max_market_order || 1000000,
-                maxLimQty: market.max_limit_order || 1000000,
-                priceDecimals: market.price_decimals || 2
+            symbol: _symbol,
+            minQty: market.trading_config.min_order_size,
+            qtyStep: market.trading_config.min_order_size_change,
+            maxMktQty: market.trading_config.max_market_order_value,
+            maxLimQty: market.trading_config.max_limit_order_value,
+            priceDecimals: (market.trading_config.min_price_change?.toString().split('.')[1]?.length)
             },
             'extended.getMarketOrderSize'
         );
@@ -170,25 +129,27 @@ export async function vmGetMarketOrderSize(callPythonService, _symbol){
 /**
  * @async
  * @function vmGetFundingRateHour
- * @description Retrieves the hourly funding rate for a given symbol using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @description Retrieves the hourly funding rate for a given market symbol
+ * @param {Function} _pythonService - Configured Python service method
  * @param {string} _symbol - The market symbol for which to retrieve the funding rate.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the funding rate or an error message.
  */
-export async function vmGetFundingRateHour(callPythonService, _symbol) {
+export async function vmGetFundingRateHour(_pythonService, _symbol) {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const marketData = await callPythonService('get_market_data', {
-            market_name: _symbol
-        });
+        // Use standardized get_markets method and filter
+        const markets = await _pythonService.call('get_markets');
+        const market = markets.find(m => m.name === _symbol);
         
-        // Mappiamo al formato Extended originale
+        if (!market) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getFundingRateHour');
+        }
+        
         return createResponse(
             true,
             'success',
             {
                 symbol: _symbol,
-                fundingRate: (marketData.funding_rate || 0) * 100
+                fundingRate: (market.market_stats?.funding_rate * 100) / 8
             },
             'extended.getFundingRateHour'
         );
@@ -202,21 +163,23 @@ export async function vmGetFundingRateHour(callPythonService, _symbol) {
  * @async
  * @function vmGetMarketOpenInterest
  * @description Retrieves the open interest for a given market symbol using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @param {Function} callPythonService - Python service call function
  * @param {string} _symbol - The market symbol for which to retrieve the open interest.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open interest data or an error message.
  */
 export async function vmGetMarketOpenInterest(callPythonService, _symbol){
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const marketData = await callPythonService('get_market_data', {
-            market_name: _symbol
-        });
+        // Use standardized get_markets method and filter
+        const markets = await callPythonService('get_markets');
+        const market = markets.find(m => m.name === _symbol);
         
-        const midPrice = marketData.mark_price || marketData.last_price || 1;
-        const openInterest = marketData.open_interest || 0;
+        if (!market) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getMarketOpenInterest');
+        }
         
-        // Mappiamo al formato Extended originale
+        const midPrice = market.market_stats?.mark_price || market.market_stats?.last_price || 1;
+        const openInterest = market.market_stats?.open_interest || 0;
+        
         return createResponse(
             true,
             'success',
