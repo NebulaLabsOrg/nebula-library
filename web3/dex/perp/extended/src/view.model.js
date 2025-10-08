@@ -11,16 +11,15 @@ import { calculateMidPrice } from './utils.js';
  */
 export async function vmGetWalletStatus(callPythonService) {
     try {
-        // Usa il servizio Python già configurato
+        // Use the already configured and initialized Python service
         const accountInfo = await callPythonService('get_account_info');
-        
-        // Mappiamo i dati del Python SDK al formato Extended originale
+
         return createResponse(
             true,
             'success',
             {
-                balance: accountInfo.available_balance || accountInfo.balance || 0,
-                equity: accountInfo.equity || accountInfo.total_balance || accountInfo.balance || 0,
+                balance: accountInfo.balance || 0,
+                equity: accountInfo.equity || 0,
             },
             'extended.getWalletStatus'
         );
@@ -39,10 +38,9 @@ export async function vmGetWalletStatus(callPythonService) {
  */
 export async function vmGetWalletBalance(pythonService) {
     try {
-        // Usa il servizio Python già configurato e inizializzato
+        // Use the already configured and initialized Python service
         const accountInfo = await pythonService.call('get_account_info');
-        console.log(accountInfo)
-        // Mappiamo i dati del Python SDK al formato Extended originale
+
         return createResponse(
             true,
             'success',
@@ -69,9 +67,8 @@ export async function vmGetWalletBalance(pythonService) {
  */
 export async function vmGetMarketData(callPythonService, _symbol = '') {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
+        // Use the already configured and initialized Python service
         if (_symbol) {
-            // Singolo mercato
             const marketData = await callPythonService('get_market_data', {
                 market_name: _symbol
             });

@@ -22,7 +22,7 @@ const extendedInstance = new Extended(
     extendedThrottler
 );
 
-console.log('Get token quantity');
-console.log('Calling: extended.getWalletBalance');
-const walletBalance = await extendedInstance.getWalletBalance();
-console.log(walletBalance);
+
+console.log('Calling: extended.getWalletStatus');
+const response = await extendedInstance.getWalletStatus();
+console.log(response);

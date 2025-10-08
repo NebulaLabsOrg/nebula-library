@@ -10,9 +10,8 @@ export { extendedEnum };
 
 /**
  * @class Extended
- * @description Extended DEX client che usa internamente l'SDK Python x10-python-trading-starknet
- * Mantiene la stessa API pubblica ma usa il servizio Python per tutte le operazioni crittografiche e di trading.
- * NESSUNA FIRMA MANUALE - TUTTO AUTOMATICO CON SDK PYTHON!
+ * @description A class for interacting with the Extended DEX. 
+ * Provides methods for onboarding, authenticating, trading, and retrieving account and market information using the internal x10-python-trading-starknet SDK.
  */
 export class Extended {
     /**
@@ -36,16 +35,16 @@ export class Extended {
         this.throttler = _throttler;
         this.environment = _environment;
         
-        // Path al servizio Python
+        // Path to the Python service
         this.pythonPath = 'python3.11';
         this.scriptPath = path.join(__dirname, '../python-service/extended_trading_service.py');
-        
-        // Inizializza il servizio Python con tutti i parametri
+
+        // Initializes the Python service with all configured parameters
         this.pythonService = this._initializePythonService();
     }
 
     /**
-     * Inizializza il servizio Python con tutti i parametri configurati
+     * Initializes the Python service with all configured parameters
      * @private
      */
     _initializePythonService() {
@@ -63,7 +62,7 @@ export class Extended {
     }
 
     /**
-     * Chiama il servizio Python con comando specifico
+     * Calls the Python service with a specific command
      * @private
      */
     async _callPythonService(command, additionalArgs = {}) {
@@ -113,6 +112,12 @@ export class Extended {
         });
     }
 
+    /**
+     * @async
+     * @method checkPythonService
+     * @description Verifies the connection and parameters with the underlying Python service.
+     * @returns {Promise<Object>} A Promise that resolves with the test result or an error response.
+     */
     async checkPythonService() {
         try {
             const testResult = await this._callPythonService('test_params', {
@@ -139,10 +144,9 @@ export class Extended {
     }
 
     /**
-     * Retrieves the wallet balance using view model aggiornato
-     *
      * @async
      * @method getWalletBalance
+     * @description Retrieves the wallet balance using view model aggiornato
      * @returns {Promise<Object>} A promise that resolves to the wallet balance object.
      */
     async getWalletBalance() {
