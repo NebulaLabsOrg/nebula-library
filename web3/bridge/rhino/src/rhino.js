@@ -1,11 +1,6 @@
 import { RhinoSdk } from '@rhino.fi/sdk';
-import { ethers } from 'ethers';
-import { getEvmChainAdapterFromPrivateKey } from '@rhino.fi/sdk/adapters/evm';
-import { getParadexChainAdapterFromAccount } from '@rhino.fi/sdk/adapters/paradex';
-import { Account, Config, ParaclearProvider, Signer } from '@paradex/sdk';
+import { chainAdapter } from './adapters.js';
 import { createResponse } from '../../../../utils/src/response.utils.js';
-import { ChainType } from './chainType.enum.js';
-
 /**
  * @class Rhino
  * @description A class for interacting with the Rhino bridge SDK.
@@ -29,65 +24,36 @@ export class Rhino {
             apiKey: _apiKey,
         });
     }
-    /**
-     * @async
-     * @method #manageChainAdapter
-     * @description Returns the appropriate chain adapter based on the source chain type.
-     * For EVM chains, it uses the private key to create an EVM adapter.
-     * For Paradex, it creates an account using the private key and RPC provider, then returns a Paradex adapter.
-     * @param {object} _chainConfig - The configuration object for the target chain.
-     * @returns {Promise<object>} A Promise that resolves with the chain adapter instance.
-     * @throws {Error} If the chain type is not supported.
-     */
-    async #manageChainAdapter(_chainConfig) {
-        if (this.fromChainType === ChainType.EVM) {
-            return getEvmChainAdapterFromPrivateKey(this.privateKey, _chainConfig);
-        }
-        if (this.fromChainType === ChainType.PARADEX) {
-            const provider = new ethers.JsonRpcProvider(this.rpcProvider);
-            const ethersSigner = new ethers.Wallet(this.privateKey, provider);
-            const config = await Config.fetchConfig('prod');
-
-            const paradexAccount = await Account.fromEthSigner({
-                provider: new ParaclearProvider.DefaultProvider(config),
-                config,
-                signer: Signer.ethersSignerAdapter(ethersSigner)
-            });
-
-            return getParadexChainAdapterFromAccount(paradexAccount, _chainConfig);
-        }
-        throw new Error('Chain type not supported');
-    }
 
     /**
      * @async
      * @method bridge
-     * @description Bridges assets between chains using the Rhino SDK.
-     * Initiates a bridge transaction with the provided parameters, supports fee limits, and logs status updates if requested.
-     * @param {string|number|BigNumber} _amount - The amount of the asset to bridge (e.g., 1 USDC).
-     * @param {string} _token - The address or symbol of the token to bridge.
-     * @param {string} _chainIn - The source chain identifier.
-     * @param {string} _chainOut - The destination chain identifier.
-     * @param {string} _depositor - The address initiating the bridge.
-     * @param {string} _recipient - The address receiving the bridged asset.
+     * @description Initiates a bridge transaction using the Rhino SDK to transfer assets between chains.
+     * Supports fee limits and optional logging of bridge status updates. Returns a standardized response object.
+     * @param {string} _amount - Amount of the asset to bridge (e.g., 1 USDC).
+     * @param {string} _token - Address or symbol of the token to bridge.
+     * @param {string} _fromChain - Source chain identifier.
+     * @param {string} _toChain - Destination chain identifier.
+     * @param {string} _fromAddress - Address initiating the bridge.
+     * @param {string} _toAddress - Address receiving the bridged asset.
      * @param {string} [_maxFeeUSD='0'] - Maximum allowed fee in USD (optional).
      * @param {boolean} _logStatusChange - Whether to log bridge status changes.
-     * @returns {Promise<Object>} A Promise that resolves with a response object containing the bridge result or error.
+     * @returns {Promise<Object>} Resolves with a response object containing the bridge result or error.
      */
-    async bridge(_amount, _token, _chainIn, _chainOut, _depositor, _recipient, _maxFeeUSD = '0', _logStatusChange) {
+    async bridge(_amount, _token, _fromChain, _toChain, _fromAddress, _toAddress, _maxFeeUSD = '0', _logStatusChange) {
         try {
             const bridgeResult = await this.rhinoSdk.bridge({
                 type: 'bridge',
                 amount: _amount,
                 token: _token,
-                chainIn: _chainIn,
-                chainOut: _chainOut,
-                depositor: _depositor,
-                recipient: _recipient,
+                chainIn: _fromChain,
+                chainOut: _toChain,
+                depositor: _fromAddress,
+                recipient: _toAddress,
                 mode: this.mode,
             }, {
                 //Callbacks
-                getChainAdapter: async chainConfig => await this.#manageChainAdapter(chainConfig),
+                getChainAdapter: async chainConfig => await chainAdapter(this.fromChainType, this.rpcProvider, _fromAddress, this.privateKey, chainConfig),
                 hooks: {
                     checkQuote: quote => {
                         if (_maxFeeUSD === '0') return Promise.resolve(true);
