@@ -238,7 +238,7 @@ export class Extended {
      */
     async getOrderStatus(_orderId) {
         const { vmGetOrderStatus } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetOrderStatus(this._callPythonService.bind(this), _orderId));
+        return this.throttler.enqueue(() => vmGetOrderStatus(this.instance, _orderId));
     }
 
     /**
@@ -267,15 +267,14 @@ export class Extended {
     async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty) {
         const { wmSubmitOrder } = await import('./write.model.js');
         return await this.throttler.enqueue(() => wmSubmitOrder(
-            this, // passa l'istanza Extended con Python service
+            this.pythonService,
             this.slippage,
-            this.account,
             _type,
             _symbol,
             _side,
             _marketUnit,
             _orderQty
-        ), 5);
+        ));
     }
 
     /**
@@ -283,12 +282,12 @@ export class Extended {
      *
      * @async
      * @method submitCancelOrder
-     * @param {string} _orderId - L'ID dell'ordine da cancellare.
+     * @param {string} _externalId - L'external ID dell'ordine da cancellare.
      * @returns {Promise<Object>} Una Promise che si risolve con il risultato della cancellazione dell'ordine.
      */
-    async submitCancelOrder(_orderId) {
+    async submitCancelOrder(_externalId) {
         const { wmSubmitCancelOrder } = await import('./write.model.js');
-        return this.throttler.enqueue(() => wmSubmitCancelOrder(this, _orderId));
+        return this.throttler.enqueue(() => wmSubmitCancelOrder(this.pythonService, _externalId));
     }
 
     /**
@@ -299,22 +298,21 @@ export class Extended {
      * @method submitCloseOrder
      * @param {string} _type - The type of the close order (e.g., 'limit', 'market').
      * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTCUSD').
-     * @param {number} _orderQty - The quantity to close.
-     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 'coins').
+     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 
+     * @param {number} _orderQty - The quantity to close.'coins').
      * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol.
      * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
      */
     async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll = false) {
         const { wmSubmitCloseOrder } = await import('./write.model.js');
         return this.throttler.enqueue(() => wmSubmitCloseOrder(
-            this, // passa l'istanza Extended con Python service
+            this.pythonService,
             this.slippage,
-            this.account,
             _type,
             _symbol,
             _orderQty,
             _marketUnit,
             _closeAll
-        ), 6);
+        ));
     }
 }

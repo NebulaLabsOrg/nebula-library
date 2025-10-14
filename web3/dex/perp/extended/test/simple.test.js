@@ -23,6 +23,6 @@ const extendedInstance = new Extended(
 );
 
 
-console.log('Calling: extended.getEarnedPoints');
-const response = await extendedInstance.getEarnedPoints();
+console.log('Calling: extended.getOpenPositionDetail');
+const response = await extendedInstance.getOpenPositionDetail('HYPE-USD');
 console.log(response);

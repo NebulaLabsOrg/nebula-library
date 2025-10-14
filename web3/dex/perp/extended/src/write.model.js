@@ -1,13 +1,31 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
+import { vmGetMarketData, vmGetOpenPositionDetail } from './view.model.js';
+import { formatOrderQuantity, calculateMidPrice } from './utils.js';
 import { extendedEnum } from './enum.js';
+import { MARKET_TIME_IN_FORCE, LIMIT_TIME_IN_FORCE } from './constant.js';
+
+/**
+ * Helper per contare decimali da min_price_change
+ */
+function countDecimals(value) {
+    const str = value.toString();
+    if (str.indexOf('.') !== -1 && str.indexOf('e-') === -1) {
+        return str.split('.')[1].length;
+    } else if (str.indexOf('e-') !== -1) {
+        const parts = str.split('e-');
+        return parseInt(parts[1], 10);
+    }
+    return 0;
+}
 
 /**
  * @async
  * @function wmSubmitOrder
- * @description Submits order using Python SDK internally but maintains same response format
- * @param {Function} callPythonService - Configured Python service method
+ * @description Submits a new order using Python SDK internally with centralized error handling.
+ * NOTE: Fee calculation is handled automatically by the Extended SDK - no need to pass fee parameters.
+ * The SDK uses account.trading_fee or DEFAULT_FEES (maker: 0.02%, taker: 0.05%) automatically.
+ * @param {Object} _pythonService - The Extended client instance with configured Python service
  * @param {number} _slippage - The allowed slippage percentage for market orders.
- * @param {Object} _account - The user's account object containing vault number and Stark key information.
  * @param {string} _type - The order type (e.g., market or limit).
  * @param {string} _symbol - The market symbol for which to submit the order.
  * @param {string} _side - The order side (e.g., long or short).
@@ -15,169 +33,250 @@ import { extendedEnum } from './enum.js';
  * @param {number|string} _orderQty - The quantity of the order to submit.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the order ID and symbol, or an error message.
  */
-export async function wmSubmitOrder(callPythonService, _slippage, _account, _type, _symbol, _side, _marketUnit, _orderQty) {
+export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
     try {
-        // Usa il servizio Python già configurato
-        // Converti i parametri al formato Python SDK
-        const pythonSide = _side === extendedEnum.order.long ? "BUY" : "SELL";
-        const pythonType = _type === extendedEnum.order.type.market ? "MARKET" : "LIMIT";
-        
-        // Calcola il prezzo per ordini limit (per market sarà ignorato)
-        let price = "0"; // Default per market orders
-        if (_type === extendedEnum.order.type.limit) {
-            // Per ora usiamo un prezzo di mercato, in futuro si può migliorare
-            try {
-                const marketData = await extendedInstance._callPythonService('get_market_data', {
-                    market_name: _symbol
-                });
-                price = marketData.mark_price || marketData.last_price || "50000"; // Fallback
-            } catch (error) {
-                price = "50000"; // Fallback price
-            }
+        // 1. Get market data (single call per tutti i dati necessari)
+        const marketData = await vmGetMarketData(_pythonService, _symbol);
+        if (!marketData.success) {
+            throw new Error(marketData.message);
         }
         
-        // Converti quantity se necessario
-        let amount = _orderQty.toString();
-        
-        // Piazza l'ordine usando il servizio Python
-        const orderResult = await extendedInstance._callPythonService('place_order', {
-            market_name: _symbol,
-            side: pythonSide,
-            amount: amount,
-            price: price,
-            order_type: pythonType,
-            time_in_force: "GTC"
-        });
-        
-        if (orderResult.success) {
-            // Formato risposta compatibile con Extended originale
-            return createResponse(true, 'success', { 
-                symbol: _symbol, 
-                orderId: orderResult.order.id || crypto.randomUUID() 
-            }, 'extended.submitOrder');
-        } else {
-            return createResponse(false, orderResult.error || 'Failed to place order', null, 'extended.submitOrder');
+        const market = marketData.data[0];
+        if (!market) {
+            throw new Error(`Market ${_symbol} not found`);
         }
-    } catch (error) {
-        const message = error.message || 'Failed to submit order';
-        return createResponse(
-            false,
-            message,
-            null,
-            'extended.submitOrder'
+        
+        const { market_stats, trading_config } = market;
+        if (!market_stats || !trading_config) {
+            throw new Error(`Invalid market data for ${_symbol}`);
+        }
+        
+        // 2. Extract market parameters (NO FEE CALL NEEDED - SDK handles fees automatically)
+        const askPrice = parseFloat(market_stats.ask_price);
+        const bidPrice = parseFloat(market_stats.bid_price);
+        const qtyStep = parseFloat(trading_config.min_order_size_change);
+        const minQty = parseFloat(trading_config.min_order_size);
+        const priceDecimals = countDecimals(trading_config.min_price_change);
+        
+        if (isNaN(askPrice) || isNaN(bidPrice)) {
+            throw new Error('Invalid market prices received');
+        }
+        
+        // 3. Calcoli locali (mantieni logica esistente)
+        const midPrice = calculateMidPrice(askPrice, bidPrice);
+        const actPrice = (_type === extendedEnum.order.type.market 
+            ? _side === extendedEnum.order.long 
+                ? midPrice + midPrice * (_slippage / 100) 
+                : midPrice - midPrice * (_slippage / 100) 
+            : midPrice
+        ).toFixed(priceDecimals);
+        
+        // 4. Format quantity (mantieni logica esistente)
+        const qty = formatOrderQuantity(
+            _orderQty,
+            _marketUnit === extendedEnum.order.quoteOnSecCoin,
+            actPrice,
+            qtyStep
         );
+        
+        // 5. Validazioni
+        if (qty < minQty) {
+            throw new Error(`Order quantity ${qty} must be greater than ${minQty}`);
+        }
+        
+        // 6. Map parameters for SDK (NO FEE PARAMETERS - SDK handles automatically)
+        const sdkSide = _side === extendedEnum.order.long ? 'BUY' : 'SELL';
+        const sdkOrderType = _type === extendedEnum.order.type.market ? 'MARKET' : 'LIMIT';
+        const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
+        
+        // Set post_only for LIMIT orders (recommended for better fills and maker fees)
+        const postOnly = sdkOrderType === 'LIMIT';
+        
+        // 7. Place order via SDK with proper post_only for LIMIT orders
+        const orderResult = await _pythonService.call('place_order', {
+            market_name: _symbol,
+            side: sdkSide,
+            amount: qty.toString(),
+            price: actPrice.toString(),
+            order_type: sdkOrderType,
+            time_in_force: timeInForce,
+            post_only: postOnly
+        });
+
+        return createResponse(true, 'success', { 
+            symbol: _symbol, 
+            orderId: orderResult.external_id 
+        }, 'extended.submitOrder');
+        
+    } catch (error) {
+        // Tutti gli errori arrivano qui - gestione centralizzata
+        const message = error.response?.data?.error?.message || error.message || 'Failed to submit order';
+        return createResponse(false, message, null, 'extended.submitOrder');
     }
 }
 
 /**
- * Cancels an existing order using Python SDK
+ * Cancels an existing order using Python SDK with centralized error handling
  *
  * @async
  * @function wmSubmitCancelOrder
- * @param {Object} extendedInstance - Extended instance with configured Python service
- * @param {string|number} _orderId - The unique identifier of the order to cancel.
- * @returns {Promise<Object>} A promise that resolves to a response object indicating success or failure, including the order ID on success, or an error message on failure.
+ * @param {Object} _pythonService - Configured Python service method
+ * @param {string} _externalId - The external ID of the order to cancel.
+ * @returns {Promise<Object>} A promise that resolves to a response object indicating success or failure, including the external ID on success, or an error message on failure.
  */
-export async function wmSubmitCancelOrder(extendedInstance, _orderId) {
+export async function wmSubmitCancelOrder(_pythonService, _externalId) {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const cancelResult = await extendedInstance._callPythonService('cancel_order', {
-            order_id: _orderId.toString()
+        if (!_externalId) {
+            throw new Error('External ID is required');
+        }
+        
+        // Use Python service with real SDK method: trading_client.orders.cancel_order_by_external_id()
+        const cancelResult = await _pythonService.call('cancel_order_by_external_id', {
+            external_id: _externalId.toString()
         });
         
-        if (cancelResult.success) {
-            return createResponse(true, 'success', { orderId: _orderId }, 'extended.submitCancelOrder');
-        } else {
-            return createResponse(false, cancelResult.error || 'Failed to cancel order', null, 'extended.submitCancelOrder');
+        if (cancelResult.error) {
+            throw new Error(cancelResult.error);
         }
+        
+        return createResponse(true, 'success', { externalId: _externalId }, 'extended.submitCancelOrder');
+        
     } catch (error) {
-        const message = error.message || 'Failed to cancel order';
+        // Centralized error handling
+        const message = error.response?.data?.error?.message || error.message || 'Failed to cancel order';
         return createResponse(false, message, null, 'extended.submitCancelOrder');
     }
 }
 
 /**
- * Submits a close order for an open position using Python SDK
+ * Submits a close order for an open position using Python SDK with centralized error handling
  *
  * @async
  * @function wmSubmitCloseOrder
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @param {Object} _pythonService - The Extended client instance with configured Python service
  * @param {number} _slippage - Allowed slippage percentage for market orders.
- * @param {Object} _account - User account object containing vault number and Stark key information.
  * @param {string} _type - Order type (e.g., market or limit).
  * @param {string} _symbol - Market symbol for the order (e.g., 'BTC-USD').
- * @param {number} _orderQty - Quantity to close (ignored if _closeAll is true).
  * @param {string} _marketUnit - Unit type for the market (e.g., base or quote).
+ * @param {number} _orderQty - Quantity to close (ignored if _closeAll is true).
  * @param {boolean} _closeAll - If true, closes the entire position; otherwise, closes the specified quantity.
  * @returns {Promise<Object>} A promise that resolves to a response object indicating success or failure, including the symbol and order ID on success, or an error message on failure.
  */
-export async function wmSubmitCloseOrder(extendedInstance, _slippage, _account, _type, _symbol, _orderQty, _marketUnit, _closeAll) {
+export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll) {
     try {
-        // Prima otteniamo le posizioni per determinare quale chiudere
-        const positions = await extendedInstance._callPythonService('get_positions');
-        const position = positions.find(p => p.market_name === _symbol);
+        if (!_symbol) {
+            throw new Error('Symbol is required');
+        }
         
-        if (!position) {
-            return createResponse(false, 'No open position found', null, 'extended.submitCloseOrder');
+        // 1. Get position details using vmGetOpenPositionDetail
+        const positionResponse = await vmGetOpenPositionDetail(_pythonService, _symbol);
+        if (!positionResponse.success) {
+            throw new Error(positionResponse.message || `No open position found for ${_symbol}`);
+        }
+        
+        const positionDetail = positionResponse.data;
+        const { side, qty: positionQty } = positionDetail;
+        
+        if (!positionQty || positionQty === 0) {
+            throw new Error('Position size is zero');
         }
 
-        const positionSize = Math.abs(parseFloat(position.size));
-        if (positionSize === 0) {
-            return createResponse(false, 'Position size is zero', null, 'extended.submitCloseOrder');
-        }
-
-        // Determina la quantità da chiudere
-        let closeQty = _closeAll ? positionSize : _orderQty;
-        if (closeQty > positionSize) {
-            closeQty = positionSize;
-        }
-
-        // Determina il lato opposto per chiudere
-        const positionSide = position.side; // "BUY" o "SELL" dal SDK Python
-        const closeSide = positionSide === "BUY" ? "SELL" : "BUY";
-        
-        // Converti il tipo di ordine
-        const pythonType = _type === extendedEnum.order.type.market ? "MARKET" : "LIMIT";
-        
-        // Calcola il prezzo per ordini limit
-        let price = "0"; // Default per market orders
-        if (_type === extendedEnum.order.type.limit) {
-            try {
-                const marketData = await extendedInstance._callPythonService('get_market_data', {
-                    market_name: _symbol
-                });
-                price = marketData.mark_price || marketData.last_price || "50000";
-            } catch (error) {
-                price = "50000"; // Fallback price
-            }
-        }
-
-        // Chiudi la posizione usando il servizio Python
-        const closeResult = await extendedInstance._callPythonService('place_order', {
-            market_name: _symbol,
-            side: closeSide,
-            amount: closeQty.toString(),
-            price: price,
-            order_type: pythonType,
-            time_in_force: "GTC",
-            reduce_only: true // Importante per gli ordini di chiusura
-        });
-        
-        if (closeResult.success) {
-            return createResponse(true, 'success', { 
-                symbol: _symbol, 
-                orderId: closeResult.order.id || crypto.randomUUID() 
-            }, 'extended.submitCloseOrder');
+        // 2. Determine quantity to close
+        let closeQuantity;
+        if (_closeAll) {
+            closeQuantity = positionQty;
         } else {
-            return createResponse(false, closeResult.error || 'Failed to close position', null, 'extended.submitCloseOrder');
+            closeQuantity = _orderQty;
         }
-    } catch (error) {
-        const message = error.message || 'Failed to submit close order';
-        return createResponse(
-            false,
-            message,
-            null,
-            'extended.submitCloseOrder'
+        
+        if (closeQuantity <= 0) {
+            throw new Error('Close quantity must be greater than zero');
+        }
+
+        // 3. Determine opposite side to close the position
+        const closeSide = side === 'long' ? extendedEnum.order.short : extendedEnum.order.long;
+        
+        // 4. Get market data for order parameters
+        const marketData = await vmGetMarketData(_pythonService, _symbol);
+        if (!marketData.success) {
+            throw new Error(marketData.message);
+        }
+        
+        const market = marketData.data[0];
+        if (!market) {
+            throw new Error(`Market ${_symbol} not found`);
+        }
+        
+        const { market_stats, trading_config } = market;
+        if (!market_stats || !trading_config) {
+            throw new Error(`Invalid market data for ${_symbol}`);
+        }
+        
+        // 5. Extract market parameters
+        const askPrice = parseFloat(market_stats.ask_price);
+        const bidPrice = parseFloat(market_stats.bid_price);
+        const qtyStep = parseFloat(trading_config.min_order_size_change);
+        const minQty = parseFloat(trading_config.min_order_size);
+        const priceDecimals = countDecimals(trading_config.min_price_change);
+        
+        if (isNaN(askPrice) || isNaN(bidPrice)) {
+            throw new Error('Invalid market prices received');
+        }
+        
+        // 6. Calculate execution price
+        const midPrice = calculateMidPrice(askPrice, bidPrice);
+        const actPrice = (_type === extendedEnum.order.type.market 
+            ? closeSide === extendedEnum.order.long 
+                ? midPrice + midPrice * (_slippage / 100) 
+                : midPrice - midPrice * (_slippage / 100) 
+            : midPrice
+        ).toFixed(priceDecimals);
+        
+        // 7. Format quantity
+        const qty = formatOrderQuantity(
+            closeQuantity,
+            (_marketUnit === extendedEnum.order.quoteOnSecCoin) && !_closeAll,
+            actPrice,
+            qtyStep
         );
+        
+        // 8. Validations
+        if (qty < minQty) {
+            throw new Error(`Close quantity ${qty} must be greater than ${minQty}`);
+        }
+        
+        // 9. Map parameters for SDK
+        const sdkSide = closeSide === extendedEnum.order.long ? 'BUY' : 'SELL';
+        const sdkOrderType = _type === extendedEnum.order.type.market ? 'MARKET' : 'LIMIT';
+        const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
+        
+        // Set post_only for LIMIT orders and always set reduce_only for close orders
+        const postOnly = sdkOrderType === 'LIMIT';
+        const reduceOnly = true; // Always true for close orders
+        
+        // 10. Place close order via SDK with reduce_only and post_only for LIMIT orders
+        const orderResult = await _pythonService.call('place_order', {
+            market_name: _symbol,
+            side: sdkSide,
+            amount: qty.toString(),
+            price: actPrice.toString(),
+            order_type: sdkOrderType,
+            time_in_force: timeInForce,
+            post_only: postOnly,
+            reduce_only: reduceOnly
+        });
+
+        return createResponse(true, 'success', { 
+            symbol: _symbol, 
+            orderId: orderResult.external_id,
+            closedQuantity: closeQuantity,
+            side: closeSide,
+            type: _type
+        }, 'extended.submitCloseOrder');
+        
+    } catch (error) {
+        // Centralized error handling
+        const message = error.response?.data?.error?.message || error.message || 'Failed to submit close order';
+        return createResponse(false, message, null, 'extended.submitCloseOrder');
     }
 }

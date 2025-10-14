@@ -176,9 +176,81 @@ class ExtendedTradingService:
         except Exception as e:
             return {"error": f"Failed to get orders: {str(e)}"}
     
+    async def get_order_by_id(self, order_id: str) -> Dict[str, Any]:
+        """Get a specific order by ID using ONLY real SDK methods - Returns ONLY raw data"""
+        if not SDK_AVAILABLE or not self.trading_client:
+            return {"error": "SDK not available or trading client not initialized"}
+            
+        try:
+            # ONLY real SDK method: search in open orders
+            orders_response = await self.trading_client.account.get_open_orders()
+            orders = orders_response.data if hasattr(orders_response, 'data') else orders_response
+            
+            # Look for the specific order by ID in open orders
+            for order in orders:
+                if str(order.id) == str(order_id) or str(getattr(order, 'client_order_id', '')) == str(order_id):
+                    return self._serialize_object(order)
+            
+            # If not found in open orders, try to search trades from known markets
+            # We can only get trades if we know the market names, so let's try common ones
+            try:
+                # Get markets using the REAL SDK method
+                markets_response = await self.data_client.markets_info.get_markets()
+                markets = markets_response.data if hasattr(markets_response, 'data') else markets_response
+                
+                # Search through recent trades in available markets
+                for market in markets:
+                    market_name = market.name if hasattr(market, 'name') else market.get('name')
+                    if not market_name:
+                        continue
+                        
+                    try:
+                        # Use REAL SDK method: get_trades
+                        trades_response = await self.data_client.get_trades(market_name, limit=100)
+                        trades = trades_response.data if hasattr(trades_response, 'data') else trades_response
+                        
+                        # Check if any trade matches our order ID
+                        for trade in trades:
+                            # Check various possible order ID fields in trade data
+                            trade_order_ids = [
+                                getattr(trade, 'order_id', None),
+                                getattr(trade, 'maker_order_id', None), 
+                                getattr(trade, 'taker_order_id', None),
+                                getattr(trade, 'client_order_id', None)
+                            ]
+                            
+                            for trade_order_id in trade_order_ids:
+                                if trade_order_id and str(trade_order_id) == str(order_id):
+                                    # Found the order in trades - reconstruct basic order data
+                                    return self._serialize_object({
+                                        'id': order_id,
+                                        'market_name': market_name,
+                                        'status': 'FILLED',  # Since it appears in trades
+                                        'type': 'UNKNOWN',   # Can't determine from trade
+                                        'side': getattr(trade, 'side', 'UNKNOWN'),
+                                        'amount': getattr(trade, 'size', 0),
+                                        'filled_amount': getattr(trade, 'size', 0),
+                                        'price': getattr(trade, 'price', 0),
+                                        'average_price': getattr(trade, 'price', 0),
+                                        'created_at': getattr(trade, 'timestamp', None)
+                                    })
+                                    
+                    except Exception:
+                        # Skip this market if we can't get trades
+                        continue
+                        
+            except Exception:
+                # If we can't get markets or trades, just return not found
+                pass
+            
+            return {"error": f"Order with ID {order_id} not found in open orders or available trade history"}
+                    
+        except Exception as e:
+            return {"error": f"Failed to get order by ID: {str(e)}"}
+    
     async def place_order(self, market_name: str, side: str, amount: str, price: str, 
-                         order_type: str = "LIMIT", time_in_force: str = "GTC") -> Dict[str, Any]:
-        """Place an order DIRECTLY using the SDK - Returns ONLY raw data"""
+                         order_type: str = "LIMIT", time_in_force: str = "GTC", post_only: bool = False, reduce_only: bool = False) -> Dict[str, Any]:
+        """Place an order DIRECTLY using the SDK with post_only and reduce_only support - Returns ONLY raw data"""
         if not SDK_AVAILABLE or not self.trading_client:
             return {"error": "SDK not available or client not initialized"}
             
@@ -188,12 +260,25 @@ class ExtendedTradingService:
             amount_of_synthetic = Decimal(amount)
             order_price = Decimal(price)
             
-            # Place order using the official SDK method signature
+            # Convert time_in_force string to TimeInForce enum
+            from x10.perpetual.orders import TimeInForce
+            tif_mapping = {
+                "GTC": TimeInForce.GTT,  # Good Till Time (GTT) is Extended's equivalent of GTC
+                "GTT": TimeInForce.GTT,
+                "IOC": TimeInForce.IOC,
+                "FOK": TimeInForce.FOK
+            }
+            time_in_force_enum = tif_mapping.get(time_in_force.upper(), TimeInForce.GTT)
+            
+            # Place order using the official SDK method signature with post_only and reduce_only support
             placed_order_response = await self.trading_client.place_order(
                 market_name=market_name,
                 amount_of_synthetic=amount_of_synthetic,
                 price=order_price,
-                side=order_side
+                side=order_side,
+                post_only=post_only,  # ✅ Enable post-only parameter
+                reduce_only=reduce_only,  # ✅ Enable reduce-only parameter for close orders
+                time_in_force=time_in_force_enum  # ✅ Support proper time in force
             )
             
             placed_order = placed_order_response.data if hasattr(placed_order_response, 'data') else placed_order_response
@@ -204,20 +289,51 @@ class ExtendedTradingService:
         except Exception as e:
             return {"error": f"Failed to place order: {str(e)}"}
     
-    async def cancel_order(self, order_id: str) -> Dict[str, Any]:
-        """Cancel an order DIRECTLY using the SDK - Returns ONLY raw data"""
-        if not SDK_AVAILABLE or not self.trading_client:
-            return {"error": "SDK not available or client not initialized"}
-            
+    def cancel_order(self, external_id):
+        """Cancel an order by external ID using Extended SDK cancel_order_by_external_id method"""
         try:
-            # Use the official SDK method
-            cancel_response = await self.trading_client.orders.cancel_order(order_id=int(order_id))
+            print(f"DEBUG: cancel_order called with external_id={external_id}")
             
-            # Return ONLY raw data without any wrapper
-            return self._serialize_object(cancel_response)
+            async def _cancel_order():
+                # Use the cancel_order_by_external_id method from Extended SDK
+                result = await self.trading_client.orders.cancel_order_by_external_id(order_external_id=external_id)
+                print(f"DEBUG: Successfully called cancel_order_by_external_id")
+                return result
+            
+            # Run the async function
+            result = asyncio.run(_cancel_order())
+            
+            return {
+                "success": True,
+                "message": "Order cancelled successfully",
+                "result": result.to_dict() if hasattr(result, 'to_dict') else str(result)
+            }
             
         except Exception as e:
-            return {"error": f"Failed to cancel order: {str(e)}"}
+            print(f"DEBUG: Error in cancel_order: {str(e)}")
+            return {
+                "error": f"Cancel order failed: {str(e)}"
+            }
+
+    async def cancel_order_by_external_id(self, external_id):
+        """Cancel an order by external ID using Extended SDK cancel_order_by_external_id method"""
+        try:
+            if not SDK_AVAILABLE or not self.trading_client:
+                return {"error": "SDK not available or client not initialized"}
+            
+            # Use the cancel_order_by_external_id method from Extended SDK directly
+            result = await self.trading_client.orders.cancel_order_by_external_id(order_external_id=external_id)
+            
+            return {
+                "success": True,
+                "message": "Order cancelled successfully",
+                "result": result.to_dict() if hasattr(result, 'to_dict') else str(result)
+            }
+            
+        except Exception as e:
+            return {
+                "error": f"Cancel order by external ID failed: {str(e)}"
+            }
     
     async def cancel_all_orders(self, market_name: Optional[str] = None) -> Dict[str, Any]:
         """Cancel all orders DIRECTLY using the SDK - Returns ONLY raw data"""
@@ -235,12 +351,21 @@ class ExtendedTradingService:
             if not open_orders:
                 return {"message": "No orders to cancel", "cancelled_count": 0}
             
-            # Cancel all orders using mass_cancel
-            order_ids = [order.id for order in open_orders]
-            mass_cancel_response = await self.trading_client.orders.mass_cancel(order_ids=order_ids)
+            # Cancel orders individually using real SDK methods
+            cancelled_orders = []
+            for order in open_orders:
+                try:
+                    if hasattr(self.trading_client, 'cancel_order'):
+                        cancel_result = await self.trading_client.cancel_order(order_id=int(order.id))
+                        cancelled_orders.append(order.id)
+                    else:
+                        # If no cancel method exists, we can't cancel orders via SDK
+                        break
+                except Exception as cancel_error:
+                    # Continue with other orders even if one fails
+                    continue
             
-            # Return ONLY raw data without any wrapper
-            return self._serialize_object(mass_cancel_response)
+            return {"cancelled_orders": cancelled_orders, "cancelled_count": len(cancelled_orders)}
             
         except Exception as e:
             return {"error": f"Failed to cancel all orders: {str(e)}"}
@@ -330,8 +455,8 @@ def main():
     
     try:
         # Asynchronous commands that use the complete SDK
-        if command in ["get_markets", "get_account_info", "get_positions", "get_orders", 
-                      "place_order", "cancel_order", "cancel_all_orders", "close_position",
+        if command in ["get_markets", "get_account_info", "get_positions", "get_orders", "get_order_by_id",
+                      "place_order", "cancel_order", "cancel_order_by_external_id", "cancel_all_orders", "close_position",
                       "get_orderbook", "get_trades", "test_params"]:
             
             args = json.loads(sys.argv[2])
@@ -354,6 +479,8 @@ def main():
                     return await service.get_positions()
                 elif command == "get_orders":
                     return await service.get_orders(args.get("market_name"))
+                elif command == "get_order_by_id":
+                    return await service.get_order_by_id(args["order_id"])
                 elif command == "place_order":
                     return await service.place_order(
                         market_name=args["market_name"],
@@ -361,10 +488,14 @@ def main():
                         amount=args["amount"],
                         price=args["price"],
                         order_type=args.get("order_type", "LIMIT"),
-                        time_in_force=args.get("time_in_force", "GTC")
+                        time_in_force=args.get("time_in_force", "GTC"),
+                        post_only=args.get("post_only", False),  # ✅ Add post_only parameter
+                        reduce_only=args.get("reduce_only", False)  # ✅ Add reduce_only parameter
                     )
                 elif command == "cancel_order":
-                    return await service.cancel_order(args["order_id"])
+                    return service.cancel_order(args["external_id"])
+                elif command == "cancel_order_by_external_id":
+                    return await service.cancel_order_by_external_id(args["external_id"])
                 elif command == "cancel_all_orders":
                     return await service.cancel_all_orders(args.get("market_name"))
                 elif command == "close_position":

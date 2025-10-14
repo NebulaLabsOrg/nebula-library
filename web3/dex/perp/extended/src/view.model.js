@@ -1,4 +1,5 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
+import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
 
 /**
  * @async
@@ -256,41 +257,39 @@ export async function vmGetOpenPositionDetail(_pythonService, _symbol) {
     }
 }
 
-/** TO UPDATE
+/**
  * @async
  * @function vmGetOrderStatus
- * @description Retrieves the status and details of a specific order by its ID using Python service
- * @param {Object} extendedInstance - Extended instance with configured Python service
+ * @description Retrieves the status and details of a specific order by its ID using the provided API client instance. Returns a standardized response object containing order details such as symbol, order type, status, quantity, executed quantity, executed value in USD, and average price, or an error message if no order is found.
+ * @param {Object} _instance - The API client instance used to perform the request.
  * @param {string|number} _orderId - The unique identifier of the order to retrieve.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the order details or an error message.
  */
-export async function vmGetOrderStatus(callPythonService, _orderId) {
+export async function vmGetOrderStatus(_instance, _orderId) {
     try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const orders = await callPythonService('get_orders');
-        const order = orders.find(o => o.id === _orderId || o.client_order_id === _orderId);
-        
+        const url = encodeGetUrl('/user/orders/external/' + _orderId)
+        const response = await _instance.get(url);
+        const order = response.data.data[0];
         if (!order) {
             return createResponse(false, 'No order found', null, 'extended.getOrderStatus');
         }
-
-        // Mappiamo al formato Extended originale
+        const { market, type, status, qty, filledQty, averagePrice } = order;
         const detail = {
-            symbol: order.market_name || order.symbol,
-            orderType: order.type || order.order_type,
-            status: order.status,
-            qty: parseFloat(order.amount || order.quantity || 0),
-            qtyExe: parseFloat(order.filled_amount || order.executed_quantity || 0),
-            qtyExeUsd: parseFloat(order.filled_amount || 0) * parseFloat(order.average_price || order.price || 0),
-            avgPrice: parseFloat(order.average_price || order.price || 0),
-        };
-        
+            symbol: market,
+            orderType: type,
+            status: status,
+            qty: qty,
+            qtyExe: filledQty,
+            qtyExeUsd: filledQty * averagePrice,
+            avgPrice: averagePrice,
+        }
         return createResponse(true, 'success', detail, 'extended.getOrderStatus');
     } catch (error) {
-        const message = error.message || 'Failed to get order status';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get order status';
         return createResponse(false, message, null, 'extended.getOrderStatus');
     }
 }
+
 
 /**
  * @async
