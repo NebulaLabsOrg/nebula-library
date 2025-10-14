@@ -280,9 +280,8 @@ async function executeCloseCycle(extendedInstance, cycleNumber) {
             const closeResponse = await extendedInstance.submitCloseOrder(
                 CONFIG.closeOrderType,
                 CONFIG.market,
-                CONFIG.quantity,
                 CONFIG.marketUnit,
-                false // Don't close all, use specified quantity
+                CONFIG.quantity,
             );
             
             if (!closeResponse.success) {
