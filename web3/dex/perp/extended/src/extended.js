@@ -14,6 +14,7 @@ export { extendedEnum };
  * @class Extended
  * @description A class for interacting with the Extended DEX. 
  * Provides methods for onboarding, authenticating, trading, and retrieving account and market information using the internal x10-python-trading-starknet SDK.
+ * Trade detail: limit orders have post-only and market orders use slippage protection. Close orders use reduce-only.
  */
 export class Extended {
     /**
@@ -171,18 +172,6 @@ export class Extended {
 
     /**
      * @async
-     * @method getMarketOrderSize
-     * @param {string} _symbol - The symbol of the market to query.
-     * @description Retrieves market order size configuration
-     * @returns {Promise<*>} A Promise that resolves to the markets list.
-     */
-    async getMarketOrderSize(_symbol) {
-        const { vmGetMarketOrderSize } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketOrderSize(this.pythonService, _symbol));
-    }
-
-    /**
-     * @async
      * @method getFundingRateHour
      * @param {string} _symbol - The symbol of the market to retrieve the funding rate for.
      * @description Retrieves market hourly funding rate
@@ -229,10 +218,9 @@ export class Extended {
     }
 
     /**
-     * Retrieves orders using view model aggiornato
-     * 
      * @async
      * @method getOrderStatus
+     * @description Retrieves orders using view model aggiornato
      * @param {string} _orderId - The ID of the order to retrieve the status for (optional - gets all orders if not provided).
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order status data or an error message.
      */
@@ -253,10 +241,9 @@ export class Extended {
     }
 
     /**
-     * Submits a new order using write model aggiornato (usa Python SDK internamente)
-     *
      * @async
      * @method submitOrder
+     * @description Submits a new order using write model aggiornato (usa Python SDK internamente)
      * @param {string} _type - The type of the order (e.g., 'limit', 'market').
      * @param {string} _symbol - The trading symbol for the order (e.g., 'BTCUSD').
      * @param {string} _side - The side of the order ('buy' or 'sell').
@@ -278,12 +265,11 @@ export class Extended {
     }
 
     /**
-     * Cancella un ordine esistente utilizzando write model aggiornato (usa Python SDK internamente)
-     *
      * @async
      * @method submitCancelOrder
-     * @param {string} _externalId - L'external ID dell'ordine da cancellare.
-     * @returns {Promise<Object>} Una Promise che si risolve con il risultato della cancellazione dell'ordine.
+     * @description Cancels an existing order using the updated write model (internally uses the Python SDK).
+     * @param {string} _externalId - The external ID of the order to cancel.
+     * @returns {Promise<Object>} A Promise that resolves with the result of the order cancellation.
      */
     async submitCancelOrder(_externalId) {
         const { wmSubmitCancelOrder } = await import('./write.model.js');
@@ -291,15 +277,13 @@ export class Extended {
     }
 
     /**
-     * Submits a close order to the trading system with the specified parameters.
-     * Uses a throttler to control the rate of close order submissions and invokes the underlying close order function.
-     *
      * @async
      * @method submitCloseOrder
+     * @description Submits a close order to the trading system with the specified parameters.
      * @param {string} _type - The type of the close order (e.g., 'limit', 'market').
-     * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTCUSD').
-     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 
-     * @param {number} _orderQty - The quantity to close.'coins').
+     * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTC-USD').
+     * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 'coins').
+     * @param {number} _orderQty - The quantity to close.
      * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol.
      * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
      */

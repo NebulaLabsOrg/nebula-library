@@ -92,43 +92,6 @@ export async function vmGetMarketData(_pythonService, _symbol = '') {
 
 /**
  * @async
- * @function vmGetMarketOrderSize
- * @description Retrieves the market order size configuration for a given symbol using Python service
- * @param {Object} _pythonService - Configured Python service method
- * @param {string} _symbol - The market symbol for which to retrieve order size configuration.
- * @returns {Promise<Object>} A Promise that resolves with a response object containing order size configuration or an error message.
- */
-export async function vmGetMarketOrderSize(_pythonService, _symbol) {
-    try {
-        // Usa il servizio Python configurato nell'istanza Extended
-        const markets = await _pythonService.call('get_markets');
-        const market = markets.find(m => m.name === _symbol);
-
-        if (!market) {
-            return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getMarketOrderSize');
-        }
-
-        return createResponse(
-            true,
-            'success',
-            {
-            symbol: _symbol,
-            minQty: market.trading_config.min_order_size,
-            qtyStep: market.trading_config.min_order_size_change,
-            maxMktQty: market.trading_config.max_market_order_value,
-            maxLimQty: market.trading_config.max_limit_order_value,
-            priceDecimals: (market.trading_config.min_price_change?.toString().split('.')[1]?.length)
-            },
-            'extended.getMarketOrderSize'
-        );
-    } catch (error) {
-        const message = error.message || 'Failed to get market order size';
-        return createResponse(false, message, null, 'extended.getMarketOrderSize');
-    }
-}
-
-/**
- * @async
  * @function vmGetFundingRateHour
  * @description Retrieves the hourly funding rate for a given market symbol
  * @param {Function} _pythonService - Configured Python service method

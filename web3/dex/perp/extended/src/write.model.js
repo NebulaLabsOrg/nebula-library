@@ -1,22 +1,8 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { vmGetMarketData, vmGetOpenPositionDetail } from './view.model.js';
-import { formatOrderQuantity, calculateMidPrice } from './utils.js';
+import { formatOrderQuantity, calculateMidPrice, countDecimals } from './utils.js';
 import { extendedEnum } from './enum.js';
 import { MARKET_TIME_IN_FORCE, LIMIT_TIME_IN_FORCE } from './constant.js';
-
-/**
- * Helper per contare decimali da min_price_change
- */
-function countDecimals(value) {
-    const str = value.toString();
-    if (str.indexOf('.') !== -1 && str.indexOf('e-') === -1) {
-        return str.split('.')[1].length;
-    } else if (str.indexOf('e-') !== -1) {
-        const parts = str.split('e-');
-        return parseInt(parts[1], 10);
-    }
-    return 0;
-}
 
 /**
  * @async
@@ -116,10 +102,9 @@ export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _
 }
 
 /**
- * Cancels an existing order using Python SDK with centralized error handling
- *
  * @async
  * @function wmSubmitCancelOrder
+ * @description Cancels an existing order using Python SDK with centralized error handling
  * @param {Object} _pythonService - Configured Python service method
  * @param {string} _externalId - The external ID of the order to cancel.
  * @returns {Promise<Object>} A promise that resolves to a response object indicating success or failure, including the external ID on success, or an error message on failure.
@@ -149,10 +134,9 @@ export async function wmSubmitCancelOrder(_pythonService, _externalId) {
 }
 
 /**
- * Submits a close order for an open position using Python SDK with centralized error handling
- *
  * @async
  * @function wmSubmitCloseOrder
+ * @description Closes an existing position by submitting an opposite order using Python SDK.
  * @param {Object} _pythonService - The Extended client instance with configured Python service
  * @param {number} _slippage - Allowed slippage percentage for market orders.
  * @param {string} _type - Order type (e.g., market or limit).
@@ -269,9 +253,6 @@ export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symb
         return createResponse(true, 'success', { 
             symbol: _symbol, 
             orderId: orderResult.external_id,
-            closedQuantity: closeQuantity,
-            side: closeSide,
-            type: _type
         }, 'extended.submitCloseOrder');
         
     } catch (error) {
