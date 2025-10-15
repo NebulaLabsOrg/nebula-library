@@ -8,7 +8,6 @@
  * @returns {string} The formatted perpetual market symbol (e.g., 'ETH-USD', 'ETH-USD-PERP').
  */
 export function formatPerpMarket(_symbol, _perpType) {
-    // Se il simbolo non contiene '-', aggiungi '-USD'
     if (!_symbol.includes('-')) {
         _symbol = `${_symbol}-USD`;
     }
