@@ -19,7 +19,7 @@ export function getMoralisChainEnum(_chainID) {
         1135: "0x46f",
         1284: "0x504",
         2020: "0x7e4",
-        8453: "0x1a4",
+        8453: "0x2105",
         59144: "0xe708",
         43114: "0xa86a",
         88888: "0x15b38"
