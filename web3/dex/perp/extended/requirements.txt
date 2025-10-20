@@ -1,0 +1,3 @@
+# Requirements for Extended Trading Python dependencies
+# Tested with Python 3.11
+x10-python-trading-starknet

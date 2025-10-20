@@ -2,6 +2,9 @@
 
 echo "🔧 Setting up Extended Trading environment..."
 
+# Ensure script fails on unhandled errors
+set -euo pipefail
+
 # Check if Python 3.11 is available
 if ! command -v python3.11 &> /dev/null; then
     echo "❌ Python 3.11 is required but not installed."
@@ -11,12 +14,21 @@ fi
 
 echo "✅ Python 3.11 is available"
 
-# Install required Python packages
-echo "📦 Installing Python dependencies..."
+# Path to requirements file (root)
+REQ_FILE="requirements.txt"
 
-# Install x10-python-trading-starknet with Python 3.11
-python3.11 -m pip install x10-python-trading-starknet || {
-    echo "❌ Failed to install Python dependencies"
+# Verify requirements.txt exists
+if [ ! -f "$REQ_FILE" ]; then
+    echo "❌ Could not find $REQ_FILE in the repository root."
+    echo "💡 Make sure $REQ_FILE exists or update REQ_FILE variable in this script."
+    exit 1
+fi
+
+echo "📦 Installing Python dependencies from $REQ_FILE..."
+
+# Install Python dependencies from requirements.txt using Python 3.11
+python3.11 -m pip install -r "$REQ_FILE" || {
+    echo "❌ Failed to install Python dependencies from $REQ_FILE"
     exit 1
 }
 

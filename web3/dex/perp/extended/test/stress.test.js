@@ -156,9 +156,12 @@ function log(message, type = 'INFO') {
 // Waits for order to fill/finish, triggers hedge per fill
 async function waitForOrderCompletion(extendedInstance, orderId, expectedStatus, timeout, positionTracker, perpSide, onStatusUpdate = null) {
     const startTime = Date.now();
+    let newStatusStartTime = Date.now(); // Track when order entered NEW status
     let lastStatus = null, lastExecutedQty = 0, statusCount = {};
     let hasTimeoutLogged = false;
-    while (Date.now() - startTime < timeout) {
+    let isInNewStatus = false;
+    
+    while (true) {
         try {
             const statusResponse = await extendedInstance.getOrderStatus(orderId);
             if (statusResponse.success) {
@@ -173,10 +176,26 @@ async function waitForOrderCompletion(extendedInstance, orderId, expectedStatus,
                         log(`Order status: ${lastStatus} → ${currentStatus}`, 'ORDER');
                     }
                     lastStatus = currentStatus;
+                    
+                    // Track NEW status time for timeout logic
+                    if (currentStatus === ORDER_STATUS.NEW) {
+                        isInNewStatus = true;
+                        newStatusStartTime = Date.now();
+                    } else {
+                        isInNewStatus = false; // Reset timeout tracking when leaving NEW
+                    }
+                    
                     if (onStatusUpdate) onStatusUpdate(currentStatus, statusResponse.data);
                 }
                 if (currentExecutedQty > lastExecutedQty && avgPrice > 0) {
                     const newFillQty = currentExecutedQty - lastExecutedQty;
+                    // Reset timeout tracking when there's fill activity
+                    if (isInNewStatus) {
+                        log(`Fill detected - timeout reset (was in NEW for ${((Date.now() - newStatusStartTime)/1000).toFixed(1)}s)`, 'INFO');
+                        isInNewStatus = false;
+                    }
+                    log(`New fill: ${newFillQty.toFixed(6)} @ $${avgPrice.toFixed(4)} (Total: ${currentExecutedQty.toFixed(6)})`, 'SUCCESS');
+                    
                     await executeHedge(positionTracker, perpSide, newFillQty, avgPrice,
                         currentStatus === ORDER_STATUS.FILLED
                             ? `Full fill - Order ${orderId}`
@@ -184,6 +203,15 @@ async function waitForOrderCompletion(extendedInstance, orderId, expectedStatus,
                     );
                     lastExecutedQty = currentExecutedQty;
                 }
+                // Check for timeout only when in NEW status
+                if (isInNewStatus && (Date.now() - newStatusStartTime) > timeout) {
+                    if (!hasTimeoutLogged) {
+                        log(`Order ${orderId} timed out after ${timeout/1000}s in NEW status`, 'WARNING');
+                        hasTimeoutLogged = true;
+                    }
+                    return { success: false, status: currentStatus, timeout: true, statusCount };
+                }
+                
                 if (currentStatus === expectedStatus)
                     return { success: true, status: currentStatus, data: statusResponse.data, statusCount };
                 if ([ORDER_STATUS.CANCELLED, ORDER_STATUS.REJECTED, ORDER_STATUS.EXPIRED].includes(currentStatus))
@@ -192,10 +220,6 @@ async function waitForOrderCompletion(extendedInstance, orderId, expectedStatus,
         } catch (error) { log(`Order status error: ${error.message}`, 'ERROR'); }
         await sleep(CONFIG.checkInterval);
     }
-    if (!hasTimeoutLogged) {
-        log(`Order ${orderId} timed out after ${CONFIG.newOrderTimeout/1000}s in NEW, cancelling...`, 'WARNING');
-    }
-    return { success: false, status: lastStatus, timeout: true, statusCount };
 }
 
 async function placeOrderWithRetry(extendedInstance, type, symbol, side, marketUnit, quantity, maxRetries) {
