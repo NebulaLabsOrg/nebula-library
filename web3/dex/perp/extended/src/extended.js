@@ -39,12 +39,79 @@ export class Extended {
         this.throttler = _throttler;
         this.environment = _environment;
         
-        // Path to the Python service
-        this.pythonPath = 'python3.11';
+        // Path to the Python service - initialize with default, will be updated async
+        this.pythonPath = 'python3';
         this.scriptPath = path.join(__dirname, '../python-service/extended_trading_service.py');
+
+        // Initialize Python path asynchronously
+        this._initializePythonPathAsync();
 
         // Initializes the Python service with all configured parameters
         this.pythonService = this._initializePythonService();
+    }
+
+    /**
+     * Initializes Python path asynchronously
+     * @private
+     */
+    async _initializePythonPathAsync() {
+        try {
+            this.pythonPath = await this._findPythonPath();
+            // Update the python service with the correct path
+            this.pythonService.pythonPath = this.pythonPath;
+        } catch (error) {
+            // Keep default python3 if initialization fails
+            console.warn('Failed to initialize Python path, using default python3');
+        }
+    }
+
+    /**
+     * Ensures Python path is initialized (useful for testing)
+     * @public
+     */
+    async ensurePythonPathInitialized() {
+        if (this.pythonPath === 'python3') {
+            await this._initializePythonPathAsync();
+        }
+        return this.pythonPath;
+    }
+
+    /**
+     * Finds the best Python path to use (virtual environment first, then system Python)
+     * @private
+     */
+    async _findPythonPath() {
+        try {
+            // Dynamic import for ES6 modules
+            const fs = await import('fs');
+            const { execSync } = await import('child_process');
+            
+            // First try virtual environment python
+            const venvPython = path.join(__dirname, '../.venv/bin/python');
+            if (fs.existsSync(venvPython)) {
+                return venvPython;
+            }
+            
+            // Fallback to system python versions (3.11-3.13 compatible with fast-stark-crypto)
+            const pythonVersions = ['python3.13', 'python3.12', 'python3.11', 'python3'];
+            
+            for (const pythonCmd of pythonVersions) {
+                try {
+                    // Check if command exists by trying to get version
+                    execSync(`${pythonCmd} --version`, { stdio: 'ignore' });
+                    return pythonCmd;
+                } catch (error) {
+                    // Continue to next version
+                    continue;
+                }
+            }
+            
+            // Final fallback
+            return 'python3';
+        } catch (error) {
+            // Fallback if imports fail
+            return 'python3';
+        }
     }
 
     /**

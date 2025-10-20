@@ -76,6 +76,11 @@ async function testPythonParameters() {
     
     log('✅ Extended client initialized', 'green');
     
+    // Ensure Python path is properly initialized
+    log('\n🔧 Ensuring Python path initialization...', 'yellow');
+    await extendedInstance.ensurePythonPathInitialized();
+    log('✅ Python path initialization completed', 'green');
+    
     // Check internal configuration
     log('\n📊 Checking internal configuration:', 'yellow');
     log(`   API Key: ${extendedInstance.apiKey ? '✅ Present' : '❌ Missing'}`, extendedInstance.apiKey ? 'green' : 'red');
@@ -86,6 +91,173 @@ async function testPythonParameters() {
     log(`   Python Path: ${extendedInstance.pythonPath}`, 'blue');
     log(`   Script Path: ${extendedInstance.scriptPath}`, 'blue');
     
+    // Check Python version compatibility
+    log('\n🐍 Checking Python version:', 'yellow');
+    
+    try {
+        const { spawn } = await import('child_process');
+        const pythonVersionProcess = spawn(extendedInstance.pythonPath, ['--version']);
+        let versionOutput = '';
+        
+        pythonVersionProcess.stdout.on('data', (data) => {
+            versionOutput += data.toString();
+        });
+        
+        pythonVersionProcess.stderr.on('data', (data) => {
+            versionOutput += data.toString();
+        });
+        
+        await new Promise((resolve) => {
+            pythonVersionProcess.on('close', (code) => {
+                if (code === 0) {
+                    const version = versionOutput.trim();
+                    log(`✅ Python version: ${version}`, 'green');
+                    
+                    // Check if Python 3.11 or higher
+                    const versionMatch = version.match(/Python (\d+)\.(\d+)/);
+                    if (versionMatch) {
+                        const major = parseInt(versionMatch[1]);
+                        const minor = parseInt(versionMatch[2]);
+                        
+                        if (major >= 3 && minor >= 11) {
+                            log('✅ Python version is compatible (3.11+ required)', 'green');
+                        } else {
+                            log('❌ Python version is too old (3.11+ required)', 'red');
+                            log('💡 Install Python 3.11+ with: brew install python@3.11', 'yellow');
+                        }
+                    }
+                } else {
+                    log('❌ Python is not available or accessible', 'red');
+                }
+                resolve();
+            });
+        });
+        
+    } catch (error) {
+        log(`❌ Error checking Python version: ${error.message}`, 'red');
+    }
+    
+    
+    // Check requirements.txt file
+    log('\n📋 Checking requirements.txt:', 'yellow');
+    
+    try {
+        const fs = await import('fs');
+        const requirementsPath = path.join(__dirname, '../requirements.txt');
+        const rootRequirementsPath = path.join(__dirname, '../../../../requirements.txt');
+        
+        let requirementsFound = false;
+        let requirementsContent = '';
+        
+        if (fs.existsSync(requirementsPath)) {
+            requirementsContent = fs.readFileSync(requirementsPath, 'utf8');
+            requirementsFound = true;
+            log(`✅ Found requirements.txt in extended folder`, 'green');
+        } else if (fs.existsSync(rootRequirementsPath)) {
+            requirementsContent = fs.readFileSync(rootRequirementsPath, 'utf8');
+            requirementsFound = true;
+            log(`✅ Found requirements.txt in root folder`, 'green');
+        }
+        
+        if (requirementsFound) {
+            log('📄 Requirements content:', 'blue');
+            requirementsContent.split('\n').forEach(line => {
+                if (line.trim() && !line.startsWith('#')) {
+                    log(`   ${line}`, 'blue');
+                }
+            });
+            
+            if (requirementsContent.includes('x10-python-trading-starknet')) {
+                log('✅ x10-python-trading-starknet is listed in requirements', 'green');
+            } else {
+                log('❌ x10-python-trading-starknet NOT found in requirements', 'red');
+            }
+        } else {
+            log('❌ requirements.txt not found!', 'red');
+        }
+        
+    } catch (error) {
+        log(`❌ Error reading requirements.txt: ${error.message}`, 'red');
+    }
+
+    // Test SDK dependencies
+    log('\n📦 Checking SDK dependencies:', 'yellow');
+    
+    try {
+        log('   Verifying Python SDK libraries installation...', 'blue');
+        
+        const { spawn } = await import('child_process');
+        const { promisify } = await import('util');
+        const execFile = promisify(spawn);
+        
+        // Check if x10-python-trading-starknet is installed
+        const sdkCheckCommand = `
+try:
+    from x10.perpetual.accounts import StarkPerpetualAccount
+    from x10.perpetual.configuration import TESTNET_CONFIG, MAINNET_CONFIG
+    from x10.perpetual.order_object import create_order_object
+    from x10.perpetual.orders import OrderSide, OrderType
+    from x10.perpetual.markets import MarketModel
+    from x10.perpetual.assets import Asset
+    from x10.perpetual.fees import TradingFeeModel, DEFAULT_FEES
+    from x10.perpetual.trading_client import PerpetualTradingClient
+    from x10.utils.date import utc_now
+    from fast_stark_crypto import get_public_key
+    print('SDK_AVAILABLE=True')
+    print('All required libraries for SDK functionality are installed!')
+except ImportError as e:
+    print('SDK_AVAILABLE=False')
+    print(f'Missing library: {e}')
+`;
+        
+        const pythonProcess = spawn(extendedInstance.pythonPath, ['-c', sdkCheckCommand]);
+        let stdout = '';
+        let stderr = '';
+        
+        pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+        
+        pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+        
+        await new Promise((resolve, reject) => {
+            pythonProcess.on('close', (code) => {
+                if (code === 0) {
+                    const lines = stdout.trim().split('\n');
+                    const sdkStatus = lines.find(line => line.includes('SDK_AVAILABLE='));
+                    
+                    if (sdkStatus && sdkStatus.includes('True')) {
+                        log('✅ SDK_AVAILABLE: True', 'green');
+                        log('✅ x10-python-trading-starknet SDK is properly installed', 'green');
+                        lines.slice(1).forEach(line => log(`   ${line}`, 'green'));
+                    } else {
+                        log('❌ SDK_AVAILABLE: False', 'red');
+                        log('❌ x10-python-trading-starknet SDK is NOT installed or has missing dependencies', 'red');
+                        lines.slice(1).forEach(line => log(`   ${line}`, 'red'));
+                        
+                        // Provide installation instructions
+                        log('\n💡 To install the required SDK, run:', 'yellow');
+                        log('   pip install x10-python-trading-starknet', 'blue');
+                        log('   OR run the setup script:', 'blue');
+                        log('   cd /Users/samuelslongo/Documents/GitHub/test/web3/dex/perp/extended', 'blue');
+                        log('   sh setup.sh', 'blue');
+                    }
+                    resolve();
+                } else {
+                    log('❌ Error checking SDK dependencies:', 'red');
+                    if (stderr) log(`   ${stderr}`, 'red');
+                    resolve();
+                }
+            });
+        });
+        
+    } catch (error) {
+        log('❌ Error checking SDK dependencies:', 'red');
+        log(`   ${error.message}`, 'red');
+    }
+
     // Test direct call to Python service to verify parameters
     log('\n🐍 Testing direct call to Python service:', 'yellow');
     

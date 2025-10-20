@@ -15,7 +15,6 @@ Create a `requirements.txt` file in the project root with the following content:
 
 ```txt
 # Requirements for Extended Trading Python dependencies
-# Tested with Python 3.11
 x10-python-trading-starknet
 ```
 
