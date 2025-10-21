@@ -86,10 +86,18 @@ export class Extended {
             const fs = await import('fs');
             const { execSync } = await import('child_process');
             
-            // First try virtual environment python
-            const venvPython = path.join(__dirname, '../.venv/bin/python');
-            if (fs.existsSync(venvPython)) {
-                return venvPython;
+            // First try virtual environment python (multiple possible locations)
+            const venvPaths = [
+                path.join(__dirname, '../venv/bin/python'),      // Created by setup.sh
+                path.join(__dirname, '../.venv/bin/python'),     // Alternative location
+                path.join(process.cwd(), 'venv/bin/python'),     // Current working directory
+                path.join(process.cwd(), '.venv/bin/python')     // Alternative in cwd
+            ];
+            
+            for (const venvPython of venvPaths) {
+                if (fs.existsSync(venvPython)) {
+                    return venvPython;
+                }
             }
             
             // Fallback to system python versions (3.11-3.13 compatible with fast-stark-crypto)
