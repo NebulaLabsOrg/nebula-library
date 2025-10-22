@@ -57,7 +57,7 @@ export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _
             : midPrice
         ).toFixed(priceDecimals);
         
-        // 4. Format quantity (mantieni logica esistente)
+        // 4. Format quantity (maintain existing logic)
         const qty = formatOrderQuantity(
             _orderQty,
             _marketUnit === extendedEnum.order.quoteOnSecCoin,
