@@ -212,7 +212,7 @@ export class Extended {
     /**
      * @async
      * @method getWalletStatus
-     * @description Ottiene informazioni account usando view model aggiornato
+     * @description Retrieves account information using updated view model
      * @returns {Promise<Object>} A Promise that resolves with the user's account information or an error response.
      */
     async getWalletStatus() {
