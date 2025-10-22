@@ -25,12 +25,19 @@ export function calculateMidPrice(_askPrice, _bidPrice) {
 }
 
 /**
- * Generates a random nonce value for use in requests or transactions.
- * This function is documented as part of the extended utils documentation.
- * @returns {number} A random integer nonce between 1 and 2^31.
+ * Counts the number of decimal places in a given value, supporting both standard and scientific notation.
+ * @param {number|string} value - The value to count decimals for.
+ * @returns {number} The number of decimal places.
  */
-export function generateNonce() {
-  return Math.floor(Math.random() * Math.pow(2, 31)) + 1;
+export function countDecimals(value) {
+    const str = value.toString();
+    if (str.indexOf('.') !== -1 && str.indexOf('e-') === -1) {
+        return str.split('.')[1].length;
+    } else if (str.indexOf('e-') !== -1) {
+        const parts = str.split('e-');
+        return parseInt(parts[1], 10);
+    }
+    return 0;
 }
 
 /**

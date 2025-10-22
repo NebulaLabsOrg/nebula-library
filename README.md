@@ -44,7 +44,7 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 | **Module**   | **Purpose**                              | **Dependencies**                  | **Path**                                               |
 |--------------|------------------------------------------|-----------------------------------|--------------------------------------------------------|
 | `Paradex`    | Connect to Paradex perpetual exchange    | `starknet`, `axios`, `bignumber.js` | `nebula-library/web3/dex/perp/paradex/index.js`         |
-| `Extended`   | Connect to Extended perpetual exchange   | `starknet`, `axios`, `decimal.js`   | `nebula-library/web3/dex/perp/extended/index.js`        |
+| `Extended`   | **Extended DEX with Python SDK** - StarkNet perpetuals with automated signatures | `axios`,`x10-python-trading-starknet`   | `nebula-library/web3/dex/perp/extended/index.js`        |
 | `DefX`       | Connect to Defx perpetual exchange       | `axios`                             | `nebula-library/web3/dex/perp/defx/index.js`            |
 
 #### 🌉 Bridges
@@ -106,6 +106,7 @@ Automate data extraction from websites and APIs.
 - `retry`: Retries a function with customizable backoff strategy and attempt limits.
 - `throttler`: Controls the rate of function execution to prevent exceeding API limits or resource exhaustion.
 - `tx`: Utility to manage txs.
+- `perp`: Perp utility for market nomenclature for market compatibility
 
 Explore the full list in [`./utils/src`](./utils/src).
 

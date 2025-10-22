@@ -24,6 +24,16 @@ export const extendedEnum = Object.freeze({
         type:{
             market: 'MARKET',
             limit: 'LIMIT'
-        }
+        },
+        status: {
+            new: 'NEW',
+            filled: 'FILLED',
+            untriggered: 'UNTRIGGERED',
+            cancelled: 'CANCELLED',
+            rejected: 'REJECTED',
+            expired: 'EXPIRED',
+            triggered: 'TRIGGERED',
+            partially_filled: 'PARTIALLY_FILLED'
+        },
     }
 });
