@@ -16,7 +16,7 @@
     "dotenv": "^16.5.0"
   },
   "scripts": {
-    "test.pyservice:": "cd test && node py-service.test.js",
+    "test.pyservice": "cd test && node py-service.test.js",
     "setup": "sh ./setup.sh",
     "example": "cd example && node extended.example.js"
   },
