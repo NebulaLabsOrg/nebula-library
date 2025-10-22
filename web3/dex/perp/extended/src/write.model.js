@@ -21,7 +21,7 @@ import { MARKET_TIME_IN_FORCE, LIMIT_TIME_IN_FORCE } from './constant.js';
  */
 export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
     try {
-        // 1. Get market data (single call per tutti i dati necessari)
+        // 1. Get market data (single call for all necessary data)
         const marketData = await vmGetMarketData(_pythonService, _symbol);
         if (!marketData.success) {
             throw new Error(marketData.message);
