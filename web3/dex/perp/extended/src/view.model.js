@@ -4,26 +4,26 @@ import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
 /**
  * @async
  * @function vmGetWalletStatus
- * @description Retrieves the wallet status using Python service
- * @param {Function} _pythonService - Configured Python service method
+ * @description Retrieves the wallet status using API instance
+ * @param {Object} _instance - The API client instance used to perform the request
  * @returns {Promise<Object>} A Promise that resolves with a response object containing wallet status data or an error message.
  */
-export async function vmGetWalletStatus(_pythonService) {
+export async function vmGetWalletStatus(_instance) {
     try {
-        // Use the already configured and initialized Python service
-        const accountInfo = await _pythonService('get_account_info');
+        const response = await _instance.get('/user/balance');
+        const data = response.data.data;
 
         return createResponse(
             true,
             'success',
             {
-                balance: accountInfo.balance,
-                equity: accountInfo.equity,
+                balance: data.balance,
+                equity: data.equity,
             },
             'extended.getWalletStatus'
         );
     } catch (error) {
-        const message = error.message || 'Failed to get wallet status';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get wallet status';
         return createResponse(false, message, null, 'extended.getWalletStatus');
     }
 }

@@ -23,6 +23,6 @@ const extendedInstance = new Extended(
 );
 
 
-console.log('Calling: extended.getOpenPositionDetail');
-const response = await extendedInstance.getOpenPositionDetail('HYPE-USD');
+console.log('Calling: extended.getWalletStatus');
+const response = await extendedInstance.getWalletStatus();
 console.log(response);

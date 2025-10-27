@@ -217,7 +217,7 @@ export class Extended {
      */
     async getWalletStatus() {
         const { vmGetWalletStatus } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetWalletStatus(this._callPythonService.bind(this)));
+        return this.throttler.enqueue(() => vmGetWalletStatus(this.instance));
     }
 
     /**
