@@ -1,20 +1,20 @@
-import { createInstance } from '../../../../../utils/src/http.utils.js';
-import { 
-    vmGetWalletStatus, vmGetWalletBalance, vmGetMarketData, vmGetLatestMarketData, vmGetMarketOrderSize,
-    vmGetFundingRateHour, vmGetMarketOpenInterest, vmGetOpenPositions, vmGetOpenPositionDetail, vmGetOrderStatus,
-    vmGetEarnedPoints
-} from './view.model.js';
-import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
+import { spawn } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createInstance } from '../../../../../utils/index.js';
 import { extendedEnum } from './enum.js';
+import { MAINNET_API_URL, TESTNET_API_URL } from './constant.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export { extendedEnum };
 
-
 /**
  * @class Extended
- * @description A class for interacting with the Extended exchange API.
- * Provides methods for onboarding, authentication, retrieving account information, market data, balances, open positions, order management, and more for users.
- * Uses a throttler to manage request frequency and offers an extended interface for trading and account management operations.
+ * @description A class for interacting with the Extended DEX. 
+ * Provides methods for onboarding, authenticating, trading, and retrieving account and market information using the internal x10-python-trading-starknet SDK.
+ * Trade detail: limit orders have post-only and market orders use slippage protection. Close orders use reduce-only.
  */
 export class Extended {
     /**
@@ -22,171 +22,303 @@ export class Extended {
      * @param {string} _apiKey - The API key used to authenticate requests to the Extended exchange.
      * @param {string} _starkKeyPrv - The user's private Stark key for signing transactions.
      * @param {string} _starkKeyPub - The user's public Stark key for identification.
-     * @param {string} _address - The user's wallet address.
      * @param {number} _vaultNr - The vault number associated with the user's account.
      * @param {number} [_slippage=0.1] - Maximum allowed slippage for trades, as a decimal (e.g., 0.1 for 10%).
      * @param {Object} [_throttler={ enqueue: fn => fn() }] - Throttler object to manage and queue API requests.
+     * @param {string} [_environment="mainnet"] - Environment: "testnet" or "mainnet"
      */
-    constructor(_apiKey, _starkKeyPrv, _starkKeyPub, _address, _vaultNr, _slippage = 0.1, _throttler = { enqueue: fn => fn() }) {
+    constructor(_apiKey, _starkKeyPrv, _starkKeyPub, _vaultNr, _slippage = 0.1, _throttler = { enqueue: fn => fn() }, _environment = "mainnet") {
         this.account = {
-            address: _address,
             starkKeyPrv: _starkKeyPrv,
             starkKeyPub: _starkKeyPub,
             vaultNr: _vaultNr
         }
-        this.instance = createInstance('https://api.starknet.extended.exchange/api/v1', { 'X-Api-Key': _apiKey });
-        this.slippage = _slippage
+        this.instance = createInstance(_environment === "mainnet" ? MAINNET_API_URL : TESTNET_API_URL, { 'X-Api-Key': _apiKey });
+        this.apiKey = _apiKey;
+        this.slippage = _slippage;
         this.throttler = _throttler;
+        this.environment = _environment;
+        
+        // Path to the Python service - initialize with default, will be updated async
+        this.pythonPath = 'python3';
+        this.scriptPath = path.join(__dirname, '../python-service/extended_trading_service.py');
+
+        // Initialize Python path asynchronously
+        this._initializePythonPathAsync();
+
+        // Initializes the Python service with all configured parameters
+        this.pythonService = this._initializePythonService();
+    }
+
+    /**
+     * Initializes Python path asynchronously
+     * @private
+     */
+    async _initializePythonPathAsync() {
+        try {
+            this.pythonPath = await this._findPythonPath();
+            // Update the python service with the correct path
+            this.pythonService.pythonPath = this.pythonPath;
+        } catch (error) {
+            // Keep default python3 if initialization fails
+            console.warn('Failed to initialize Python path, using default python3');
+        }
+    }
+
+    /**
+     * Ensures Python path is initialized (useful for testing)
+     * @public
+     */
+    async ensurePythonPathInitialized() {
+        if (this.pythonPath === 'python3') {
+            await this._initializePythonPathAsync();
+        }
+        return this.pythonPath;
+    }
+
+    /**
+     * Finds the best Python path to use (virtual environment first, then system Python)
+     * @private
+     */
+    async _findPythonPath() {
+        try {
+            // Dynamic import for ES6 modules
+            const fs = await import('fs');
+            const { execSync } = await import('child_process');
+            
+            // First try virtual environment python (multiple possible locations)
+            const venvPaths = [
+                path.join(__dirname, '../venv/bin/python'),      // Created by setup.sh
+                path.join(__dirname, '../.venv/bin/python'),     // Alternative location
+                path.join(process.cwd(), 'venv/bin/python'),     // Current working directory
+                path.join(process.cwd(), '.venv/bin/python')     // Alternative in cwd
+            ];
+            
+            for (const venvPython of venvPaths) {
+                if (fs.existsSync(venvPython)) {
+                    return venvPython;
+                }
+            }
+            
+            // Fallback to system python versions (3.11-3.13 compatible with fast-stark-crypto)
+            const pythonVersions = ['python3.13', 'python3.12', 'python3.11', 'python3'];
+            
+            for (const pythonCmd of pythonVersions) {
+                try {
+                    // Check if command exists by trying to get version
+                    execSync(`${pythonCmd} --version`, { stdio: 'ignore' });
+                    return pythonCmd;
+                } catch (error) {
+                    // Continue to next version
+                    continue;
+                }
+            }
+            
+            // Final fallback
+            return 'python3';
+        } catch (error) {
+            // Fallback if imports fail
+            return 'python3';
+        }
+    }
+
+    /**
+     * Initializes the Python service with all configured parameters
+     * @private
+     */
+    _initializePythonService() {
+        return {
+            apiKey: this.apiKey,
+            privateKey: this.account.starkKeyPrv,
+            publicKey: this.account.starkKeyPub,
+            vault: parseInt(this.account.vaultNr),
+            environment: this.environment,
+            pythonPath: this.pythonPath,
+            scriptPath: this.scriptPath,
+            call: this._callPythonService.bind(this)
+        };
+    }
+
+    /**
+     * Calls the Python service with a specific command
+     * @private
+     */
+    async _callPythonService(command, additionalArgs = {}) {
+        return new Promise((resolve, reject) => {
+            const args = {
+                api_key: this.apiKey,
+                private_key: this.account.starkKeyPrv,
+                public_key: this.account.starkKeyPub,
+                vault: parseInt(this.account.vaultNr),
+                environment: this.environment,
+                ...additionalArgs
+            };
+
+            const pythonProcess = spawn(this.pythonPath, [
+                this.scriptPath,
+                command,
+                JSON.stringify(args)
+            ]);
+
+            let result = '';
+            let error = '';
+
+            pythonProcess.stdout.on('data', (data) => {
+                result += data.toString();
+            });
+
+            pythonProcess.stderr.on('data', (data) => {
+                error += data.toString();
+            });
+
+            pythonProcess.on('close', (code) => {
+                if (code !== 0) {
+                    reject(new Error(`Python service failed: ${error}`));
+                } else {
+                    try {
+                        const parsedResult = JSON.parse(result.trim());
+                        if (parsedResult.error) {
+                            reject(new Error(parsedResult.error));
+                        } else {
+                            resolve(parsedResult);
+                        }
+                    } catch (parseError) {
+                        reject(new Error(`Failed to parse Python output: ${result}`));
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * @async
+     * @method checkPythonService
+     * @description Verifies the connection and parameters with the underlying Python service.
+     * @returns {Promise<Object>} A Promise that resolves with the test result or an error response.
+     */
+    async checkPythonService() {
+        try {
+            const testResult = await this._callPythonService('test_params', {
+                test_param: 'verification_test',
+                timestamp: new Date().toISOString()
+            });
+            return testResult;
+        }
+        catch (error) {
+            throw new Error(`Error calling Python service: ${error.message}`);
+        }
     }
 
     /**
      * @async
      * @method getWalletStatus
-     * @description Authenticates the user and retrieves their account information from Paradex.
-     * Utilizes a throttler to manage request rate and calls `vmGetWalletStatus` with the current instance.
+     * @description Retrieves account information using updated view model
      * @returns {Promise<Object>} A Promise that resolves with the user's account information or an error response.
      */
     async getWalletStatus() {
+        const { vmGetWalletStatus } = await import('./view.model.js');
         return this.throttler.enqueue(() => vmGetWalletStatus(this.instance));
     }
 
     /**
-     * Retrieves the wallet balance for the current instance.
-     *
-     * This function uses a throttler to enqueue the balance retrieval operation,
-     * ensuring that requests are rate-limited as needed. It fetches the wallet balance
-     * associated with the current instance.
-     *
      * @async
      * @method getWalletBalance
+     * @description Retrieves the wallet balance using view model aggiornato
      * @returns {Promise<Object>} A promise that resolves to the wallet balance object.
      */
     async getWalletBalance() {
-        return this.throttler.enqueue(() => vmGetWalletBalance(this.instance));
+        const { vmGetWalletBalance } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetWalletBalance(this.pythonService));
     }
 
     /**
-     * Retrieves market data for a specific symbol.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the market data.
+     * Retrieves market data for a specific symbol using view model aggiornato
      * 
      * @async
      * @method getMarketData
      * @param {string} _symbol - The symbol of the market to retrieve data for.
+     * @description Retrieves market data for a specific symbol using view model aggiornato
      * @returns {Promise<Object>} A Promise that resolves with the response containing the market data or an error message.
-     * 
-     * For latest market data, use getLatestMarketData.
      */
     async getMarketData(_symbol) {
-        return this.throttler.enqueue(() => vmGetMarketData(this.instance, _symbol));
+        const { vmGetMarketData } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetMarketData(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves the latest market data for a specific symbol.
-     * Uses a throttler to enqueue the request and calls the underlying function to fetch the market data.
-     *
-     * @async
-     * @method getLatestMarketData
-     * @param {string} _symbol - The symbol of the market to retrieve the latest data for.
-     * @returns {Promise<Object>} A Promise that resolves with the latest market data or an error message.
-     */
-    async getLatestMarketData(_symbol) {
-        return this.throttler.enqueue(() => vmGetLatestMarketData(this.instance, _symbol));
-    }
-
-    /**
-     * Retrieves the market order size for a given symbol.
-     *
-     * @async
-     * @method getMarketOrderSize
-     * @param {string} _symbol - The symbol of the market to query.
-     * @returns {Promise<*>} A Promise that resolves to the market order size for the specified symbol.
-     */
-    async getMarketOrderSize(_symbol) {
-        return this.throttler.enqueue(() => vmGetMarketOrderSize(this.instance, _symbol));
-    }
-
-    /**
-     * Retrieves the funding rate per hour for a specific symbol.
-     * Executes the request through a throttler to manage rate limits and calls the underlying function to fetch the funding rate.
-     *
      * @async
      * @method getFundingRateHour
      * @param {string} _symbol - The symbol of the market to retrieve the funding rate for.
+     * @description Retrieves market hourly funding rate
      * @returns {Promise<Object>} A Promise that resolves with the funding rate data for the specified symbol.
      */
     async getFundingRateHour(_symbol) {
-        return this.throttler.enqueue(() => vmGetFundingRateHour(this.instance, _symbol));
+        const { vmGetFundingRateHour } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetFundingRateHour(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves the open interest for a specific market symbol.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the market open interest.
-     * 
      * @async
      * @method getMarketOpenInterest
      * @param {string} _symbol - The symbol of the market to retrieve the open interest for.
+     * @description Retrieves market open interest
      * @returns {Promise<Object>} A Promise that resolves with the response containing the open interest data or an error message.
      */
     async getMarketOpenInterest(_symbol) {
-        return this.throttler.enqueue(() => vmGetMarketOpenInterest(this.instance, _symbol));
+        const { vmGetMarketOpenInterest } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetMarketOpenInterest(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves the open positions for the authenticated user.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the user's open positions.
-     * 
      * @async
      * @method getOpenPositions
+     * @description Retrieves the open positions
      * @returns {Promise<Object>} A Promise that resolves with the response containing the open positions data or an error message.
      */
     async getOpenPositions() {
-        return this.throttler.enqueue(() => vmGetOpenPositions(this.instance));
+        const { vmGetOpenPositions } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetOpenPositions(this.pythonService));
     }
 
     /**
-     * Retrieves the status of a position for the authenticated user on Paradex.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the position status for the specified symbol.
-     *
      * @async
      * @method getOpenPositionDetail
      * @param {string} _symbol - The symbol of the position to retrieve the status for.
+     * @description Retrieves specific position details
      * @returns {Promise<Object>} A Promise that resolves with the response containing the position status data or an error message.
      */
     async getOpenPositionDetail(_symbol) {
-        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this.instance, _symbol), 2);
+        const { vmGetOpenPositionDetail } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this.pythonService, _symbol));
     }
 
     /**
-     * Retrieves the status of an order for the authenticated user on Paradex.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the order status for the specified order ID.
-     * 
      * @async
      * @method getOrderStatus
-     * @param {string} _orderId - The ID of the order to retrieve the status for.
+     * @description Retrieves orders using view model aggiornato
+     * @param {string} _orderId - The ID of the order to retrieve the status for (optional - gets all orders if not provided).
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order status data or an error message.
      */
     async getOrderStatus(_orderId) {
+        const { vmGetOrderStatus } = await import('./view.model.js');
         return this.throttler.enqueue(() => vmGetOrderStatus(this.instance, _orderId));
     }
 
     /**
-     * Retrieves the earned points for the authenticated user on Paradex.
-     * Authenticates the user, sets the authorization header, and calls the function to fetch the earned points.
-     *
      * @async
      * @method getEarnedPoints
-     * @returns {Promise<Object>} A Promise that resolves with the response containing the earned points data or an error message.
+     * @description Retrieves account point earned
+     * @returns {Promise<Object>} A Promise that resolves with the response containing account data.
      */
     async getEarnedPoints() {
+        const { vmGetEarnedPoints } = await import('./view.model.js');
         return this.throttler.enqueue(() => vmGetEarnedPoints(this.instance));
     }
 
     /**
-     * Submits a new order to the trading system with specified parameters.
-     * Utilizes a throttler to limit the rate of order submissions and calls the underlying order submission function.
-     *
      * @async
      * @method submitOrder
+     * @description Submits a new order using write model aggiornato (usa Python SDK internamente)
      * @param {string} _type - The type of the order (e.g., 'limit', 'market').
      * @param {string} _symbol - The trading symbol for the order (e.g., 'BTCUSD').
      * @param {string} _side - The side of the order ('buy' or 'sell').
@@ -195,54 +327,51 @@ export class Extended {
      * @returns {Promise<Object>} A Promise that resolves with the result of the order submission.
      */
     async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty) {
+        const { wmSubmitOrder } = await import('./write.model.js');
         return await this.throttler.enqueue(() => wmSubmitOrder(
-            this.instance,
+            this.pythonService,
             this.slippage,
-            this.account,
             _type,
             _symbol,
             _side,
             _marketUnit,
             _orderQty
-        ), 5);
+        ));
     }
 
     /**
-     * Cancella un ordine esistente nel sistema di trading utilizzando l'ID specificato.
-     * Utilizza un throttler per limitare la frequenza delle richieste di cancellazione e invoca la funzione sottostante per la cancellazione dell'ordine.
-     *
      * @async
      * @method submitCancelOrder
-     * @param {string} _orderId - L'ID dell'ordine da cancellare.
-     * @returns {Promise<Object>} Una Promise che si risolve con il risultato della cancellazione dell'ordine.
+     * @description Cancels an existing order using the updated write model (internally uses the Python SDK).
+     * @param {string} _externalId - The external ID of the order to cancel.
+     * @returns {Promise<Object>} A Promise that resolves with the result of the order cancellation.
      */
-    async submitCancelOrder(_orderId) {
-        return this.throttler.enqueue(() => wmSubmitCancelOrder(this.instance, _orderId));
+    async submitCancelOrder(_externalId) {
+        const { wmSubmitCancelOrder } = await import('./write.model.js');
+        return this.throttler.enqueue(() => wmSubmitCancelOrder(this.pythonService, _externalId));
     }
 
     /**
-     * Submits a close order to the trading system with the specified parameters.
-     * Uses a throttler to control the rate of close order submissions and invokes the underlying close order function.
-     *
      * @async
      * @method submitCloseOrder
+     * @description Submits a close order to the trading system with the specified parameters.
      * @param {string} _type - The type of the close order (e.g., 'limit', 'market').
-     * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTCUSD').
-     * @param {number} _orderQty - The quantity to close.
+     * @param {string} _symbol - The trading symbol for the close order (e.g., 'BTC-USD').
      * @param {string} _marketUnit - The market unit for the close order (e.g., 'contracts', 'coins').
+     * @param {number} _orderQty - The quantity to close.
      * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol.
      * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
      */
     async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll = false) {
+        const { wmSubmitCloseOrder } = await import('./write.model.js');
         return this.throttler.enqueue(() => wmSubmitCloseOrder(
-            this.instance,
+            this.pythonService,
             this.slippage,
-            this.account,
             _type,
             _symbol,
             _orderQty,
             _marketUnit,
             _closeAll
-        ), 6);
+        ));
     }
 }
