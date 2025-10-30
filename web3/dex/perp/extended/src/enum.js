@@ -35,5 +35,13 @@ export const extendedEnum = Object.freeze({
             triggered: 'TRIGGERED',
             partially_filled: 'PARTIALLY_FILLED'
         },
+    },
+    withdrawal: {
+        status: {
+            created: 'CREATED',
+            in_progress: 'IN_PROGRESS',
+            completed: 'COMPLETED',
+            rejected: 'REJECTED'
+        }
     }
 });
