@@ -261,3 +261,61 @@ export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symb
         return createResponse(false, message, null, 'extended.submitCloseOrder');
     }
 }
+
+/**
+ * @async
+ * @function wmSubmitWithdrawal
+ * @description Submits a Starknet withdrawal request using the Extended Python SDK
+ * @param {Object} _pythonService - Configured Python service instance
+ * @param {string} _amount - Withdrawal amount in collateral asset (required)
+ * @param {string} [_starkAddress] - Recipient Starknet address (optional - uses account default if not provided)
+ * @returns {Promise<Object>} A Promise that resolves with withdrawal response containing withdrawal_id or error message
+ */
+export async function wmSubmitWithdrawal(_pythonService, _amount, _starkAddress = null) {
+    try {
+        // 1. Validate required parameters
+        if (!_amount || parseFloat(_amount) <= 0) {
+            throw new Error('Amount must be a positive number');
+        }
+        
+        // 2. Get account information to check available balance
+        const accountInfo = await _pythonService.call('get_account_info');
+        if (accountInfo.error) {
+            throw new Error(`Failed to get account info: ${accountInfo.error}`);
+        }
+        
+        // 3. Check if withdrawal amount is available
+        const availableForWithdrawal = parseFloat(accountInfo.available_for_withdrawal || 0);
+        const withdrawalAmount = parseFloat(_amount);
+        
+        if (withdrawalAmount > availableForWithdrawal) {
+            throw new Error(`Insufficient balance for withdrawal. Available: ${availableForWithdrawal}, Requested: ${withdrawalAmount}`);
+        }
+        
+        // 4. Prepare withdrawal parameters for SDK (Starknet only)
+        const withdrawalParams = {
+            amount: _amount.toString(),
+            chain_id: 'STRK'
+        };
+        
+        // Add optional Starknet address if provided
+        if (_starkAddress) {
+            withdrawalParams.stark_address = _starkAddress;
+        }
+        
+        // 5. Submit withdrawal via SDK
+        const withdrawalResult = await _pythonService.call('withdraw', withdrawalParams);
+        
+        if (withdrawalResult.error) {
+            throw new Error(withdrawalResult.error);
+        }
+        
+        // 6. Return success response with withdrawal details
+        return createResponse(true, 'success', withdrawalResult.withdrawal_id, 'extended.submitWithdrawal');
+        
+    } catch (error) {
+        // Centralized error handling
+        const message = error.response?.data?.error?.message || error.message || 'Failed to submit withdrawal';
+        return createResponse(false, message, null, 'extended.submitWithdrawal');
+    }
+}
