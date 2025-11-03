@@ -41,7 +41,7 @@ if (response.success && response.data) {
     while (statusResponse.data.status !== 'COMPLETED' && statusResponse.data.status !== 'REJECTED') {
         await new Promise(resolve => setTimeout(resolve, 1000));
         statusResponse = await extendedInstance.getWithdrawalStatus(response.data);
-        status != statusResponse.data.status ? console.log('Current status:', statusResponse.data.status) : null;
+        status !== statusResponse.data.status ? console.log('Current status:', statusResponse.data.status) : null;
         status = statusResponse.data.status;
     }
 
