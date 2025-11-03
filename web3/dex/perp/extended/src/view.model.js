@@ -298,7 +298,7 @@ export async function vmGetEarnedPoints(_instance){
 export async function vmGetWithdrawalStatus(_instance, _withdrawalId = null, _limit = 50) {
     try {
         const params = { limit: _withdrawalId ? 100 : _limit };
-        const url = encodeGetUrl('/user/assetOperations', params)
+        const url = encodeGetUrl('/user/assetOperations', params);
         const response = await _instance.get(url);
         const operations = response.data.data;
 
