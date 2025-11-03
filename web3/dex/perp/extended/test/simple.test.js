@@ -35,14 +35,24 @@ if (response.success && response.data) {
     let statusResponse = await extendedInstance.getWithdrawalStatus(response.data);
     console.log('getWithdrawalStatus response:', statusResponse);
     
-    let status = statusResponse.data.status;
+    let status = (statusResponse && statusResponse.data) ? statusResponse.data.status : undefined;
     const startTime = Date.now();
 
-    while (statusResponse.data.status !== 'COMPLETED' && statusResponse.data.status !== 'REJECTED') {
+    while (
+        statusResponse &&
+        statusResponse.data &&
+        statusResponse.data.status !== 'COMPLETED' &&
+        statusResponse.data.status !== 'REJECTED'
+    ) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         statusResponse = await extendedInstance.getWithdrawalStatus(response.data);
-        status !== statusResponse.data.status ? console.log('Current status:', statusResponse.data.status) : null;
-        status = statusResponse.data.status;
+        if (statusResponse && statusResponse.data) {
+            status != statusResponse.data.status ? console.log('Current status:', statusResponse.data.status) : null;
+            status = statusResponse.data.status;
+        } else {
+            console.error('Error: statusResponse.data is undefined');
+            break;
+        }
     }
 
     const endTime = Date.now();
