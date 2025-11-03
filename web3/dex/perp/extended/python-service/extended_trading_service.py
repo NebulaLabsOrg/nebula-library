@@ -438,6 +438,107 @@ class ExtendedTradingService:
         except Exception as e:
             return {"error": f"Failed to get trades: {str(e)}"}
     
+    async def withdraw(self, amount: str, stark_address: str = None) -> Dict[str, Any]:
+        """Submit a Starknet withdrawal request using the Extended SDK - Returns withdrawal ID
+        
+        For Starknet withdrawals:
+        - amount: withdrawal amount in collateral asset (required)
+        - stark_address: recipient Starknet address (OPTIONAL - uses account default if not provided)
+        
+        Returns withdrawal_id assigned by Extended on success
+        """
+        if not SDK_AVAILABLE or not self.trading_client:
+            return {"error": "SDK not available or trading client not initialized"}
+            
+        try:
+            from decimal import Decimal
+            
+            # Convert amount to Decimal for SDK
+            withdrawal_amount = Decimal(str(amount))
+            
+            # Prepare withdrawal parameters for Starknet
+            withdrawal_params = {
+                "amount": withdrawal_amount,
+                "chain_id": "STRK"
+            }
+            
+            # Add optional Starknet address if provided
+            if stark_address:
+                withdrawal_params["stark_address"] = stark_address
+            
+            # Submit withdrawal via SDK account module
+            withdrawal_response = await self.trading_client.account.withdraw(**withdrawal_params)
+            
+            # The SDK returns WrappedApiResponse[int] where .data contains the withdrawal ID
+            withdrawal_id = withdrawal_response.data
+            
+            # Return the withdrawal data in the expected format
+            return {
+                "withdrawal_id": withdrawal_id,
+                "amount": str(withdrawal_amount),
+                "stark_address": stark_address,
+                "status": "submitted"
+            }
+            
+        except Exception as e:
+            return {"error": f"Failed to submit withdrawal: {str(e)}"}
+    
+    async def get_bridge_config(self) -> Dict[str, Any]:
+        """Get bridge configuration for EVM withdrawals - Returns ONLY raw data"""
+        if not SDK_AVAILABLE or not self.trading_client:
+            return {"error": "SDK not available or trading client not initialized"}
+            
+        try:
+            bridge_config_response = await self.trading_client.account.get_bridge_config()
+            bridge_config = bridge_config_response.data if hasattr(bridge_config_response, 'data') else bridge_config_response
+            
+            # Return ONLY raw data without any wrapper
+            return self._serialize_object(bridge_config)
+        except Exception as e:
+            return {"error": f"Failed to get bridge config: {str(e)}"}
+    
+    async def get_bridge_quote(self, chain_in: str, chain_out: str, amount: str) -> Dict[str, Any]:
+        """Get a bridge quote for EVM withdrawals - Returns ONLY raw data"""
+        if not SDK_AVAILABLE or not self.trading_client:
+            return {"error": "SDK not available or trading client not initialized"}
+            
+        try:
+            from decimal import Decimal
+            
+            # Convert amount to Decimal for SDK
+            quote_amount = Decimal(str(amount))
+            
+            # Get bridge quote via SDK
+            quote_response = await self.trading_client.account.get_bridge_quote(
+                chain_in=chain_in,
+                chain_out=chain_out,
+                amount=quote_amount
+            )
+            
+            quote = quote_response.data if hasattr(quote_response, 'data') else quote_response
+            
+            # Return ONLY raw data without any wrapper
+            return self._serialize_object(quote)
+        except Exception as e:
+            return {"error": f"Failed to get bridge quote: {str(e)}"}
+    
+    async def commit_bridge_quote(self, quote_id: str) -> Dict[str, Any]:
+        """Commit a bridge quote for EVM withdrawals - Returns ONLY raw data"""
+        if not SDK_AVAILABLE or not self.trading_client:
+            return {"error": "SDK not available or trading client not initialized"}
+            
+        try:
+            # Commit bridge quote via SDK
+            await self.trading_client.account.commit_bridge_quote(id=quote_id)
+            
+            return {
+                "success": True,
+                "message": "Bridge quote committed successfully",
+                "quote_id": quote_id
+            }
+        except Exception as e:
+            return {"error": f"Failed to commit bridge quote: {str(e)}"}
+    
     def get_stark_public_key(self, private_key: str) -> str:
         """Generate StarkNet public key (utility function)"""
         private_key_int = int(private_key, 16) if isinstance(private_key, str) else private_key
@@ -457,7 +558,8 @@ def main():
         # Asynchronous commands that use the complete SDK
         if command in ["get_markets", "get_account_info", "get_positions", "get_orders", "get_order_by_id",
                       "place_order", "cancel_order", "cancel_order_by_external_id", "cancel_all_orders", "close_position",
-                      "get_orderbook", "get_trades", "test_params"]:
+                      "get_orderbook", "get_trades", "withdraw", "get_bridge_config", "get_bridge_quote", 
+                      "commit_bridge_quote", "test_params"]:
             
             args = json.loads(sys.argv[2])
             
@@ -510,6 +612,21 @@ def main():
                         market_name=args["market_name"],
                         limit=args.get("limit", 50)
                     )
+                elif command == "withdraw":
+                    return await service.withdraw(
+                        amount=args["amount"],
+                        stark_address=args.get("stark_address")
+                    )
+                elif command == "get_bridge_config":
+                    return await service.get_bridge_config()
+                elif command == "get_bridge_quote":
+                    return await service.get_bridge_quote(
+                        chain_in=args["chain_in"],
+                        chain_out=args["chain_out"],
+                        amount=args["amount"]
+                    )
+                elif command == "commit_bridge_quote":
+                    return await service.commit_bridge_quote(args["quote_id"])
                 elif command == "test_params":
                     # Test command to verify parameters are passed correctly
                     return {

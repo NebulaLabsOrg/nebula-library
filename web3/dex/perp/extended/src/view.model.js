@@ -285,3 +285,80 @@ export async function vmGetEarnedPoints(_instance){
         return createResponse(false, message, null, 'extended.getEarnedPoints');
     }
 }
+
+/**
+ * @async
+ * @function vmGetWithdrawalStatus
+ * @description Retrieves withdrawal status using direct API call (like vmGetEarnedPoints)
+ * @param {Object} _instance - The API client instance used to perform the request
+ * @param {string|number} [_withdrawalId] - Specific withdrawal ID to check (when provided, returns only that withdrawal's status)
+ * @param {number} [_limit=50] - Maximum number of records to return (only used when no withdrawal ID is specified)
+ * @returns {Promise<Object>} A Promise that resolves with withdrawal status data or error message
+ */
+export async function vmGetWithdrawalStatus(_instance, _withdrawalId = null, _limit = 50) {
+    try {
+        const params = { limit: _withdrawalId ? 100 : _limit };
+        const url = encodeGetUrl('/user/assetOperations', params);
+        const response = await _instance.get(url);
+        const operations = response.data.data;
+
+        // Filter for withdrawal operations (type: WITHDRAWAL, FAST_WITHDRAWAL, SLOW_WITHDRAWAL)
+        const withdrawalOperations = operations.filter(op => 
+            op.type === 'WITHDRAWAL' || 
+            op.type === 'FAST_WITHDRAWAL' || 
+            op.type === 'SLOW_WITHDRAWAL'
+        );
+
+        // If specific withdrawal ID was requested
+        if (_withdrawalId) {
+            // First try exact match
+            let withdrawal = withdrawalOperations.find(op => op.id.toString() === _withdrawalId.toString());
+            
+            // If not found, try to find a close match (Extended might use different IDs for submission vs final operation)
+            if (!withdrawal) {
+                const submissionId = parseInt(_withdrawalId);
+                const closeMatches = withdrawalOperations.filter(op => {
+                    const opId = parseInt(op.id);
+                    const diff = Math.abs(opId - submissionId);
+                    return diff < 100; // Within 100 of the submission ID
+                }).sort((a, b) => {
+                    // Sort by closest ID match
+                    const diffA = Math.abs(parseInt(a.id) - submissionId);
+                    const diffB = Math.abs(parseInt(b.id) - submissionId);
+                    return diffA - diffB;
+                });
+                
+                if (closeMatches.length > 0) {
+                    withdrawal = closeMatches[0];
+                    // Add note about ID difference
+                    withdrawal._note = `Found close match: submitted ID ${_withdrawalId}, operation ID ${withdrawal.id}`;
+                }
+            }
+            
+            return createResponse(
+                true,
+                'success',
+                {
+                    status: withdrawal.status,
+                    amount: Math.abs(parseFloat(withdrawal.amount)),
+                    createdTime: withdrawal.time,
+                    txHash: withdrawal.transactionHash,
+                    note: withdrawal._note ? withdrawal._note : undefined
+                },
+                'extended.getWithdrawalStatus'
+            );
+        }
+
+        // Return all withdrawal history if no specific ID requested
+        return createResponse(
+            true,
+            'success',
+            withdrawalOperations.slice(0, _limit),
+            'extended.getWithdrawalStatus'
+        );
+        
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get withdrawal status';
+        return createResponse(false, message, null, 'extended.getWithdrawalStatus');
+    }
+}

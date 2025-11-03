@@ -374,4 +374,38 @@ export class Extended {
             _closeAll
         ));
     }
+
+    /**
+     * @async
+     * @method submitWithdrawal
+     * @description Submits a Starknet withdrawal request to Extended exchange.
+     * @param {number|string} _amount - The amount to withdraw in USDC
+     * @param {string} [_starkAddress=null] - Optional Starknet recipient address. If not provided, uses account's default address
+     * @returns {Promise<Object>} A Promise that resolves with the withdrawal result containing withdrawal ID and status
+     */
+    async submitWithdrawal(_amount, _starkAddress = null) {
+        const { wmSubmitWithdrawal } = await import('./write.model.js');
+        return this.throttler.enqueue(() => wmSubmitWithdrawal(
+            this.pythonService,
+            _amount,
+            _starkAddress
+        ));
+    }
+
+    /**
+     * @async
+     * @method getWithdrawalStatus
+     * @description Retrieves withdrawal status using direct API call. When provided with withdrawal ID, returns detailed info for that specific withdrawal.
+     * @param {string|number} [_withdrawalId=null] - Specific withdrawal ID to check (when provided, returns only that withdrawal's status)
+     * @param {number} [_limit=50] - Maximum number of records to return (only used when no withdrawal ID is specified)
+     * @returns {Promise<Object>} A Promise that resolves with withdrawal status data containing transaction details
+     */
+    async getWithdrawalStatus(_withdrawalId = null, _limit = 50) {
+        const { vmGetWithdrawalStatus } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetWithdrawalStatus(
+            this.instance,
+            _withdrawalId,
+            _limit
+        ));
+    }
 }

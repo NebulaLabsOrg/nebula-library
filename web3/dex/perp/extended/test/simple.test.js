@@ -22,7 +22,41 @@ const extendedInstance = new Extended(
     extendedThrottler
 );
 
+console.log('Calling: extended.submitWithdrawal');
+const response = await extendedInstance.submitWithdrawal(
+    10,
+    '0x007a8bb3747d8307354fe3ee72c591026896f8fb61cb11436b70f9e9c840dc69'
+);
+console.log('submitWithdrawal response:', response);
 
-console.log('Calling: extended.getWalletStatus');
-const response = await extendedInstance.getWalletStatus();
-console.log(response);
+// Then try to find this withdrawal immediately
+if (response.success && response.data) {
+    console.log('\nTrying to find withdrawal with ID:', response.data);
+    let statusResponse = await extendedInstance.getWithdrawalStatus(response.data);
+    console.log('getWithdrawalStatus response:', statusResponse);
+    
+    let status = (statusResponse && statusResponse.data) ? statusResponse.data.status : undefined;
+    const startTime = Date.now();
+
+    while (
+        statusResponse &&
+        statusResponse.data &&
+        statusResponse.data.status !== 'COMPLETED' &&
+        statusResponse.data.status !== 'REJECTED'
+    ) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        statusResponse = await extendedInstance.getWithdrawalStatus(response.data);
+        if (statusResponse && statusResponse.data) {
+            status != statusResponse.data.status ? console.log('Current status:', statusResponse.data.status) : null;
+            status = statusResponse.data.status;
+        } else {
+            console.error('Error: statusResponse.data is undefined');
+            break;
+        }
+    }
+
+    const endTime = Date.now();
+    const elapsedTime = (endTime - startTime) / 1000;
+    console.log(`Withdrawal completed in ${elapsedTime} seconds`);
+    console.log('getWithdrawalStatus response:', statusResponse);
+}
