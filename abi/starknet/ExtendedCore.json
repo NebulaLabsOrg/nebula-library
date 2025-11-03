@@ -1,0 +1,3773 @@
+[
+  {
+    "type": "impl",
+    "name": "CoreImpl",
+    "interface_name": "perpetuals::core::interface::ICore"
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::felt252>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::position::PositionId",
+    "members": [
+      {
+        "name": "value",
+        "type": "core::integer::u32"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "starkware_utils::time::time::Timestamp",
+    "members": [
+      {
+        "name": "seconds",
+        "type": "core::integer::u64"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::asset::AssetId",
+    "members": [
+      {
+        "name": "value",
+        "type": "core::felt252"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::order::Order",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId"
+      },
+      {
+        "name": "base_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId"
+      },
+      {
+        "name": "base_amount",
+        "type": "core::integer::i64"
+      },
+      {
+        "name": "quote_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId"
+      },
+      {
+        "name": "quote_amount",
+        "type": "core::integer::i64"
+      },
+      {
+        "name": "fee_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId"
+      },
+      {
+        "name": "fee_amount",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::interface::Settlement",
+    "members": [
+      {
+        "name": "signature_a",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "signature_b",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "order_a",
+        "type": "perpetuals::core::types::order::Order"
+      },
+      {
+        "name": "order_b",
+        "type": "perpetuals::core::types::order::Order"
+      },
+      {
+        "name": "actual_amount_base_a",
+        "type": "core::integer::i64"
+      },
+      {
+        "name": "actual_amount_quote_a",
+        "type": "core::integer::i64"
+      },
+      {
+        "name": "actual_fee_a",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "actual_fee_b",
+        "type": "core::integer::u64"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<perpetuals::core::interface::Settlement>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<perpetuals::core::interface::Settlement>"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "perpetuals::core::interface::ICore",
+    "items": [
+      {
+        "type": "function",
+        "name": "withdraw_request",
+        "inputs": [
+          {
+            "name": "signature",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "recipient",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "withdraw",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "recipient",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "transfer_request",
+        "inputs": [
+          {
+            "name": "signature",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "recipient",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "transfer",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "recipient",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "trade",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "signature_a",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "signature_b",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "order_a",
+            "type": "perpetuals::core::types::order::Order"
+          },
+          {
+            "name": "order_b",
+            "type": "perpetuals::core::types::order::Order"
+          },
+          {
+            "name": "actual_amount_base_a",
+            "type": "core::integer::i64"
+          },
+          {
+            "name": "actual_amount_quote_a",
+            "type": "core::integer::i64"
+          },
+          {
+            "name": "actual_fee_a",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "actual_fee_b",
+            "type": "core::integer::u64"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "multi_trade",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "trades",
+            "type": "core::array::Span::<perpetuals::core::interface::Settlement>"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "liquidate",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "liquidator_signature",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "liquidated_position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "liquidator_order",
+            "type": "perpetuals::core::types::order::Order"
+          },
+          {
+            "name": "actual_amount_base_liquidated",
+            "type": "core::integer::i64"
+          },
+          {
+            "name": "actual_amount_quote_liquidated",
+            "type": "core::integer::i64"
+          },
+          {
+            "name": "actual_liquidator_fee",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "liquidated_fee_amount",
+            "type": "core::integer::u64"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "deleverage",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "deleveraged_position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "deleverager_position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "base_asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "deleveraged_base_amount",
+            "type": "core::integer::i64"
+          },
+          {
+            "name": "deleveraged_quote_amount",
+            "type": "core::integer::i64"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "reduce_inactive_asset_position",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "position_id_a",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "position_id_b",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "base_asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "base_amount_a",
+            "type": "core::integer::i64"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "OperatorNonceImpl",
+    "interface_name": "perpetuals::core::components::operator_nonce::interface::IOperatorNonce"
+  },
+  {
+    "type": "interface",
+    "name": "perpetuals::core::components::operator_nonce::interface::IOperatorNonce",
+    "items": [
+      {
+        "type": "function",
+        "name": "get_operator_nonce",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u64"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "DepositImpl",
+    "interface_name": "perpetuals::core::components::deposit::interface::IDeposit"
+  },
+  {
+    "type": "enum",
+    "name": "perpetuals::core::components::deposit::interface::DepositStatus",
+    "variants": [
+      {
+        "name": "NOT_REGISTERED",
+        "type": "()"
+      },
+      {
+        "name": "PROCESSED",
+        "type": "()"
+      },
+      {
+        "name": "CANCELED",
+        "type": "()"
+      },
+      {
+        "name": "PENDING",
+        "type": "starkware_utils::time::time::Timestamp"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "starkware_utils::time::time::TimeDelta",
+    "members": [
+      {
+        "name": "seconds",
+        "type": "core::integer::u64"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "perpetuals::core::components::deposit::interface::IDeposit",
+    "items": [
+      {
+        "type": "function",
+        "name": "deposit",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "quantized_amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "cancel_deposit",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "quantized_amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "reject_deposit",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "depositor",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "quantized_amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "process_deposit",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "depositor",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "quantized_amount",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "salt",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_deposit_status",
+        "inputs": [
+          {
+            "name": "deposit_hash",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "perpetuals::core::components::deposit::interface::DepositStatus"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_cancel_delay",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "starkware_utils::time::time::TimeDelta"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "RequestApprovalsImpl",
+    "interface_name": "starkware_utils::components::request_approvals::interface::IRequestApprovals"
+  },
+  {
+    "type": "enum",
+    "name": "starkware_utils::components::request_approvals::interface::RequestStatus",
+    "variants": [
+      {
+        "name": "NOT_REGISTERED",
+        "type": "()"
+      },
+      {
+        "name": "PROCESSED",
+        "type": "()"
+      },
+      {
+        "name": "PENDING",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "starkware_utils::components::request_approvals::interface::IRequestApprovals",
+    "items": [
+      {
+        "type": "function",
+        "name": "get_request_status",
+        "inputs": [
+          {
+            "name": "request_hash",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "starkware_utils::components::request_approvals::interface::RequestStatus"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "AssetsImpl",
+    "interface_name": "perpetuals::core::components::assets::interface::IAssets"
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<core::integer::u16>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<core::integer::u16>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::funding::FundingIndex",
+    "members": [
+      {
+        "name": "value",
+        "type": "core::integer::i64"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::funding::FundingTick",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId"
+      },
+      {
+        "name": "funding_index",
+        "type": "perpetuals::core::types::funding::FundingIndex"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<perpetuals::core::types::funding::FundingTick>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<perpetuals::core::types::funding::FundingTick>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::price::SignedPrice",
+    "members": [
+      {
+        "name": "signature",
+        "type": "core::array::Span::<core::felt252>"
+      },
+      {
+        "name": "signer_public_key",
+        "type": "core::felt252"
+      },
+      {
+        "name": "timestamp",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "oracle_price",
+        "type": "core::integer::u128"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<perpetuals::core::types::price::SignedPrice>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<perpetuals::core::types::price::SignedPrice>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "openzeppelin_token::erc20::interface::IERC20Dispatcher",
+    "members": [
+      {
+        "name": "contract_address",
+        "type": "core::starknet::contract_address::ContractAddress"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "perpetuals::core::types::asset::AssetStatus",
+    "variants": [
+      {
+        "name": "PENDING",
+        "type": "()"
+      },
+      {
+        "name": "ACTIVE",
+        "type": "()"
+      },
+      {
+        "name": "INACTIVE",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::asset::synthetic::SyntheticConfig",
+    "members": [
+      {
+        "name": "version",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "status",
+        "type": "perpetuals::core::types::asset::AssetStatus"
+      },
+      {
+        "name": "risk_factor_first_tier_boundary",
+        "type": "core::integer::u128"
+      },
+      {
+        "name": "risk_factor_tier_size",
+        "type": "core::integer::u128"
+      },
+      {
+        "name": "quorum",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "resolution_factor",
+        "type": "core::integer::u64"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::price::Price",
+    "members": [
+      {
+        "name": "value",
+        "type": "core::integer::u64"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::asset::synthetic::SyntheticTimelyData",
+    "members": [
+      {
+        "name": "version",
+        "type": "core::integer::u8"
+      },
+      {
+        "name": "price",
+        "type": "perpetuals::core::types::price::Price"
+      },
+      {
+        "name": "last_price_update",
+        "type": "starkware_utils::time::time::Timestamp"
+      },
+      {
+        "name": "funding_index",
+        "type": "perpetuals::core::types::funding::FundingIndex"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::risk_factor::RiskFactor",
+    "members": [
+      {
+        "name": "value",
+        "type": "core::integer::u16"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<perpetuals::core::types::risk_factor::RiskFactor>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<perpetuals::core::types::risk_factor::RiskFactor>"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "perpetuals::core::components::assets::interface::IAssets",
+    "items": [
+      {
+        "type": "function",
+        "name": "add_oracle_to_asset",
+        "inputs": [
+          {
+            "name": "asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "oracle_public_key",
+            "type": "core::felt252"
+          },
+          {
+            "name": "oracle_name",
+            "type": "core::felt252"
+          },
+          {
+            "name": "asset_name",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "add_synthetic_asset",
+        "inputs": [
+          {
+            "name": "asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "risk_factor_tiers",
+            "type": "core::array::Span::<core::integer::u16>"
+          },
+          {
+            "name": "risk_factor_first_tier_boundary",
+            "type": "core::integer::u128"
+          },
+          {
+            "name": "risk_factor_tier_size",
+            "type": "core::integer::u128"
+          },
+          {
+            "name": "quorum",
+            "type": "core::integer::u8"
+          },
+          {
+            "name": "resolution_factor",
+            "type": "core::integer::u64"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "update_synthetic_asset_risk_factor",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "risk_factor_tiers",
+            "type": "core::array::Span::<core::integer::u16>"
+          },
+          {
+            "name": "risk_factor_first_tier_boundary",
+            "type": "core::integer::u128"
+          },
+          {
+            "name": "risk_factor_tier_size",
+            "type": "core::integer::u128"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "deactivate_synthetic",
+        "inputs": [
+          {
+            "name": "synthetic_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "funding_tick",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "funding_ticks",
+            "type": "core::array::Span::<perpetuals::core::types::funding::FundingTick>"
+          },
+          {
+            "name": "timestamp",
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "price_tick",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "oracle_price",
+            "type": "core::integer::u128"
+          },
+          {
+            "name": "signed_prices",
+            "type": "core::array::Span::<perpetuals::core::types::price::SignedPrice>"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_oracle_from_asset",
+        "inputs": [
+          {
+            "name": "asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "oracle_public_key",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "update_synthetic_quorum",
+        "inputs": [
+          {
+            "name": "synthetic_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          },
+          {
+            "name": "quorum",
+            "type": "core::integer::u8"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "get_collateral_token_contract",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "openzeppelin_token::erc20::interface::IERC20Dispatcher"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_collateral_quantum",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u64"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_last_funding_tick",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_last_price_validation",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_max_funding_interval",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "starkware_utils::time::time::TimeDelta"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_max_funding_rate",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_max_price_interval",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "starkware_utils::time::time::TimeDelta"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_max_oracle_price_validity",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "starkware_utils::time::time::TimeDelta"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_num_of_active_synthetic_assets",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u32"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_collateral_id",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "perpetuals::core::types::asset::AssetId"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_synthetic_config",
+        "inputs": [
+          {
+            "name": "synthetic_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "perpetuals::core::types::asset::synthetic::SyntheticConfig"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_synthetic_timely_data",
+        "inputs": [
+          {
+            "name": "synthetic_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "perpetuals::core::types::asset::synthetic::SyntheticTimelyData"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_risk_factor_tiers",
+        "inputs": [
+          {
+            "name": "asset_id",
+            "type": "perpetuals::core::types::asset::AssetId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::array::Span::<perpetuals::core::types::risk_factor::RiskFactor>"
+          }
+        ],
+        "state_mutability": "view"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "ReplaceabilityImpl",
+    "interface_name": "starkware_utils::components::replaceability::interface::IReplaceable"
+  },
+  {
+    "type": "struct",
+    "name": "starkware_utils::components::replaceability::interface::EICData",
+    "members": [
+      {
+        "name": "eic_hash",
+        "type": "core::starknet::class_hash::ClassHash"
+      },
+      {
+        "name": "eic_init_data",
+        "type": "core::array::Span::<core::felt252>"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "core::option::Option::<starkware_utils::components::replaceability::interface::EICData>",
+    "variants": [
+      {
+        "name": "Some",
+        "type": "starkware_utils::components::replaceability::interface::EICData"
+      },
+      {
+        "name": "None",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "enum",
+    "name": "core::bool",
+    "variants": [
+      {
+        "name": "False",
+        "type": "()"
+      },
+      {
+        "name": "True",
+        "type": "()"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "starkware_utils::components::replaceability::interface::ImplementationData",
+    "members": [
+      {
+        "name": "impl_hash",
+        "type": "core::starknet::class_hash::ClassHash"
+      },
+      {
+        "name": "eic_data",
+        "type": "core::option::Option::<starkware_utils::components::replaceability::interface::EICData>"
+      },
+      {
+        "name": "final",
+        "type": "core::bool"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "starkware_utils::components::replaceability::interface::IReplaceable",
+    "items": [
+      {
+        "type": "function",
+        "name": "get_upgrade_delay",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::integer::u64"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_impl_activation_time",
+        "inputs": [
+          {
+            "name": "implementation_data",
+            "type": "starkware_utils::components::replaceability::interface::ImplementationData"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::integer::u64"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "add_new_implementation",
+        "inputs": [
+          {
+            "name": "implementation_data",
+            "type": "starkware_utils::components::replaceability::interface::ImplementationData"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_implementation",
+        "inputs": [
+          {
+            "name": "implementation_data",
+            "type": "starkware_utils::components::replaceability::interface::ImplementationData"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "replace_to",
+        "inputs": [
+          {
+            "name": "implementation_data",
+            "type": "starkware_utils::components::replaceability::interface::ImplementationData"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "RolesImpl",
+    "interface_name": "starkware_utils::components::roles::interface::IRoles"
+  },
+  {
+    "type": "interface",
+    "name": "starkware_utils::components::roles::interface::IRoles",
+    "items": [
+      {
+        "type": "function",
+        "name": "is_app_governor",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_app_role_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_governance_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_operator",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_token_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_upgrade_governor",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_security_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_security_agent",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "register_app_governor",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_app_governor",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_app_role_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_app_role_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_governance_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_governance_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_operator",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_operator",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_token_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_token_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_upgrade_governor",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_upgrade_governor",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "renounce",
+        "inputs": [
+          {
+            "name": "role",
+            "type": "core::felt252"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_security_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_security_admin",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "register_security_agent",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "remove_security_agent",
+        "inputs": [
+          {
+            "name": "account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "PausableImpl",
+    "interface_name": "starkware_utils::components::pausable::interface::IPausable"
+  },
+  {
+    "type": "interface",
+    "name": "starkware_utils::components::pausable::interface::IPausable",
+    "items": [
+      {
+        "type": "function",
+        "name": "is_paused",
+        "inputs": [],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "pause",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "unpause",
+        "inputs": [],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "impl",
+    "name": "PositionsImpl",
+    "interface_name": "perpetuals::core::components::positions::interface::IPositions"
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::balance::Balance",
+    "members": [
+      {
+        "name": "value",
+        "type": "core::integer::i64"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::asset::synthetic::SyntheticAsset",
+    "members": [
+      {
+        "name": "id",
+        "type": "perpetuals::core::types::asset::AssetId"
+      },
+      {
+        "name": "balance",
+        "type": "perpetuals::core::types::balance::Balance"
+      },
+      {
+        "name": "price",
+        "type": "perpetuals::core::types::price::Price"
+      },
+      {
+        "name": "risk_factor",
+        "type": "perpetuals::core::types::risk_factor::RiskFactor"
+      },
+      {
+        "name": "cached_funding_index",
+        "type": "perpetuals::core::types::funding::FundingIndex"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "core::array::Span::<perpetuals::core::types::asset::synthetic::SyntheticAsset>",
+    "members": [
+      {
+        "name": "snapshot",
+        "type": "@core::array::Array::<perpetuals::core::types::asset::synthetic::SyntheticAsset>"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::types::position::PositionData",
+    "members": [
+      {
+        "name": "synthetics",
+        "type": "core::array::Span::<perpetuals::core::types::asset::synthetic::SyntheticAsset>"
+      },
+      {
+        "name": "collateral_balance",
+        "type": "perpetuals::core::types::balance::Balance"
+      }
+    ]
+  },
+  {
+    "type": "struct",
+    "name": "perpetuals::core::value_risk_calculator::PositionTVTR",
+    "members": [
+      {
+        "name": "total_value",
+        "type": "core::integer::i128"
+      },
+      {
+        "name": "total_risk",
+        "type": "core::integer::u128"
+      }
+    ]
+  },
+  {
+    "type": "interface",
+    "name": "perpetuals::core::components::positions::interface::IPositions",
+    "items": [
+      {
+        "type": "function",
+        "name": "get_position_assets",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "perpetuals::core::types::position::PositionData"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "get_position_tv_tr",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "perpetuals::core::value_risk_calculator::PositionTVTR"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_deleveragable",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_healthy",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "is_liquidatable",
+        "inputs": [
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          }
+        ],
+        "outputs": [
+          {
+            "type": "core::bool"
+          }
+        ],
+        "state_mutability": "view"
+      },
+      {
+        "type": "function",
+        "name": "new_position",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "owner_public_key",
+            "type": "core::felt252"
+          },
+          {
+            "name": "owner_account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "owner_protection_enabled",
+            "type": "core::bool"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_owner_account_request",
+        "inputs": [
+          {
+            "name": "signature",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "new_owner_account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_owner_account",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "new_owner_account",
+            "type": "core::starknet::contract_address::ContractAddress"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_public_key_request",
+        "inputs": [
+          {
+            "name": "signature",
+            "type": "core::array::Span::<core::felt252>"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "new_public_key",
+            "type": "core::felt252"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "set_public_key",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "new_public_key",
+            "type": "core::felt252"
+          },
+          {
+            "name": "expiration",
+            "type": "starkware_utils::time::time::Timestamp"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      },
+      {
+        "type": "function",
+        "name": "enable_owner_protection",
+        "inputs": [
+          {
+            "name": "operator_nonce",
+            "type": "core::integer::u64"
+          },
+          {
+            "name": "position_id",
+            "type": "perpetuals::core::types::position::PositionId"
+          },
+          {
+            "name": "signature",
+            "type": "core::array::Span::<core::felt252>"
+          }
+        ],
+        "outputs": [],
+        "state_mutability": "external"
+      }
+    ]
+  },
+  {
+    "type": "constructor",
+    "name": "constructor",
+    "inputs": [
+      {
+        "name": "governance_admin",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "upgrade_delay",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId"
+      },
+      {
+        "name": "collateral_token_address",
+        "type": "core::starknet::contract_address::ContractAddress"
+      },
+      {
+        "name": "collateral_quantum",
+        "type": "core::integer::u64"
+      },
+      {
+        "name": "max_price_interval",
+        "type": "starkware_utils::time::time::TimeDelta"
+      },
+      {
+        "name": "max_oracle_price_validity",
+        "type": "starkware_utils::time::time::TimeDelta"
+      },
+      {
+        "name": "max_funding_interval",
+        "type": "starkware_utils::time::time::TimeDelta"
+      },
+      {
+        "name": "max_funding_rate",
+        "type": "core::integer::u32"
+      },
+      {
+        "name": "cancel_delay",
+        "type": "starkware_utils::time::time::TimeDelta"
+      },
+      {
+        "name": "fee_position_owner_public_key",
+        "type": "core::felt252"
+      },
+      {
+        "name": "insurance_fund_position_owner_public_key",
+        "type": "core::felt252"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "role",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "sender",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "role",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "sender",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "delay",
+        "type": "core::integer::u64",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "role",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "sender",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "role",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "previous_admin_role",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "new_admin_role",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "RoleGranted",
+        "type": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGranted",
+        "kind": "nested"
+      },
+      {
+        "name": "RoleGrantedWithDelay",
+        "type": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleGrantedWithDelay",
+        "kind": "nested"
+      },
+      {
+        "name": "RoleRevoked",
+        "type": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleRevoked",
+        "kind": "nested"
+      },
+      {
+        "name": "RoleAdminChanged",
+        "type": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::RoleAdminChanged",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::operator_nonce::operator_nonce::OperatorNonceComponent::Event",
+    "kind": "enum",
+    "variants": []
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::pausable::pausable::PausableComponent::Paused",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::pausable::pausable::PausableComponent::Unpaused",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::pausable::pausable::PausableComponent::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "Paused",
+        "type": "starkware_utils::components::pausable::pausable::PausableComponent::Paused",
+        "kind": "nested"
+      },
+      {
+        "name": "Unpaused",
+        "type": "starkware_utils::components::pausable::pausable::PausableComponent::Unpaused",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::replaceability::interface::ImplementationAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "implementation_data",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationData",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::replaceability::interface::ImplementationRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "implementation_data",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationData",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::replaceability::interface::ImplementationReplaced",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "implementation_data",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationData",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::replaceability::interface::ImplementationFinalized",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "impl_hash",
+        "type": "core::starknet::class_hash::ClassHash",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::replaceability::replaceability::ReplaceabilityComponent::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "ImplementationAdded",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "ImplementationRemoved",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "ImplementationReplaced",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationReplaced",
+        "kind": "nested"
+      },
+      {
+        "name": "ImplementationFinalized",
+        "type": "starkware_utils::components::replaceability::interface::ImplementationFinalized",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::AppGovernorAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::AppGovernorRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::AppRoleAdminAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::AppRoleAdminRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::GovernanceAdminAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::GovernanceAdminRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::OperatorAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::OperatorRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::SecurityAdminAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::SecurityAdminRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::SecurityAgentAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::SecurityAgentRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::TokenAdminAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::TokenAdminRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::UpgradeGovernorAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "added_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "added_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::interface::UpgradeGovernorRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "removed_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      },
+      {
+        "name": "removed_by",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::roles::roles::RolesComponent::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "AppGovernorAdded",
+        "type": "starkware_utils::components::roles::interface::AppGovernorAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "AppGovernorRemoved",
+        "type": "starkware_utils::components::roles::interface::AppGovernorRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "AppRoleAdminAdded",
+        "type": "starkware_utils::components::roles::interface::AppRoleAdminAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "AppRoleAdminRemoved",
+        "type": "starkware_utils::components::roles::interface::AppRoleAdminRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "GovernanceAdminAdded",
+        "type": "starkware_utils::components::roles::interface::GovernanceAdminAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "GovernanceAdminRemoved",
+        "type": "starkware_utils::components::roles::interface::GovernanceAdminRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "OperatorAdded",
+        "type": "starkware_utils::components::roles::interface::OperatorAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "OperatorRemoved",
+        "type": "starkware_utils::components::roles::interface::OperatorRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "SecurityAdminAdded",
+        "type": "starkware_utils::components::roles::interface::SecurityAdminAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "SecurityAdminRemoved",
+        "type": "starkware_utils::components::roles::interface::SecurityAdminRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "SecurityAgentAdded",
+        "type": "starkware_utils::components::roles::interface::SecurityAgentAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "SecurityAgentRemoved",
+        "type": "starkware_utils::components::roles::interface::SecurityAgentRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "TokenAdminAdded",
+        "type": "starkware_utils::components::roles::interface::TokenAdminAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "TokenAdminRemoved",
+        "type": "starkware_utils::components::roles::interface::TokenAdminRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "UpgradeGovernorAdded",
+        "type": "starkware_utils::components::roles::interface::UpgradeGovernorAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "UpgradeGovernorRemoved",
+        "type": "starkware_utils::components::roles::interface::UpgradeGovernorRemoved",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "openzeppelin_introspection::src5::SRC5Component::Event",
+    "kind": "enum",
+    "variants": []
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::OracleAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "asset_name",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "oracle_public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "oracle_name",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::SyntheticAdded",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "risk_factor_tiers",
+        "type": "core::array::Span::<core::integer::u16>",
+        "kind": "data"
+      },
+      {
+        "name": "risk_factor_first_tier_boundary",
+        "type": "core::integer::u128",
+        "kind": "data"
+      },
+      {
+        "name": "risk_factor_tier_size",
+        "type": "core::integer::u128",
+        "kind": "data"
+      },
+      {
+        "name": "resolution_factor",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "quorum",
+        "type": "core::integer::u8",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::SyntheticChanged",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "risk_factor_tiers",
+        "type": "core::array::Span::<core::integer::u16>",
+        "kind": "data"
+      },
+      {
+        "name": "risk_factor_first_tier_boundary",
+        "type": "core::integer::u128",
+        "kind": "data"
+      },
+      {
+        "name": "risk_factor_tier_size",
+        "type": "core::integer::u128",
+        "kind": "data"
+      },
+      {
+        "name": "resolution_factor",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "quorum",
+        "type": "core::integer::u8",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::AssetActivated",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::SyntheticAssetDeactivated",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::FundingTick",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "funding_index",
+        "type": "perpetuals::core::types::funding::FundingIndex",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::PriceTick",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "price",
+        "type": "perpetuals::core::types::price::Price",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::OracleRemoved",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "oracle_public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::events::AssetQuorumUpdated",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "key"
+      },
+      {
+        "name": "new_quorum",
+        "type": "core::integer::u8",
+        "kind": "data"
+      },
+      {
+        "name": "old_quorum",
+        "type": "core::integer::u8",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::assets::assets::AssetsComponent::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "OracleAdded",
+        "type": "perpetuals::core::components::assets::events::OracleAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "SyntheticAdded",
+        "type": "perpetuals::core::components::assets::events::SyntheticAdded",
+        "kind": "nested"
+      },
+      {
+        "name": "SyntheticChanged",
+        "type": "perpetuals::core::components::assets::events::SyntheticChanged",
+        "kind": "nested"
+      },
+      {
+        "name": "AssetActivated",
+        "type": "perpetuals::core::components::assets::events::AssetActivated",
+        "kind": "nested"
+      },
+      {
+        "name": "SyntheticAssetDeactivated",
+        "type": "perpetuals::core::components::assets::events::SyntheticAssetDeactivated",
+        "kind": "nested"
+      },
+      {
+        "name": "FundingTick",
+        "type": "perpetuals::core::components::assets::events::FundingTick",
+        "kind": "nested"
+      },
+      {
+        "name": "PriceTick",
+        "type": "perpetuals::core::components::assets::events::PriceTick",
+        "kind": "nested"
+      },
+      {
+        "name": "OracleRemoved",
+        "type": "perpetuals::core::components::assets::events::OracleRemoved",
+        "kind": "nested"
+      },
+      {
+        "name": "AssetQuorumUpdated",
+        "type": "perpetuals::core::components::assets::events::AssetQuorumUpdated",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::deposit::events::Deposit",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "depositing_address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "quantized_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "unquantized_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "deposit_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::deposit::events::DepositCanceled",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "depositing_address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "quantized_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "unquantized_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "deposit_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::deposit::events::DepositProcessed",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "depositing_address",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "quantized_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "unquantized_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "deposit_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::deposit::deposit::Deposit::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "Deposit",
+        "type": "perpetuals::core::components::deposit::events::Deposit",
+        "kind": "nested"
+      },
+      {
+        "name": "DepositCanceled",
+        "type": "perpetuals::core::components::deposit::events::DepositCanceled",
+        "kind": "nested"
+      },
+      {
+        "name": "DepositProcessed",
+        "type": "perpetuals::core::components::deposit::events::DepositProcessed",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "starkware_utils::components::request_approvals::request_approvals::RequestApprovalsComponent::Event",
+    "kind": "enum",
+    "variants": []
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::positions::events::NewPosition",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "owner_public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "owner_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::positions::events::SetOwnerAccount",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "new_owner_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "set_owner_account_hash",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::positions::events::SetOwnerAccountRequest",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "new_owner_account",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp",
+        "kind": "data"
+      },
+      {
+        "name": "set_owner_account_hash",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::positions::events::SetPublicKey",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "new_public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "old_public_key",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "set_public_key_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::positions::events::SetPublicKeyRequest",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "new_public_key",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "old_public_key",
+        "type": "core::felt252",
+        "kind": "data"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp",
+        "kind": "data"
+      },
+      {
+        "name": "set_public_key_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::components::positions::positions::Positions::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "NewPosition",
+        "type": "perpetuals::core::components::positions::events::NewPosition",
+        "kind": "nested"
+      },
+      {
+        "name": "SetOwnerAccount",
+        "type": "perpetuals::core::components::positions::events::SetOwnerAccount",
+        "kind": "nested"
+      },
+      {
+        "name": "SetOwnerAccountRequest",
+        "type": "perpetuals::core::components::positions::events::SetOwnerAccountRequest",
+        "kind": "nested"
+      },
+      {
+        "name": "SetPublicKey",
+        "type": "perpetuals::core::components::positions::events::SetPublicKey",
+        "kind": "nested"
+      },
+      {
+        "name": "SetPublicKeyRequest",
+        "type": "perpetuals::core::components::positions::events::SetPublicKeyRequest",
+        "kind": "nested"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::Deleverage",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "deleveraged_position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "deleverager_position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "base_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "deleveraged_base_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "quote_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "deleveraged_quote_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::InactiveAssetPositionReduced",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id_a",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "position_id_b",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "base_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "base_amount_a",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "quote_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "quote_amount_a",
+        "type": "core::integer::i64",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::Liquidate",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "liquidated_position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "liquidator_order_position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "liquidator_order_base_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "liquidator_order_base_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "liquidator_order_quote_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "liquidator_order_quote_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "liquidator_order_fee_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "liquidator_order_fee_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_amount_base_liquidated",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_amount_quote_liquidated",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_liquidator_fee",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "insurance_fund_fee_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "insurance_fund_fee_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "liquidator_order_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::Trade",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "order_a_position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "order_a_base_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "order_a_base_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "order_a_quote_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "order_a_quote_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "fee_a_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "fee_a_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "order_b_position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "order_b_base_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "order_b_base_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "order_b_quote_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "order_b_quote_amount",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "fee_b_asset_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "fee_b_amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_amount_base_a",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_amount_quote_a",
+        "type": "core::integer::i64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_fee_a",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "actual_fee_b",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "order_a_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "order_b_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::Transfer",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "recipient",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp",
+        "kind": "data"
+      },
+      {
+        "name": "transfer_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::TransferRequest",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "recipient",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp",
+        "kind": "data"
+      },
+      {
+        "name": "transfer_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::Withdraw",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "recipient",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp",
+        "kind": "data"
+      },
+      {
+        "name": "withdraw_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::events::WithdrawRequest",
+    "kind": "struct",
+    "members": [
+      {
+        "name": "position_id",
+        "type": "perpetuals::core::types::position::PositionId",
+        "kind": "key"
+      },
+      {
+        "name": "recipient",
+        "type": "core::starknet::contract_address::ContractAddress",
+        "kind": "key"
+      },
+      {
+        "name": "collateral_id",
+        "type": "perpetuals::core::types::asset::AssetId",
+        "kind": "data"
+      },
+      {
+        "name": "amount",
+        "type": "core::integer::u64",
+        "kind": "data"
+      },
+      {
+        "name": "expiration",
+        "type": "starkware_utils::time::time::Timestamp",
+        "kind": "data"
+      },
+      {
+        "name": "withdraw_request_hash",
+        "type": "core::felt252",
+        "kind": "key"
+      },
+      {
+        "name": "salt",
+        "type": "core::felt252",
+        "kind": "data"
+      }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "perpetuals::core::core::Core::Event",
+    "kind": "enum",
+    "variants": [
+      {
+        "name": "AccessControlEvent",
+        "type": "openzeppelin_access::accesscontrol::accesscontrol::AccessControlComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "OperatorNonceEvent",
+        "type": "perpetuals::core::components::operator_nonce::operator_nonce::OperatorNonceComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "PausableEvent",
+        "type": "starkware_utils::components::pausable::pausable::PausableComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "ReplaceabilityEvent",
+        "type": "starkware_utils::components::replaceability::replaceability::ReplaceabilityComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "RolesEvent",
+        "type": "starkware_utils::components::roles::roles::RolesComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "SRC5Event",
+        "type": "openzeppelin_introspection::src5::SRC5Component::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "AssetsEvent",
+        "type": "perpetuals::core::components::assets::assets::AssetsComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "DepositEvent",
+        "type": "perpetuals::core::components::deposit::deposit::Deposit::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "RequestApprovalsEvent",
+        "type": "starkware_utils::components::request_approvals::request_approvals::RequestApprovalsComponent::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "PositionsEvent",
+        "type": "perpetuals::core::components::positions::positions::Positions::Event",
+        "kind": "flat"
+      },
+      {
+        "name": "Deleverage",
+        "type": "perpetuals::core::events::Deleverage",
+        "kind": "nested"
+      },
+      {
+        "name": "InactiveAssetPositionReduced",
+        "type": "perpetuals::core::events::InactiveAssetPositionReduced",
+        "kind": "nested"
+      },
+      {
+        "name": "Liquidate",
+        "type": "perpetuals::core::events::Liquidate",
+        "kind": "nested"
+      },
+      {
+        "name": "Trade",
+        "type": "perpetuals::core::events::Trade",
+        "kind": "nested"
+      },
+      {
+        "name": "Transfer",
+        "type": "perpetuals::core::events::Transfer",
+        "kind": "nested"
+      },
+      {
+        "name": "TransferRequest",
+        "type": "perpetuals::core::events::TransferRequest",
+        "kind": "nested"
+      },
+      {
+        "name": "Withdraw",
+        "type": "perpetuals::core::events::Withdraw",
+        "kind": "nested"
+      },
+      {
+        "name": "WithdrawRequest",
+        "type": "perpetuals::core::events::WithdrawRequest",
+        "kind": "nested"
+      }
+    ]
+  }
+]
