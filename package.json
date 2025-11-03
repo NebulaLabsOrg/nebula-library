@@ -1,6 +1,6 @@
 {
   "name": "nebula-library",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Javascript multipurposes library",
   "main": "index.js",
   "scripts": {
@@ -24,7 +24,7 @@
     "perpetuals",
     "python-sdk"
   ],
-  "author": "Nebula Labs",
+  "author": "NGC3372 Systems",
   "license": "MIT",
   "type": "module",
   "bugs": {
