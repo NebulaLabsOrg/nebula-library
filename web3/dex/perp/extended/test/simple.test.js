@@ -31,7 +31,7 @@ console.log('submitWithdrawal response:', response);
 
 // Then try to find this withdrawal immediately
 if (response.success && response.data) {
-    console.log('\\nTrying to find withdrawal with ID:', response.data);
+    console.log('\nTrying to find withdrawal with ID:', response.data);
     let statusResponse = await extendedInstance.getWithdrawalStatus(response.data);
     console.log('getWithdrawalStatus response:', statusResponse);
     
