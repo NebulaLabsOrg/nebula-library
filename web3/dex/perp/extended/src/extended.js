@@ -362,15 +362,15 @@ export class Extended {
      * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol.
      * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
      */
-    async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll = false) {
+    async submitCloseOrder(_type, _symbol, _marketUnit, _orderQty, _closeAll = false) {
         const { wmSubmitCloseOrder } = await import('./write.model.js');
         return this.throttler.enqueue(() => wmSubmitCloseOrder(
             this.pythonService,
             this.slippage,
             _type,
             _symbol,
-            _orderQty,
             _marketUnit,
+            _orderQty,
             _closeAll
         ));
     }

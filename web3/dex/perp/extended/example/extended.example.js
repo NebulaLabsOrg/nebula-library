@@ -58,8 +58,8 @@ console.log('Calling: extended.submitCloseOrder');
 const closeOrderResponse = await extendedInstance.submitCloseOrder(
     extendedEnum.order.type.limit,
     openPositionDetail.data.symbol,
-    '1',
     extendedEnum.order.quoteOnSecCoin,
+    '1',
     true
 );
 console.log(closeOrderResponse);
