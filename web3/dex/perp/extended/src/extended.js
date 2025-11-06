@@ -247,6 +247,18 @@ export class Extended {
 
     /**
      * @async
+     * @method getMarketOrderSize
+     * @param {string} _symbol - The symbol of the market to retrieve the order size for.
+     * @description Retrieves market order size information
+     * @returns {Promise<Object>} A Promise that resolves with the order size data for the specified symbol.
+     */
+    async getMarketOrderSize(_symbol) {
+        const { vmGetMarketOrderSize } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetMarketOrderSize(this.pythonService, _symbol));
+    }
+
+    /**
+     * @async
      * @method getFundingRateHour
      * @param {string} _symbol - The symbol of the market to retrieve the funding rate for.
      * @description Retrieves market hourly funding rate
@@ -362,15 +374,15 @@ export class Extended {
      * @param {boolean} [_closeAll=false] - Whether to close all positions for the given symbol.
      * @returns {Promise<Object>} A Promise that resolves with the result of the close order submission.
      */
-    async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll = false) {
+    async submitCloseOrder(_type, _symbol, _marketUnit, _orderQty, _closeAll = false) {
         const { wmSubmitCloseOrder } = await import('./write.model.js');
         return this.throttler.enqueue(() => wmSubmitCloseOrder(
             this.pythonService,
             this.slippage,
             _type,
             _symbol,
-            _orderQty,
             _marketUnit,
+            _orderQty,
             _closeAll
         ));
     }
