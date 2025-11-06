@@ -247,6 +247,18 @@ export class Extended {
 
     /**
      * @async
+     * @method getMarketOrderSize
+     * @param {string} _symbol - The symbol of the market to retrieve the order size for.
+     * @description Retrieves market order size information
+     * @returns {Promise<Object>} A Promise that resolves with the order size data for the specified symbol.
+     */
+    async getMarketOrderSize(_symbol) {
+        const { vmGetMarketOrderSize } = await import('./view.model.js');
+        return this.throttler.enqueue(() => vmGetMarketOrderSize(this.pythonService, _symbol));
+    }
+
+    /**
+     * @async
      * @method getFundingRateHour
      * @param {string} _symbol - The symbol of the market to retrieve the funding rate for.
      * @description Retrieves market hourly funding rate

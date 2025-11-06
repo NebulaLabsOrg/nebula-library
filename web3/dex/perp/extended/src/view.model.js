@@ -1,5 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { encodeGetUrl } from '../../../../../utils/src/http.utils.js';
+import { calculateMidPrice, countDecimals } from './utils.js';
 
 /**
  * @async
@@ -87,6 +88,56 @@ export async function vmGetMarketData(_pythonService, _symbol = '') {
     } catch (error) {
         const message = error.message || 'Failed to get market data';
         return createResponse(false, message, null, 'extended.getMarketData');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetMarketOrderSize
+ * @description Retrieves market order size information for a given symbol
+ * @param {Object} _pythonService - Configured Python service method
+ * @param {string} _symbol - The market symbol for which to retrieve order size information.
+ * @returns {Promise<Object>} A promise that resolves to a response object containing the minimum quantity, quantity step, and maximum quantity for market orders, or an error message.
+ */
+export async function vmGetMarketOrderSize(_pythonService, _symbol){
+    try {
+        // Use the standardized get_markets method and filter on JavaScript side
+        const markets = await _pythonService.call('get_markets');
+        
+        // Filter for specific market
+        const market = markets.find(m => m.name === _symbol);
+        
+        if (!market) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'extended.getMarketOrderSize');
+        }
+
+        const midPrice = calculateMidPrice(market.market_stats.ask_price, market.market_stats.bid_price);
+        
+        // Return single market as array for consistency
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                mainCoin: {
+                    minQty: market.trading_config.min_order_size,
+                    qtyStep: market.trading_config.min_order_size_change,
+                    maxMktQty: (market.trading_config.max_market_order_value / midPrice).toString(),
+                    maxLimQty: (market.trading_config.max_limit_order_value / midPrice).toString()
+                },
+                secCoin: {
+                    minQty: (market.trading_config.min_order_size * midPrice).toString(),
+                    qtyStep: (market.trading_config.min_order_size_change * midPrice).toString(),
+                    maxMktQty: market.trading_config.max_market_order_value,
+                    maxLimQty: market.trading_config.max_limit_order_value
+                },
+                priceDecimals: countDecimals(market.trading_config.min_price_change * midPrice)
+            },
+            'extended.getMarketOrderSize'
+        );
+    } catch (error) {
+        const message = error.response?.data?.message || error.message || 'Failed to get market order size';
+        return createResponse(false, message, null, 'paradex.getMarketOrderSize');
     }
 }
 
