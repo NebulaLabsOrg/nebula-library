@@ -112,6 +112,10 @@ export async function vmGetMarketOrderSize(_pythonService, _symbol){
         }
 
         const midPrice = calculateMidPrice(market.market_stats.ask_price, market.market_stats.bid_price);
+
+        const priceDecimals = countDecimals(market.trading_config.min_price_change);
+
+        const tokenDecimals = countDecimals(market.trading_config.min_order_size_change);
         
         // Return single market as array for consistency
         return createResponse(
@@ -122,16 +126,16 @@ export async function vmGetMarketOrderSize(_pythonService, _symbol){
                 mainCoin: {
                     minQty: market.trading_config.min_order_size,
                     qtyStep: market.trading_config.min_order_size_change,
-                    maxMktQty: (market.trading_config.max_market_order_value / midPrice).toString(),
-                    maxLimQty: (market.trading_config.max_limit_order_value / midPrice).toString()
+                    maxMktQty: (market.trading_config.max_market_order_value / midPrice).toFixed(tokenDecimals),
+                    maxLimQty: (market.trading_config.max_limit_order_value / midPrice).toFixed(tokenDecimals)
                 },
                 secCoin: {
-                    minQty: (market.trading_config.min_order_size * midPrice).toString(),
-                    qtyStep: (market.trading_config.min_order_size_change * midPrice).toString(),
+                    minQty: (market.trading_config.min_order_size * midPrice).toFixed(priceDecimals),
+                    qtyStep: (market.trading_config.min_order_size_change * midPrice).toFixed(priceDecimals),
                     maxMktQty: market.trading_config.max_market_order_value,
                     maxLimQty: market.trading_config.max_limit_order_value
                 },
-                priceDecimals: countDecimals(market.trading_config.min_price_change * midPrice)
+                priceDecimals: priceDecimals
             },
             'extended.getMarketOrderSize'
         );
