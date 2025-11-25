@@ -70,7 +70,7 @@ export class Extended {
         if (this.usePython) {
             // Initialize Python properties synchronously
             this.pythonPath = 'python3';
-            this.scriptPath = null; // Will be set async
+            this.scriptPath = null; // Will be set async when needed
             this.pythonProcess = null;
             this.messageQueue = new Map();
             this.messageId = 0;
@@ -78,8 +78,7 @@ export class Extended {
             this.isInitializing = false;
             this.shouldRestart = true;
             
-            // Initialize path modules for Python (async, but not blocking)
-            this._initPythonPaths();
+            // Path modules will be loaded lazily when first command is sent
         } else {
             // Python disabled - set flags to prevent Python calls
             this.pythonProcess = null;
