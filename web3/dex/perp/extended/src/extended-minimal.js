@@ -27,13 +27,13 @@ export class ExtendedMinimal {
             throw new Error('apiKey is required');
         }
 
+        this.environment = config.environment ?? "mainnet";
         this.instance = createInstance(
-            config.environment === "mainnet" ? MAINNET_API_URL : TESTNET_API_URL,
+            this.environment === "mainnet" ? MAINNET_API_URL : TESTNET_API_URL,
             { 'X-Api-Key': config.apiKey }
         );
         this.apiKey = config.apiKey;
         this.throttler = config.throttler ?? { enqueue: fn => fn() };
-        this.environment = config.environment ?? "mainnet";
     }
 
     /**
