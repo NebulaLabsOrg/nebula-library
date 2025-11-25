@@ -74,7 +74,7 @@ const order = await extended.submitOrder(
 await extended.close();
 ```
 
-### 🌐 Web/Serverless Mode (ExtendedWeb - HTTP Only)
+### 🌐 Web/Serverless Mode (ExtendedMinimal - HTTP Only)
 
 **Perfect for serverless environments** like Gelato, AWS Lambda, Vercel Functions, or browser environments.
 
@@ -85,9 +85,9 @@ await extended.close();
 - ✅ Pure HTTP API calls
 
 ```javascript
-import { ExtendedWeb } from '@nebula-library/web3/dex/perp/extended';
+import { ExtendedMinimal } from '@nebula-library/web3/dex/perp/extended';
 
-const client = new ExtendedWeb({
+const client = new ExtendedMinimal({
     apiKey: process.env.API_KEY,
     environment: 'testnet' // or 'mainnet'
 });
@@ -97,12 +97,9 @@ const walletStatus = await client.getWalletStatus();
 const orderStatus = await client.getOrderStatus(orderId);
 const points = await client.getEarnedPoints();
 const withdrawals = await client.getWithdrawalStatus();
-
-// No cleanup needed (no processes)
-await client.close();
 ```
 
-**ExtendedWeb Limitations:**
+**ExtendedMinimal Limitations:**
 - ❌ Cannot place orders (no Starknet signing without SDK)
 - ❌ Cannot get wallet balance (SDK only)
 - ❌ Cannot get positions (SDK only)

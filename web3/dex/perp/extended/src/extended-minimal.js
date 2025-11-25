@@ -10,7 +10,7 @@ export { extendedEnum };
  * Uses ONLY HTTP API endpoints - no Python SDK dependency.
  * For full SDK features (trading, positions), use Extended class instead.
  */
-export class ExtendedWeb {
+export class ExtendedMinimal {
     /**
      * @constructor
      * @param {Object} config - Configuration object

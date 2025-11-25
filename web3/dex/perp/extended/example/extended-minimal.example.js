@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 /**
- * ExtendedWeb Example - Web/Serverless Optimized Client
+ * ExtendedMinimal Example - Web/Serverless Optimized Client
  * 
  * Perfect for:
  * - Gelato Functions
@@ -33,12 +33,12 @@ dotenv.config({ path: path.join(__dirname, '.env') });
  */
 
 async function main() {
-    console.log('🌐 ExtendedWeb Example - Web/Serverless Client');
+    console.log('🌐 ExtendedMinimal Example - Web/Serverless Client');
     console.log('='.repeat(50));
 
     // Initialize with minimal configuration
     const extendedThrottler = new TokenBucketThrottler(1000);
-    const client = new ExtendedWeb({
+    const client = new ExtendedMinimal({
         apiKey: process.env.API_KEY,
         throttler: extendedThrottler,
         environment: process.env.ENVIRONMENT || 'testnet'

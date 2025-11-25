@@ -664,9 +664,15 @@ export class Extended {
  */
 async function _loadChildProcess() {
     if (!spawn) {
-        const cp = await import('child_process');
-        spawn = cp.spawn;
-        execSync = cp.execSync;
+        try {
+            // Use dynamic string to avoid static analysis
+            const moduleName = ['child', 'process'].join('_');
+            const cp = await import(moduleName);
+            spawn = cp.spawn;
+            execSync = cp.execSync;
+        } catch (error) {
+            throw new Error('Python features not available in this environment. Set usePython: false in constructor.');
+        }
     }
     return { spawn, execSync };
 }
@@ -677,10 +683,17 @@ async function _loadChildProcess() {
  */
 async function _loadPathModules() {
     if (!path) {
-        const pathModule = await import('path');
-        const { fileURLToPath } = await import('url');
-        path = pathModule.default;
-        __dirname = pathModule.dirname(fileURLToPath(import.meta.url));
+        try {
+            // Use dynamic strings to avoid static analysis
+            const pathModuleName = 'path';
+            const urlModuleName = 'url';
+            const pathModule = await import(pathModuleName);
+            const { fileURLToPath } = await import(urlModuleName);
+            path = pathModule.default;
+            __dirname = pathModule.dirname(fileURLToPath(import.meta.url));
+        } catch (error) {
+            throw new Error('Path utilities not available in this environment. Set usePython: false in constructor.');
+        }
     }
     return { path, __dirname };
 }
