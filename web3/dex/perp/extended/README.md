@@ -48,7 +48,9 @@ sh ./setup.sh
 
 ## 📖 Usage
 
-### Standard Usage (with Python SDK)
+### Full SDK Mode (with Python)
+
+For complete trading functionality including order placement, positions, and balance:
 
 ```javascript
 import { Extended } from '@nebula-library/web3/dex/perp/extended';
@@ -72,9 +74,43 @@ const order = await extended.submitOrder(
 await extended.close();
 ```
 
-### Serverless Mode (HTTP-only, no Python)
+### 🌐 Web/Serverless Mode (ExtendedWeb - HTTP Only)
 
-For serverless environments like **Gelato**, **AWS Lambda**, or **Vercel Functions** where `spawn` is not available:
+**Perfect for serverless environments** like Gelato, AWS Lambda, Vercel Functions, or browser environments.
+
+**Zero dependencies on:**
+- ❌ Python
+- ❌ child_process
+- ❌ file system
+- ✅ Pure HTTP API calls
+
+```javascript
+import { ExtendedWeb } from '@nebula-library/web3/dex/perp/extended';
+
+const client = new ExtendedWeb({
+    apiKey: process.env.API_KEY,
+    environment: 'testnet' // or 'mainnet'
+});
+
+// ✅ Read-only operations via HTTP:
+const walletStatus = await client.getWalletStatus();
+const orderStatus = await client.getOrderStatus(orderId);
+const points = await client.getEarnedPoints();
+const withdrawals = await client.getWithdrawalStatus();
+
+// No cleanup needed (no processes)
+await client.close();
+```
+
+**ExtendedWeb Limitations:**
+- ❌ Cannot place orders (no Starknet signing without SDK)
+- ❌ Cannot get wallet balance (SDK only)
+- ❌ Cannot get positions (SDK only)
+- ✅ Perfect for monitoring, status checks, webhooks
+
+### Hybrid Mode (usePython flag)
+
+Use the full `Extended` class with Python disabled for specific cases:
 
 ```javascript
 const extended = new Extended({
@@ -89,8 +125,6 @@ const extended = new Extended({
 // ✅ These work without Python (HTTP direct):
 const walletStatus = await extended.getWalletStatus();
 const orderStatus = await extended.getOrderStatus(orderId);
-const rewards = await extended.getRewards();
-const withdrawalStatus = await extended.getWithdrawalStatus(withdrawalId);
 
 // ❌ These require Python SDK (will throw error):
 // await extended.submitOrder(...)  // Needs Python for Starknet signing

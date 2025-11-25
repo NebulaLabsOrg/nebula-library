@@ -12,7 +12,7 @@ dotenv.config({ path: path.join(__dirname, '../example/.env') });
 const CONFIG = {
     market: 'JUP-USD',
     quantity: 10,
-    cycles: 5,
+    cycles: 1,
     maxRetries: 20,
     newOrderTimeout: 120000,
     checkInterval: 1000,
