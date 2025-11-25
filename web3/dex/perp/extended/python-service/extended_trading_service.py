@@ -546,139 +546,155 @@ class ExtendedTradingService:
         return hex(public_key)
 
 
-def main():
-    """Main function to handle commands from Node.js - USES SDK DIRECTLY!"""
-    if len(sys.argv) < 2:
-        print(json.dumps({"error": "No command provided"}))
-        sys.exit(1)
+# Global service instance (initialized once)
+_global_service = None
+
+def initialize_service(config: Dict[str, Any]):
+    """Initialize the global service instance"""
+    global _global_service
+    _global_service = ExtendedTradingService(
+        api_key=config["api_key"],
+        private_key=config["private_key"],
+        public_key=config["public_key"],
+        vault=config["vault"],
+        environment=config.get("environment", "testnet")
+    )
+    return {"status": "initialized"}
+
+async def handle_command(command: str, params: Dict[str, Any]):
+    """Handle a command using the global service"""
+    global _global_service
     
-    command = sys.argv[1]
+    if _global_service is None:
+        return {"error": "Service not initialized"}
+    
+    # Execute the correct command
+    if command == "get_markets":
+        return await _global_service.get_markets()
+    elif command == "get_account_info":
+        return await _global_service.get_account_info()
+    elif command == "get_positions":
+        return await _global_service.get_positions()
+    elif command == "get_orders":
+        return await _global_service.get_orders(params.get("market_name"))
+    elif command == "get_order_by_id":
+        return await _global_service.get_order_by_id(params["order_id"])
+    elif command == "place_order":
+        return await _global_service.place_order(
+            market_name=params["market_name"],
+            side=params["side"],
+            amount=params["amount"],
+            price=params["price"],
+            order_type=params.get("order_type", "LIMIT"),
+            time_in_force=params.get("time_in_force", "GTC"),
+            post_only=params.get("post_only", False),
+            reduce_only=params.get("reduce_only", False)
+        )
+    elif command == "cancel_order":
+        return _global_service.cancel_order(params["external_id"])
+    elif command == "cancel_order_by_external_id":
+        return await _global_service.cancel_order_by_external_id(params["external_id"])
+    elif command == "cancel_all_orders":
+        return await _global_service.cancel_all_orders(params.get("market_name"))
+    elif command == "close_position":
+        return await _global_service.close_position(
+            market_name=params["market_name"],
+            percentage=params.get("percentage", 100.0)
+        )
+    elif command == "get_orderbook":
+        return await _global_service.get_orderbook(params["market_name"])
+    elif command == "get_trades":
+        return await _global_service.get_trades(
+            market_name=params["market_name"],
+            limit=params.get("limit", 50)
+        )
+    elif command == "withdraw":
+        return await _global_service.withdraw(
+            amount=params["amount"],
+            stark_address=params.get("stark_address")
+        )
+    elif command == "get_bridge_config":
+        return await _global_service.get_bridge_config()
+    elif command == "get_bridge_quote":
+        return await _global_service.get_bridge_quote(
+            chain_in=params["chain_in"],
+            chain_out=params["chain_out"],
+            amount=params["amount"]
+        )
+    elif command == "commit_bridge_quote":
+        return await _global_service.commit_bridge_quote(params["quote_id"])
+    else:
+        return {"error": f"Unknown command: {command}"}
+
+def main():
+    """Main function - persistent loop reading from stdin with persistent event loop"""
+    # Signal ready
+    print(json.dumps({"type": "ready"}), flush=True)
+    
+    # Create a persistent event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     
     try:
-        # Asynchronous commands that use the complete SDK
-        if command in ["get_markets", "get_account_info", "get_positions", "get_orders", "get_order_by_id",
-                      "place_order", "cancel_order", "cancel_order_by_external_id", "cancel_all_orders", "close_position",
-                      "get_orderbook", "get_trades", "withdraw", "get_bridge_config", "get_bridge_quote", 
-                      "commit_bridge_quote", "test_params"]:
-            
-            args = json.loads(sys.argv[2])
-            
-            service = ExtendedTradingService(
-                api_key=args["api_key"],
-                private_key=args["private_key"],
-                public_key=args["public_key"],
-                vault=args["vault"],
-                environment=args.get("environment", "testnet")
-            )
-            
-            # Execute the correct command
-            async def run_command():
-                if command == "get_markets":
-                    return await service.get_markets()
-                elif command == "get_account_info":
-                    return await service.get_account_info()
-                elif command == "get_positions":
-                    return await service.get_positions()
-                elif command == "get_orders":
-                    return await service.get_orders(args.get("market_name"))
-                elif command == "get_order_by_id":
-                    return await service.get_order_by_id(args["order_id"])
-                elif command == "place_order":
-                    return await service.place_order(
-                        market_name=args["market_name"],
-                        side=args["side"],
-                        amount=args["amount"],
-                        price=args["price"],
-                        order_type=args.get("order_type", "LIMIT"),
-                        time_in_force=args.get("time_in_force", "GTC"),
-                        post_only=args.get("post_only", False),  # ✅ Add post_only parameter
-                        reduce_only=args.get("reduce_only", False)  # ✅ Add reduce_only parameter
-                    )
-                elif command == "cancel_order":
-                    return service.cancel_order(args["external_id"])
-                elif command == "cancel_order_by_external_id":
-                    return await service.cancel_order_by_external_id(args["external_id"])
-                elif command == "cancel_all_orders":
-                    return await service.cancel_all_orders(args.get("market_name"))
-                elif command == "close_position":
-                    return await service.close_position(
-                        market_name=args["market_name"],
-                        percentage=args.get("percentage", 100.0)
-                    )
-                elif command == "get_orderbook":
-                    return await service.get_orderbook(args["market_name"])
-                elif command == "get_trades":
-                    return await service.get_trades(
-                        market_name=args["market_name"],
-                        limit=args.get("limit", 50)
-                    )
-                elif command == "withdraw":
-                    return await service.withdraw(
-                        amount=args["amount"],
-                        stark_address=args.get("stark_address")
-                    )
-                elif command == "get_bridge_config":
-                    return await service.get_bridge_config()
-                elif command == "get_bridge_quote":
-                    return await service.get_bridge_quote(
-                        chain_in=args["chain_in"],
-                        chain_out=args["chain_out"],
-                        amount=args["amount"]
-                    )
-                elif command == "commit_bridge_quote":
-                    return await service.commit_bridge_quote(args["quote_id"])
-                elif command == "test_params":
-                    # Test command to verify parameters are passed correctly
-                    return {
-                        "success": True,
-                        "message": "Parameters received correctly",
-                        "received_params": {
-                            "api_key": "***MASKED***" if args.get("api_key") else None,
-                            "private_key": "***MASKED***" if args.get("private_key") else None,
-                            "public_key": args.get("public_key"),
-                            "vault": args.get("vault"),
-                            "environment": args.get("environment"),
-                            "test_param": args.get("test_param"),
-                            "timestamp": args.get("timestamp"),
-                            "all_args_keys": list(args.keys())
-                        },
-                        "service_config": {
-                            "sdk_available": SDK_AVAILABLE,
-                            "trading_client_initialized": service.trading_client is not None,
-                            "data_client_initialized": service.data_client is not None
-                        }
+        # Persistent loop
+        for line in sys.stdin:
+            try:
+                message = json.loads(line.strip())
+                msg_id = message.get("id")
+                msg_type = message.get("type")
+                
+                if msg_type == "init":
+                    # Initialize service
+                    config = message.get("config", {})
+                    result = initialize_service(config)
+                    response = {
+                        "id": msg_id,
+                        "type": "response",
+                        "data": result
                     }
-            
-            # Execute asynchronous command
-            result = asyncio.run(run_command())
-            print(json.dumps(result))
-            
-        elif command == "get_public_key":
-            # Synchronous command for utility
-            args = json.loads(sys.argv[2])
-            
-            service = ExtendedTradingService(
-                api_key="dummy",
-                private_key=args["private_key"],
-                public_key="dummy",
-                vault=0
-            )
-            
-            public_key = service.get_stark_public_key(args["private_key"])
-            
-            result = {
-                "starkKey": public_key
-            }
-            
-            print(json.dumps(result))
-            
-        else:
-            print(json.dumps({"error": f"Unknown command: {command}"}))
-            sys.exit(1)
-            
-    except Exception as e:
-        print(json.dumps({"error": str(e)}))
-        sys.exit(1)
+                    print(json.dumps(response), flush=True)
+                    
+                elif msg_type == "command":
+                    # Handle command using the persistent event loop
+                    command = message.get("command")
+                    params = message.get("params", {})
+                    result = loop.run_until_complete(handle_command(command, params))
+                    response = {
+                        "id": msg_id,
+                        "type": "response",
+                        "data": result
+                    }
+                    print(json.dumps(response), flush=True)
+                    
+                else:
+                    error_response = {
+                        "id": msg_id,
+                        "type": "error",
+                        "data": {"error": f"Unknown message type: {msg_type}"}
+                    }
+                    print(json.dumps(error_response), flush=True)
+                    
+            except json.JSONDecodeError as e:
+                error_response = {
+                        "type": "error",
+                        "data": {"error": f"JSON parse error: {str(e)}"}
+                    }
+                print(json.dumps(error_response), flush=True)
+            except Exception as e:
+                error_response = {
+                    "id": msg_id if 'msg_id' in locals() else None,
+                    "type": "error",
+                    "data": {"error": str(e)}
+                }
+                print(json.dumps(error_response), flush=True)
+                
+    except KeyboardInterrupt:
+        pass
+    except EOFError:
+        pass
+    finally:
+        # Close the event loop on exit
+        loop.close()
 
 
 if __name__ == "__main__":

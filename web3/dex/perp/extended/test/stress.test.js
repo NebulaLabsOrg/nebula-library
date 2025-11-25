@@ -10,10 +10,10 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../example/.env') });
 
 const CONFIG = {
-    market: 'PUMP-USD',
-    quantity: 100000,
-    cycles: 3,
-    maxRetries: 10,
+    market: 'JUP-USD',
+    quantity: 10,
+    cycles: 5,
+    maxRetries: 20,
     newOrderTimeout: 120000,
     checkInterval: 1000,
     openOrderType: extendedEnum.order.type.limit,
@@ -24,7 +24,7 @@ const CONFIG = {
     delayAfterCancel: 1000,
     onchainHedging: {
         enabled: true,
-        tokenSymbol: 'PUMP',
+        tokenSymbol: 'JUP',
         slippage: 0.5,
         minTradeAmount: 0.001
     }
@@ -378,14 +378,14 @@ async function runStressTest() {
     log('Starting stress test', 'CYCLE');
     log(`Config: ${CONFIG.cycles} cycles, ${CONFIG.quantity} ${CONFIG.market}, ${CONFIG.maxRetries} retries`, 'INFO');
     const extendedThrottler = new TokenBucketThrottler(1000);
-    const extendedInstance = new Extended(
-        process.env.API_KEY,
-        process.env.STARK_KEY_PRIVATE,
-        process.env.STARK_KEY_PUBLIC,
-        process.env.VAULT_NUMBER,
-        0.1,
-        extendedThrottler
-    );
+    const extendedInstance = new Extended({
+        apiKey: process.env.API_KEY,
+        privateKey: process.env.STARK_KEY_PRIVATE,
+        publicKey: process.env.STARK_KEY_PUBLIC,
+        vault: parseInt(process.env.VAULT_NUMBER),
+        slippage: 0.1,
+        throttler: extendedThrottler
+    });
     const testResults = {
         startTime: Date.now(),
         cycles: [],
@@ -504,6 +504,10 @@ async function runStressTest() {
         const avgCycleDuration = testResults.cycles.reduce((sum, cycle) => sum + cycle.duration, 0) / testResults.cycles.length;
         log(`  Avg cycle duration: ${(avgCycleDuration / 1000).toFixed(2)}s`, 'INFO');
     }
+    
+    // Cleanup: close the Extended instance
+    await extendedInstance.close();
+    
     return testResults;
 }
 

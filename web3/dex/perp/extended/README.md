@@ -46,7 +46,72 @@ Execute the setup script:
 sh ./setup.sh
 ```
 
-## � Usage
+## 📖 Usage
+
+### Standard Usage (with Python SDK)
+
+```javascript
+import { Extended } from '@nebula-library/web3/dex/perp/extended';
+
+const extended = new Extended({
+    apiKey: process.env.API_KEY,
+    privateKey: process.env.STARK_KEY_PRIVATE,
+    publicKey: process.env.STARK_KEY_PUBLIC,
+    vault: parseInt(process.env.VAULT_NUMBER),
+    environment: 'testnet' // or 'mainnet'
+});
+
+// Full SDK functionality available
+const balance = await extended.getWalletBalance();
+const markets = await extended.getMarketData();
+const order = await extended.submitOrder(
+    'market', 'BTC-USD-PERP', 'long', 'usd', 100
+);
+
+// IMPORTANT: Always close the connection when done
+await extended.close();
+```
+
+### Serverless Mode (HTTP-only, no Python)
+
+For serverless environments like **Gelato**, **AWS Lambda**, or **Vercel Functions** where `spawn` is not available:
+
+```javascript
+const extended = new Extended({
+    apiKey: process.env.API_KEY,
+    privateKey: process.env.STARK_KEY_PRIVATE,
+    publicKey: process.env.STARK_KEY_PUBLIC,
+    vault: parseInt(process.env.VAULT_NUMBER),
+    environment: 'testnet',
+    usePython: false // 🔥 Disable Python - HTTP only
+});
+
+// ✅ These work without Python (HTTP direct):
+const walletStatus = await extended.getWalletStatus();
+const orderStatus = await extended.getOrderStatus(orderId);
+const rewards = await extended.getRewards();
+const withdrawalStatus = await extended.getWithdrawalStatus(withdrawalId);
+
+// ❌ These require Python SDK (will throw error):
+// await extended.submitOrder(...)  // Needs Python for Starknet signing
+// await extended.getWalletBalance() // Uses Python SDK
+```
+
+### Backward Compatibility (Legacy)
+
+The old constructor signature still works:
+
+```javascript
+const extended = new Extended(
+    apiKey,
+    privateKey,
+    publicKey,
+    vault,
+    0.1,      // slippage
+    throttler,
+    'testnet'
+);
+```
 
 After setup, you can use the library modules as needed. Each module is located in its respective directory with examples provided.
 

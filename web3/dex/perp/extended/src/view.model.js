@@ -33,13 +33,13 @@ export async function vmGetWalletStatus(_instance) {
  * @async
  * @function vmGetWalletBalance
  * @description Retrieves the wallet balance using Python service
- * @param {Object} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @returns {Promise<Object>} A Promise that resolves with a response object containing wallet balance data or an error message.
  */
-export async function vmGetWalletBalance(_pythonService) {
+export async function vmGetWalletBalance(_extended) {
     try {
         // Use the already configured and initialized Python service
-        const accountInfo = await _pythonService.call('get_account_info');
+        const accountInfo = await _extended._sendCommand('get_account_info');
 
         return createResponse(
             true,
@@ -61,14 +61,14 @@ export async function vmGetWalletBalance(_pythonService) {
  * @async
  * @function vmGetMarketData
  * @description Retrieves market data using Python service
- * @param {Object} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} [_symbol=''] - (Optional) The market symbol to filter the results. If not provided, retrieves all markets.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the filtered market data or an error message.
  */
-export async function vmGetMarketData(_pythonService, _symbol = '') {
+export async function vmGetMarketData(_extended, _symbol = '') {
     try {
         // Use the standardized get_markets method and filter on JavaScript side
-        const markets = await _pythonService.call('get_markets');
+        const markets = await _extended._sendCommand('get_markets');
         
         if (_symbol) {
             // Filter for specific market
@@ -95,14 +95,14 @@ export async function vmGetMarketData(_pythonService, _symbol = '') {
  * @async
  * @function vmGetMarketOrderSize
  * @description Retrieves market order size information for a given symbol
- * @param {Object} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} _symbol - The market symbol for which to retrieve order size information.
  * @returns {Promise<Object>} A promise that resolves to a response object containing the minimum quantity, quantity step, and maximum quantity for market orders, or an error message.
  */
-export async function vmGetMarketOrderSize(_pythonService, _symbol){
+export async function vmGetMarketOrderSize(_extended, _symbol){
     try {
         // Use the standardized get_markets method and filter on JavaScript side
-        const markets = await _pythonService.call('get_markets');
+        const markets = await _extended._sendCommand('get_markets');
         
         // Filter for specific market
         const market = markets.find(m => m.name === _symbol);
@@ -149,14 +149,14 @@ export async function vmGetMarketOrderSize(_pythonService, _symbol){
  * @async
  * @function vmGetFundingRateHour
  * @description Retrieves the hourly funding rate for a given market symbol
- * @param {Function} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} _symbol - The market symbol for which to retrieve the funding rate.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the funding rate or an error message.
  */
-export async function vmGetFundingRateHour(_pythonService, _symbol) {
+export async function vmGetFundingRateHour(_extended, _symbol) {
     try {
         // Use standardized get_markets method and filter
-        const markets = await _pythonService.call('get_markets');
+        const markets = await _extended._sendCommand('get_markets');
         const market = markets.find(m => m.name === _symbol);
         
         if (!market) {
@@ -182,14 +182,14 @@ export async function vmGetFundingRateHour(_pythonService, _symbol) {
  * @async
  * @function vmGetMarketOpenInterest
  * @description Retrieves the open interest for a given market symbol using Python service
- * @param {Function} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} _symbol - The market symbol for which to retrieve the open interest.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open interest data or an error message.
  */
-export async function vmGetMarketOpenInterest(_pythonService, _symbol){
+export async function vmGetMarketOpenInterest(_extended, _symbol){
     try {
         // Use standardized get_markets method and filter
-        const markets = await _pythonService.call('get_markets');
+        const markets = await _extended._sendCommand('get_markets');
         const market = markets.find(m => m.name === _symbol);
         
         if (!market) {
@@ -216,12 +216,12 @@ export async function vmGetMarketOpenInterest(_pythonService, _symbol){
  * @async
  * @function vmGetOpenPositions
  * @description Retrieves the user's open positions using Python service
- * @param {Object} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open positions data or an error message.
  */
-export async function vmGetOpenPositions(_pythonService) {
+export async function vmGetOpenPositions(_extended) {
     try {
-        const positions = await _pythonService.call('get_positions');
+        const positions = await _extended._sendCommand('get_positions');
         
         const openPositions = positions.filter(pos => pos.size && parseFloat(pos.size) !== 0);
         const markets = openPositions.map(pos => pos.market);
@@ -245,13 +245,13 @@ export async function vmGetOpenPositions(_pythonService) {
  * @async
  * @function vmGetOpenPositionDetail
  * @description Retrieves the details of the user's open position for a specific market symbol using Python service
- * @param {Object} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} _symbol - The market symbol for which to retrieve the open position details.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the open position details or an error message.
  */
-export async function vmGetOpenPositionDetail(_pythonService, _symbol) {
+export async function vmGetOpenPositionDetail(_extended, _symbol) {
     try {
-        const positions = await _pythonService.call('get_positions');
+        const positions = await _extended._sendCommand('get_positions');
         const position = positions.find(p => p.market === _symbol);
 
         if (!position || !position.size || parseFloat(position.size) === 0) {

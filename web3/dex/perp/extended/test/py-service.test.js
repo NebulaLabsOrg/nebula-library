@@ -66,13 +66,14 @@ async function testPythonParameters() {
     // Initialize Extended client
     log('\n🔧 Initializing Extended client...', 'yellow');
     
-    const extendedInstance = new Extended(
-        process.env.API_KEY,
-        process.env.STARK_KEY_PRIVATE, 
-        process.env.STARK_KEY_PUBLIC,
-        parseInt(process.env.VAULT_NUMBER),
-        0.1
-    );
+    const extendedInstance = new Extended({
+        apiKey: process.env.API_KEY,
+        privateKey: process.env.STARK_KEY_PRIVATE,
+        publicKey: process.env.STARK_KEY_PUBLIC,
+        vault: parseInt(process.env.VAULT_NUMBER),
+        slippage: 0.1,
+        environment: process.env.ENVIRONMENT || 'testnet'
+    });
     
     log('✅ Extended client initialized', 'green');
     
@@ -300,6 +301,9 @@ except ImportError as e:
     }
     
     log('\n🏁 Test completed!', 'bold');
+    
+    // Cleanup: close the Extended instance
+    await extendedInstance.close();
 }
 
 // Run test
