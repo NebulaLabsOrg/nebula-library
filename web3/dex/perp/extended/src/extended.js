@@ -1,12 +1,12 @@
-import { spawn } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { createInstance } from '../../../../../utils/index.js';
+// Dynamic imports - only loaded if Python is enabled
+let spawn = null;
+let execSync = null;
+let path = null;
+let __dirname = null;
+
+import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { extendedEnum } from './enum.js';
 import { MAINNET_API_URL, TESTNET_API_URL } from './constant.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export { extendedEnum };
 
@@ -19,35 +19,83 @@ export { extendedEnum };
 export class Extended {
     /**
      * @constructor
-     * @param {string} _apiKey - The API key used to authenticate requests to the Extended exchange.
-     * @param {string} _starkKeyPrv - The user's private Stark key for signing transactions.
-     * @param {string} _starkKeyPub - The user's public Stark key for identification.
-     * @param {number} _vaultNr - The vault number associated with the user's account.
-     * @param {number} [_slippage=0.1] - Maximum allowed slippage for trades, as a decimal (e.g., 0.1 for 10%).
-     * @param {Object} [_throttler={ enqueue: fn => fn() }] - Throttler object to manage and queue API requests.
-     * @param {string} [_environment="mainnet"] - Environment: "testnet" or "mainnet"
+     * @param {Object|string} config - Configuration object or API key (legacy)
+     * @param {string} config.apiKey - The API key used to authenticate requests
+     * @param {string} config.privateKey - The user's private Stark key for signing transactions
+     * @param {string} config.publicKey - The user's public Stark key for identification
+     * @param {number} config.vault - The vault number associated with the user's account
+     * @param {number} [config.slippage=0.1] - Maximum allowed slippage for trades
+     * @param {Object} [config.throttler={ enqueue: fn => fn() }] - Throttler object to manage API requests
+     * @param {string} [config.environment="mainnet"] - Environment: "testnet" or "mainnet"
+     * @param {boolean} [config.usePython=true] - Enable/disable Python service (set to false for serverless environments like Gelato)
      */
-    constructor(_apiKey, _starkKeyPrv, _starkKeyPub, _vaultNr, _slippage = 0.1, _throttler = { enqueue: fn => fn() }, _environment = "mainnet") {
-        this.account = {
-            starkKeyPrv: _starkKeyPrv,
-            starkKeyPub: _starkKeyPub,
-            vaultNr: _vaultNr
-        }
-        this.instance = createInstance(_environment === "mainnet" ? MAINNET_API_URL : TESTNET_API_URL, { 'X-Api-Key': _apiKey });
-        this.apiKey = _apiKey;
-        this.slippage = _slippage;
-        this.throttler = _throttler;
-        this.environment = _environment;
+    constructor(config, _starkKeyPrv, _starkKeyPub, _vaultNr, _slippage = 0.1, _throttler = { enqueue: fn => fn() }, _environment = "mainnet") {
+        // Support both new object-based config and legacy parameters
+        let apiKey, privateKey, publicKey, vault, slippage, throttler, environment, usePython;
         
-        // Path to the Python service - initialize with default, will be updated async
-        this.pythonPath = 'python3';
-        this.scriptPath = path.join(__dirname, '../python-service/extended_trading_service.py');
+        if (typeof config === 'object' && !_starkKeyPrv) {
+            // New object-based configuration
+            apiKey = config.apiKey;
+            privateKey = config.privateKey;
+            publicKey = config.publicKey;
+            vault = config.vault;
+            slippage = config.slippage ?? 0.1;
+            throttler = config.throttler ?? { enqueue: fn => fn() };
+            environment = config.environment ?? "mainnet";
+            usePython = config.usePython ?? true;
+        } else {
+            // Legacy parameters (backward compatibility)
+            apiKey = config;
+            privateKey = _starkKeyPrv;
+            publicKey = _starkKeyPub;
+            vault = _vaultNr;
+            slippage = _slippage;
+            throttler = _throttler;
+            environment = _environment;
+            usePython = true; // Default to true for backward compatibility
+        }
+        
+        this.account = {
+            starkKeyPrv: privateKey,
+            starkKeyPub: publicKey,
+            vaultNr: vault
+        }
+        this.instance = createInstance(environment === "mainnet" ? MAINNET_API_URL : TESTNET_API_URL, { 'X-Api-Key': apiKey });
+        this.apiKey = apiKey;
+        this.slippage = slippage;
+        this.throttler = throttler;
+        this.environment = environment;
+        this.usePython = usePython;
+        
+        if (this.usePython) {
+            // Initialize Python properties synchronously
+            this.pythonPath = 'python3';
+            this.scriptPath = null; // Will be set async when needed
+            this.pythonProcess = null;
+            this.messageQueue = new Map();
+            this.messageId = 0;
+            this.isReady = false;
+            this.isInitializing = false;
+            this.shouldRestart = true;
+            
+            // Path modules will be loaded lazily when first command is sent
+        } else {
+            // Python disabled - set flags to prevent Python calls
+            this.pythonProcess = null;
+            this.isReady = false;
+            console.log('Extended initialized in HTTP-only mode (Python disabled)');
+        }
+    }
 
-        // Initialize Python path asynchronously
-        this._initializePythonPathAsync();
-
-        // Initializes the Python service with all configured parameters
-        this.pythonService = this._initializePythonService();
+    /**
+     * Initialize Python-related paths asynchronously
+     * @private
+     */
+    async _initPythonPaths() {
+        const { path: pathModule, __dirname: dirName } = await _loadPathModules();
+        
+        // Set the Python script path
+        this.scriptPath = pathModule.join(dirName, '../python-service/extended_trading_service.py');
     }
 
     /**
@@ -55,10 +103,10 @@ export class Extended {
      * @private
      */
     async _initializePythonPathAsync() {
+        if (!this.usePython) return;
+        
         try {
             this.pythonPath = await this._findPythonPath();
-            // Update the python service with the correct path
-            this.pythonService.pythonPath = this.pythonPath;
         } catch (error) {
             // Keep default python3 if initialization fails
             console.warn('Failed to initialize Python path, using default python3');
@@ -81,17 +129,20 @@ export class Extended {
      * @private
      */
     async _findPythonPath() {
+        if (!this.usePython) return null;
+        
         try {
             // Dynamic import for ES6 modules
             const fs = await import('fs');
-            const { execSync } = await import('child_process');
+            const { execSync: execSyncFn } = await _loadChildProcess();
+            const { path: pathModule, __dirname: dirName } = await _loadPathModules();
             
             // First try virtual environment python (multiple possible locations)
             const venvPaths = [
-                path.join(__dirname, '../venv/bin/python'),      // Created by setup.sh
-                path.join(__dirname, '../.venv/bin/python'),     // Alternative location
-                path.join(process.cwd(), 'venv/bin/python'),     // Current working directory
-                path.join(process.cwd(), '.venv/bin/python')     // Alternative in cwd
+                pathModule.join(dirName, '../venv/bin/python'),      // Created by setup.sh
+                pathModule.join(dirName, '../.venv/bin/python'),     // Alternative location
+                pathModule.join(process.cwd(), 'venv/bin/python'),     // Current working directory
+                pathModule.join(process.cwd(), '.venv/bin/python')     // Alternative in cwd
             ];
             
             for (const venvPython of venvPaths) {
@@ -106,7 +157,7 @@ export class Extended {
             for (const pythonCmd of pythonVersions) {
                 try {
                     // Check if command exists by trying to get version
-                    execSync(`${pythonCmd} --version`, { stdio: 'ignore' });
+                    execSyncFn(`${pythonCmd} --version`, { stdio: 'ignore' });
                     return pythonCmd;
                 } catch (error) {
                     // Continue to next version
@@ -123,71 +174,252 @@ export class Extended {
     }
 
     /**
-     * Initializes the Python service with all configured parameters
+     * Starts the persistent Python process
      * @private
      */
-    _initializePythonService() {
-        return {
-            apiKey: this.apiKey,
-            privateKey: this.account.starkKeyPrv,
-            publicKey: this.account.starkKeyPub,
+    async _startPersistentPythonProcess() {
+        if (!this.usePython || this.isInitializing || this.pythonProcess) return;
+        
+        this.isInitializing = true;
+        this.isReady = false;
+
+        // Ensure Python path is initialized before starting process
+        if (this.pythonPath === 'python3') {
+            await this._initializePythonPathAsync();
+        }
+
+        // Ensure scriptPath is initialized
+        if (!this.scriptPath) {
+            await this._initPythonPaths();
+        }
+
+        const { spawn: spawnFn } = await _loadChildProcess();
+
+        const initArgs = {
+            api_key: this.apiKey,
+            private_key: this.account.starkKeyPrv,
+            public_key: this.account.starkKeyPub,
             vault: parseInt(this.account.vaultNr),
-            environment: this.environment,
-            pythonPath: this.pythonPath,
-            scriptPath: this.scriptPath,
-            call: this._callPythonService.bind(this)
+            environment: this.environment
         };
+
+        console.log('[Extended] Starting Python process with:', this.pythonPath);
+        this.pythonProcess = spawnFn(this.pythonPath, [this.scriptPath]);
+
+        let stdoutBuffer = '';
+        
+        // Handle stdout - responses from Python
+        this.pythonProcess.stdout.on('data', (data) => {
+            stdoutBuffer += data.toString();
+            
+            // Process complete JSON messages (one per line)
+            const lines = stdoutBuffer.split('\n');
+            stdoutBuffer = lines.pop() || ''; // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+                if (line.trim()) {
+                    this._handlePythonOutput(line.trim());
+                }
+            }
+        });
+
+        // Handle stderr - errors and logs
+        this.pythonProcess.stderr.on('data', (data) => {
+            console.error('[Python stderr]:', data.toString());
+        });
+
+        // Handle process exit
+        this.pythonProcess.on('exit', (code) => {
+            console.log(`Python process exited with code ${code}`);
+            this.pythonProcess = null;
+            this.isReady = false;
+            this.isInitializing = false;
+            
+            // Reject all pending promises
+            for (const [id, handler] of this.messageQueue.entries()) {
+                clearTimeout(handler.timeout);
+                handler.reject(new Error('Python process terminated'));
+            }
+            this.messageQueue.clear();
+            
+            // Auto-restart if needed
+            if (this.shouldRestart && code !== 0) {
+                console.log('Auto-restarting Python process...');
+                setTimeout(() => this._startPersistentPythonProcess(), 1000);
+            }
+        });
+        
+        this.isInitializing = false;
     }
 
     /**
-     * Calls the Python service with a specific command
+     * Handles output from Python process
      * @private
      */
-    async _callPythonService(command, additionalArgs = {}) {
+    _handlePythonOutput(line) {
+        try {
+            const message = JSON.parse(line);
+            
+            // Handle initialization ready message
+            if (message.type === 'ready') {
+                // Send initialization message
+                const initMessage = {
+                    id: ++this.messageId,
+                    type: 'init',
+                    config: {
+                        api_key: this.apiKey,
+                        private_key: this.account.starkKeyPrv,
+                        public_key: this.account.starkKeyPub,
+                        vault: parseInt(this.account.vaultNr),
+                        environment: this.environment
+                    }
+                };
+                this.pythonProcess.stdin.write(JSON.stringify(initMessage) + '\n');
+                return;
+            }
+            
+            // Handle init response
+            if (message.type === 'response' && message.data?.status === 'initialized') {
+                this.isReady = true;
+                return;
+            }
+            
+            // Handle responses
+            if (message.type === 'response' && message.id !== undefined) {
+                const handler = this.messageQueue.get(message.id);
+                if (handler) {
+                    clearTimeout(handler.timeout);
+                    this.messageQueue.delete(message.id);
+                    handler.resolve(message.data);
+                }
+                return;
+            }
+            
+            // Handle errors
+            if (message.type === 'error') {
+                if (message.id !== undefined) {
+                    const handler = this.messageQueue.get(message.id);
+                    if (handler) {
+                        clearTimeout(handler.timeout);
+                        this.messageQueue.delete(message.id);
+                        handler.reject(new Error(message.data?.error || 'Unknown error'));
+                    }
+                } else {
+                    console.error('Python error:', message.data?.error);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse Python output:', line, error);
+        }
+    }
+
+    /**
+     * Sends a command to the Python process
+     * @private
+     */
+    async _sendCommand(command, params = {}) {
+        if (!this.usePython) {
+            throw new Error('Python is disabled - this operation requires Python SDK');
+        }
+        
+        // Start Python process if not already started
+        if (!this.pythonProcess && !this.isInitializing) {
+            await this._startPersistentPythonProcess();
+        }
+        
+        // Wait for process to be ready
+        if (!this.isReady) {
+            await new Promise((resolve) => {
+                const checkReady = setInterval(() => {
+                    if (this.isReady) {
+                        clearInterval(checkReady);
+                        resolve();
+                    }
+                }, 100);
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    clearInterval(checkReady);
+                    resolve();
+                }, 10000);
+            });
+        }
+        
+        if (!this.pythonProcess || !this.isReady) {
+            throw new Error('Python process not ready');
+        }
+
         return new Promise((resolve, reject) => {
-            const args = {
-                api_key: this.apiKey,
-                private_key: this.account.starkKeyPrv,
-                public_key: this.account.starkKeyPub,
-                vault: parseInt(this.account.vaultNr),
-                environment: this.environment,
-                ...additionalArgs
+            const id = ++this.messageId;
+            const message = {
+                id,
+                type: 'command',
+                command,
+                params
             };
 
-            const pythonProcess = spawn(this.pythonPath, [
-                this.scriptPath,
-                command,
-                JSON.stringify(args)
-            ]);
+            // Setup timeout (30 seconds)
+            const timeout = setTimeout(() => {
+                this.messageQueue.delete(id);
+                reject(new Error(`Command '${command}' timed out after 30 seconds`));
+            }, 30000);
 
-            let result = '';
-            let error = '';
+            // Store promise handlers
+            this.messageQueue.set(id, { resolve, reject, timeout });
 
-            pythonProcess.stdout.on('data', (data) => {
-                result += data.toString();
-            });
-
-            pythonProcess.stderr.on('data', (data) => {
-                error += data.toString();
-            });
-
-            pythonProcess.on('close', (code) => {
-                if (code !== 0) {
-                    reject(new Error(`Python service failed: ${error}`));
-                } else {
-                    try {
-                        const parsedResult = JSON.parse(result.trim());
-                        if (parsedResult.error) {
-                            reject(new Error(parsedResult.error));
-                        } else {
-                            resolve(parsedResult);
-                        }
-                    } catch (parseError) {
-                        reject(new Error(`Failed to parse Python output: ${result}`));
-                    }
-                }
-            });
+            // Send command
+            this.pythonProcess.stdin.write(JSON.stringify(message) + '\n');
         });
+    }
+
+    /**
+     * Closes the Python process and cleans up resources
+     * Must be called when done, especially in cron jobs
+     * @public
+     */
+    async close() {
+        if (!this.usePython) return;
+        
+        this.shouldRestart = false;
+        
+        if (this.pythonProcess) {
+            try {
+                // Send shutdown command with proper format
+                const shutdownMessage = {
+                    id: ++this.messageId,
+                    type: 'shutdown'
+                };
+                this.pythonProcess.stdin.write(JSON.stringify(shutdownMessage) + '\n');
+                
+                // Wait for graceful exit
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        // Force kill if doesn't exit gracefully
+                        if (this.pythonProcess) {
+                            this.pythonProcess.kill('SIGTERM');
+                        }
+                        resolve();
+                    }, 5000);
+                    
+                    if (this.pythonProcess) {
+                        this.pythonProcess.once('exit', () => {
+                            clearTimeout(timeout);
+                            resolve();
+                        });
+                    } else {
+                        clearTimeout(timeout);
+                        resolve();
+                    }
+                });
+            } catch (error) {
+                console.error('Error closing Python process:', error);
+            }
+            
+            this.pythonProcess = null;
+        }
+        
+        this.isReady = false;
+        this.messageQueue.clear();
     }
 
     /**
@@ -197,8 +429,12 @@ export class Extended {
      * @returns {Promise<Object>} A Promise that resolves with the test result or an error response.
      */
     async checkPythonService() {
+        if (!this.usePython) {
+            return { success: true, message: 'Python disabled - HTTP-only mode', sdk_available: false };
+        }
+        
         try {
-            const testResult = await this._callPythonService('test_params', {
+            const testResult = await this._sendCommand('test_params', {
                 test_param: 'verification_test',
                 timestamp: new Date().toISOString()
             });
@@ -228,7 +464,7 @@ export class Extended {
      */
     async getWalletBalance() {
         const { vmGetWalletBalance } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetWalletBalance(this.pythonService));
+        return this.throttler.enqueue(() => vmGetWalletBalance(this));
     }
 
     /**
@@ -242,7 +478,7 @@ export class Extended {
      */
     async getMarketData(_symbol) {
         const { vmGetMarketData } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketData(this.pythonService, _symbol));
+        return this.throttler.enqueue(() => vmGetMarketData(this, _symbol));
     }
 
     /**
@@ -254,7 +490,7 @@ export class Extended {
      */
     async getMarketOrderSize(_symbol) {
         const { vmGetMarketOrderSize } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketOrderSize(this.pythonService, _symbol));
+        return this.throttler.enqueue(() => vmGetMarketOrderSize(this, _symbol));
     }
 
     /**
@@ -266,7 +502,7 @@ export class Extended {
      */
     async getFundingRateHour(_symbol) {
         const { vmGetFundingRateHour } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetFundingRateHour(this.pythonService, _symbol));
+        return this.throttler.enqueue(() => vmGetFundingRateHour(this, _symbol));
     }
 
     /**
@@ -278,7 +514,7 @@ export class Extended {
      */
     async getMarketOpenInterest(_symbol) {
         const { vmGetMarketOpenInterest } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetMarketOpenInterest(this.pythonService, _symbol));
+        return this.throttler.enqueue(() => vmGetMarketOpenInterest(this, _symbol));
     }
 
     /**
@@ -289,7 +525,7 @@ export class Extended {
      */
     async getOpenPositions() {
         const { vmGetOpenPositions } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetOpenPositions(this.pythonService));
+        return this.throttler.enqueue(() => vmGetOpenPositions(this));
     }
 
     /**
@@ -301,7 +537,7 @@ export class Extended {
      */
     async getOpenPositionDetail(_symbol) {
         const { vmGetOpenPositionDetail } = await import('./view.model.js');
-        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this.pythonService, _symbol));
+        return this.throttler.enqueue(() => vmGetOpenPositionDetail(this, _symbol));
     }
 
     /**
@@ -341,7 +577,7 @@ export class Extended {
     async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty) {
         const { wmSubmitOrder } = await import('./write.model.js');
         return await this.throttler.enqueue(() => wmSubmitOrder(
-            this.pythonService,
+            this,
             this.slippage,
             _type,
             _symbol,
@@ -360,7 +596,7 @@ export class Extended {
      */
     async submitCancelOrder(_externalId) {
         const { wmSubmitCancelOrder } = await import('./write.model.js');
-        return this.throttler.enqueue(() => wmSubmitCancelOrder(this.pythonService, _externalId));
+        return this.throttler.enqueue(() => wmSubmitCancelOrder(this, _externalId));
     }
 
     /**
@@ -377,7 +613,7 @@ export class Extended {
     async submitCloseOrder(_type, _symbol, _marketUnit, _orderQty, _closeAll = false) {
         const { wmSubmitCloseOrder } = await import('./write.model.js');
         return this.throttler.enqueue(() => wmSubmitCloseOrder(
-            this.pythonService,
+            this,
             this.slippage,
             _type,
             _symbol,
@@ -398,7 +634,7 @@ export class Extended {
     async submitWithdrawal(_amount, _starkAddress = null) {
         const { wmSubmitWithdrawal } = await import('./write.model.js');
         return this.throttler.enqueue(() => wmSubmitWithdrawal(
-            this.pythonService,
+            this,
             _amount,
             _starkAddress
         ));
@@ -420,4 +656,44 @@ export class Extended {
             _limit
         ));
     }
+}
+
+/**
+ * Load child_process module dynamically (only when Python is enabled)
+ * @private
+ */
+async function _loadChildProcess() {
+    if (!spawn) {
+        try {
+            // Use dynamic string to avoid static analysis
+            const moduleName = ['child', 'process'].join('_');
+            const cp = await import(moduleName);
+            spawn = cp.spawn;
+            execSync = cp.execSync;
+        } catch (error) {
+            throw new Error('Python features not available in this environment. Set usePython: false in constructor.');
+        }
+    }
+    return { spawn, execSync };
+}
+
+/**
+ * Load path modules dynamically (only when Python is enabled)
+ * @private
+ */
+async function _loadPathModules() {
+    if (!path) {
+        try {
+            // Use dynamic strings to avoid static analysis
+            const pathModuleName = 'path';
+            const urlModuleName = 'url';
+            const pathModule = await import(pathModuleName);
+            const { fileURLToPath } = await import(urlModuleName);
+            path = pathModule.default;
+            __dirname = pathModule.dirname(fileURLToPath(import.meta.url));
+        } catch (error) {
+            throw new Error('Path utilities not available in this environment. Set usePython: false in constructor.');
+        }
+    }
+    return { path, __dirname };
 }

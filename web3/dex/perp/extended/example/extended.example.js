@@ -8,14 +8,14 @@ import 'dotenv/config';
 // INFO: limit order have post-only and market order used slippage protection
 // INFO: close order use reduce-only
 const extendedThrottler = new TokenBucketThrottler(1000);
-const extendedInstance = new Extended(
-    process.env.API_KEY,
-    process.env.STARK_KEY_PRIVATE,
-    process.env.STARK_KEY_PUBLIC,
-    process.env.VAULT_NUMBER,
-    0.1,
-    extendedThrottler
-);
+const extendedInstance = new Extended({
+    apiKey: process.env.API_KEY,
+    privateKey: process.env.STARK_KEY_PRIVATE,
+    publicKey: process.env.STARK_KEY_PUBLIC,
+    vault: parseInt(process.env.VAULT_NUMBER),
+    slippage: 0.1,
+    throttler: extendedThrottler
+});
 
 console.log('Get token quantity');
 console.log('Calling: extended.getWalletBalance');
@@ -73,3 +73,6 @@ while (close?.data?.status !== extendedEnum.order.status.filled) {
     close = await extendedInstance.getOrderStatus(closeOrderResponse.data.orderId);
 }
 console.log(close);
+
+// Cleanup: close the Extended instance to prevent memory leaks
+await extendedInstance.close();

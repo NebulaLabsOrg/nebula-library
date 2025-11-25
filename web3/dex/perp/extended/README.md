@@ -46,7 +46,103 @@ Execute the setup script:
 sh ./setup.sh
 ```
 
-## � Usage
+## 📖 Usage
+
+### Full SDK Mode (with Python)
+
+For complete trading functionality including order placement, positions, and balance:
+
+```javascript
+import { Extended } from '@nebula-library/web3/dex/perp/extended';
+
+const extended = new Extended({
+    apiKey: process.env.API_KEY,
+    privateKey: process.env.STARK_KEY_PRIVATE,
+    publicKey: process.env.STARK_KEY_PUBLIC,
+    vault: parseInt(process.env.VAULT_NUMBER),
+    environment: 'testnet' // or 'mainnet'
+});
+
+// Full SDK functionality available
+const balance = await extended.getWalletBalance();
+const markets = await extended.getMarketData();
+const order = await extended.submitOrder(
+    'market', 'BTC-USD-PERP', 'long', 'usd', 100
+);
+
+// IMPORTANT: Always close the connection when done
+await extended.close();
+```
+
+### 🌐 Web/Serverless Mode (ExtendedMinimal - HTTP Only)
+
+**Perfect for serverless environments** like Gelato, AWS Lambda, Vercel Functions, or browser environments.
+
+**Zero dependencies on:**
+- ❌ Python
+- ❌ child_process
+- ❌ file system
+- ✅ Pure HTTP API calls
+
+```javascript
+import { ExtendedMinimal } from '@nebula-library/web3/dex/perp/extended';
+
+const client = new ExtendedMinimal({
+    apiKey: process.env.API_KEY,
+    environment: 'testnet' // or 'mainnet'
+});
+
+// ✅ Read-only operations via HTTP:
+const walletStatus = await client.getWalletStatus();
+const orderStatus = await client.getOrderStatus(orderId);
+const points = await client.getEarnedPoints();
+const withdrawals = await client.getWithdrawalStatus();
+```
+
+**ExtendedMinimal Limitations:**
+- ❌ Cannot place orders (no Starknet signing without SDK)
+- ❌ Cannot get wallet balance (SDK only)
+- ❌ Cannot get positions (SDK only)
+- ✅ Perfect for monitoring, status checks, webhooks
+
+### Hybrid Mode (usePython flag)
+
+Use the full `Extended` class with Python disabled for specific cases:
+
+```javascript
+const extended = new Extended({
+    apiKey: process.env.API_KEY,
+    privateKey: process.env.STARK_KEY_PRIVATE,
+    publicKey: process.env.STARK_KEY_PUBLIC,
+    vault: parseInt(process.env.VAULT_NUMBER),
+    environment: 'testnet',
+    usePython: false // 🔥 Disable Python - HTTP only
+});
+
+// ✅ These work without Python (HTTP direct):
+const walletStatus = await extended.getWalletStatus();
+const orderStatus = await extended.getOrderStatus(orderId);
+
+// ❌ These require Python SDK (will throw error):
+// await extended.submitOrder(...)  // Needs Python for Starknet signing
+// await extended.getWalletBalance() // Uses Python SDK
+```
+
+### Backward Compatibility (Legacy)
+
+The old constructor signature still works:
+
+```javascript
+const extended = new Extended(
+    apiKey,
+    privateKey,
+    publicKey,
+    vault,
+    0.1,      // slippage
+    throttler,
+    'testnet'
+);
+```
 
 After setup, you can use the library modules as needed. Each module is located in its respective directory with examples provided.
 

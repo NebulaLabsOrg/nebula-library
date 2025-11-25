@@ -10,7 +10,7 @@ import { MARKET_TIME_IN_FORCE, LIMIT_TIME_IN_FORCE } from './constant.js';
  * @description Submits a new order using Python SDK internally with centralized error handling.
  * NOTE: Fee calculation is handled automatically by the Extended SDK - no need to pass fee parameters.
  * The SDK uses account.trading_fee or DEFAULT_FEES (maker: 0.02%, taker: 0.05%) automatically.
- * @param {Object} _pythonService - The Extended client instance with configured Python service
+ * @param {Object} _extended - The Extended client instance with configured Python service
  * @param {number} _slippage - The allowed slippage percentage for market orders.
  * @param {string} _type - The order type (e.g., market or limit).
  * @param {string} _symbol - The market symbol for which to submit the order.
@@ -19,10 +19,10 @@ import { MARKET_TIME_IN_FORCE, LIMIT_TIME_IN_FORCE } from './constant.js';
  * @param {number|string} _orderQty - The quantity of the order to submit.
  * @returns {Promise<Object>} A Promise that resolves with a response object containing the order ID and symbol, or an error message.
  */
-export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
+export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
     try {
         // 1. Get market data (single call for all necessary data)
-        const marketData = await vmGetMarketData(_pythonService, _symbol);
+        const marketData = await vmGetMarketData(_extended, _symbol);
         if (!marketData.success) {
             throw new Error(marketData.message);
         }
@@ -79,7 +79,7 @@ export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _
         const postOnly = sdkOrderType === 'LIMIT';
         
         // 7. Place order via SDK with proper post_only for LIMIT orders
-        const orderResult = await _pythonService.call('place_order', {
+        const orderResult = await _extended._sendCommand('place_order', {
             market_name: _symbol,
             side: sdkSide,
             amount: qty.toString(),
@@ -105,18 +105,18 @@ export async function wmSubmitOrder(_pythonService, _slippage, _type, _symbol, _
  * @async
  * @function wmSubmitCancelOrder
  * @description Cancels an existing order using Python SDK with centralized error handling
- * @param {Object} _pythonService - Configured Python service method
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} _externalId - The external ID of the order to cancel.
  * @returns {Promise<Object>} A promise that resolves to a response object indicating success or failure, including the external ID on success, or an error message on failure.
  */
-export async function wmSubmitCancelOrder(_pythonService, _externalId) {
+export async function wmSubmitCancelOrder(_extended, _externalId) {
     try {
         if (!_externalId) {
             throw new Error('External ID is required');
         }
         
         // Use Python service with real SDK method: trading_client.orders.cancel_order_by_external_id()
-        const cancelResult = await _pythonService.call('cancel_order_by_external_id', {
+        const cancelResult = await _extended._sendCommand('cancel_order_by_external_id', {
             external_id: _externalId.toString()
         });
         
@@ -137,7 +137,7 @@ export async function wmSubmitCancelOrder(_pythonService, _externalId) {
  * @async
  * @function wmSubmitCloseOrder
  * @description Closes an existing position by submitting an opposite order using Python SDK.
- * @param {Object} _pythonService - The Extended client instance with configured Python service
+ * @param {Object} _extended - The Extended client instance with configured Python service
  * @param {number} _slippage - Allowed slippage percentage for market orders.
  * @param {string} _type - Order type (e.g., market or limit).
  * @param {string} _symbol - Market symbol for the order (e.g., 'BTC-USD').
@@ -146,14 +146,14 @@ export async function wmSubmitCancelOrder(_pythonService, _externalId) {
  * @param {boolean} _closeAll - If true, closes the entire position; otherwise, closes the specified quantity.
  * @returns {Promise<Object>} A promise that resolves to a response object indicating success or failure, including the symbol and order ID on success, or an error message on failure.
  */
-export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll) {
+export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll) {
     try {
         if (!_symbol) {
             throw new Error('Symbol is required');
         }
         
         // 1. Get position details using vmGetOpenPositionDetail
-        const positionResponse = await vmGetOpenPositionDetail(_pythonService, _symbol);
+        const positionResponse = await vmGetOpenPositionDetail(_extended, _symbol);
         if (!positionResponse.success) {
             throw new Error(positionResponse.message || `No open position found for ${_symbol}`);
         }
@@ -181,7 +181,7 @@ export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symb
         const closeSide = side === 'long' ? extendedEnum.order.short : extendedEnum.order.long;
         
         // 4. Get market data for order parameters
-        const marketData = await vmGetMarketData(_pythonService, _symbol);
+        const marketData = await vmGetMarketData(_extended, _symbol);
         if (!marketData.success) {
             throw new Error(marketData.message);
         }
@@ -239,7 +239,7 @@ export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symb
         const reduceOnly = true; // Always true for close orders
         
         // 10. Place close order via SDK with reduce_only and post_only for LIMIT orders
-        const orderResult = await _pythonService.call('place_order', {
+        const orderResult = await _extended._sendCommand('place_order', {
             market_name: _symbol,
             side: sdkSide,
             amount: qty.toString(),
@@ -266,12 +266,12 @@ export async function wmSubmitCloseOrder(_pythonService, _slippage, _type, _symb
  * @async
  * @function wmSubmitWithdrawal
  * @description Submits a Starknet withdrawal request using the Extended Python SDK
- * @param {Object} _pythonService - Configured Python service instance
+ * @param {Object} _extended - Extended instance with Python service
  * @param {string} _amount - Withdrawal amount in collateral asset (required)
  * @param {string} [_starkAddress] - Recipient Starknet address (optional - uses account default if not provided)
  * @returns {Promise<Object>} A Promise that resolves with withdrawal response containing withdrawal_id or error message
  */
-export async function wmSubmitWithdrawal(_pythonService, _amount, _starkAddress = null) {
+export async function wmSubmitWithdrawal(_extended, _amount, _starkAddress = null) {
     try {
         // 1. Validate required parameters
         if (!_amount || parseFloat(_amount) <= 0) {
@@ -279,7 +279,7 @@ export async function wmSubmitWithdrawal(_pythonService, _amount, _starkAddress 
         }
         
         // 2. Get account information to check available balance
-        const accountInfo = await _pythonService.call('get_account_info');
+        const accountInfo = await _extended._sendCommand('get_account_info');
         if (accountInfo.error) {
             throw new Error(`Failed to get account info: ${accountInfo.error}`);
         }
@@ -304,7 +304,7 @@ export async function wmSubmitWithdrawal(_pythonService, _amount, _starkAddress 
         }
         
         // 5. Submit withdrawal via SDK
-        const withdrawalResult = await _pythonService.call('withdraw', withdrawalParams);
+        const withdrawalResult = await _extended._sendCommand('withdraw', withdrawalParams);
         
         if (withdrawalResult.error) {
             throw new Error(withdrawalResult.error);
