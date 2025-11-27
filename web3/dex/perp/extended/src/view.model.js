@@ -20,6 +20,7 @@ export async function vmGetWalletStatus(_instance) {
             {
                 balance: data.balance,
                 equity: data.equity,
+                leverage: data.leverage
             },
             'extended.getWalletStatus'
         );
@@ -167,8 +168,8 @@ export async function vmGetFundingRateHour(_extended, _symbol) {
             true,
             'success',
             {
-            symbol: _symbol,
-            fundingRate: ((market.market_stats?.funding_rate * 100) / 8).toString()
+                symbol: _symbol,
+                fundingRate: ((market.market_stats?.funding_rate * 100) / 8).toString()
             },
             'extended.getFundingRateHour'
         );
@@ -261,6 +262,8 @@ export async function vmGetOpenPositionDetail(_extended, _symbol) {
         const detail = {
             symbol: _symbol,
             avgPrice: position.open_price,
+            markPrice: position.mark_price,
+            liquidationPrice: position.liquidation_price,
             unrealisedPnl: position.unrealised_pnl,
             realisedPnl: position.realised_pnl,
             side: position.side.toLowerCase(),
