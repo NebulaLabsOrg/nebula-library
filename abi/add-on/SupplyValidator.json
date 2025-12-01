@@ -1,0 +1,44 @@
+[
+    {
+        "type": "function",
+        "name": "isToggled",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "validateSupply",
+        "inputs": [
+            {
+                "name": "_vault",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_referenceSupply",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "event",
+        "name": "SupplyValidated",
+        "inputs": [],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "SupplyMissmatch",
+        "inputs": []
+    }
+]
