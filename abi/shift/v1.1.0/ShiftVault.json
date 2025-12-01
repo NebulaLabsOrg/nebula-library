@@ -1,0 +1,1435 @@
+[
+    {
+        "type": "constructor",
+        "inputs": [
+            {
+                "name": "_args",
+                "type": "tuple",
+                "internalType": "struct ShiftVaultArgs",
+                "components": [
+                    {
+                        "name": "tokenContract",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "tvlFeedContract",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "shareName",
+                        "type": "string",
+                        "internalType": "string"
+                    },
+                    {
+                        "name": "shareSymbol",
+                        "type": "string",
+                        "internalType": "string"
+                    },
+                    {
+                        "name": "managerArgs",
+                        "type": "tuple",
+                        "internalType": "struct ShiftManagerArgs",
+                        "components": [
+                            {
+                                "name": "accessControlContract",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "feeCollector",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "executor",
+                                "type": "address",
+                                "internalType": "address"
+                            },
+                            {
+                                "name": "minDeposit",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            },
+                            {
+                                "name": "maxTvl",
+                                "type": "uint256",
+                                "internalType": "uint256"
+                            },
+                            {
+                                "name": "timelock",
+                                "type": "uint32",
+                                "internalType": "uint32"
+                            },
+                            {
+                                "name": "freshness",
+                                "type": "uint16",
+                                "internalType": "uint16"
+                            },
+                            {
+                                "name": "requestValidity",
+                                "type": "uint16",
+                                "internalType": "uint16"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "accessControlContract",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "contract IAccessControl"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "allowDeposit",
+        "inputs": [
+            {
+                "name": "_user",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "_tvlIndex",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "allowance",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "approve",
+        "inputs": [
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "availableForWithdraw",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "balanceOf",
+        "inputs": [
+            {
+                "name": "account",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "baseToken",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "contract ERC20"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "cancelWithdraw",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "claimMaintenanceFee",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "claimPerformanceFee",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "decimals",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint8",
+                "internalType": "uint8"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "deposit",
+        "inputs": [
+            {
+                "name": "_tokenAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "emergencyPause",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "executor",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "feeCollector",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "freshness",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint16",
+                "internalType": "uint16"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getBatchWithdrawAmount",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getSharePrice",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getWithdrawStatus",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "status",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "shareAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "tokenAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "unlockTime",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "maintenanceFeePerSecond18pt",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "manageWhitelist",
+        "inputs": [
+            {
+                "name": "_user",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "maxTvl",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "minDepositAmount",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "name",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "paused",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "performance",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "netProfit",
+                "type": "int256",
+                "internalType": "int256"
+            },
+            {
+                "name": "tvl",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "performanceFee18pt",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "processWithdraw",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "releasePause",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "reqDeposit",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "reqWithdraw",
+        "inputs": [
+            {
+                "name": "_shareAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "requestValidity",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint16",
+                "internalType": "uint16"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "resolveWithdraw",
+        "inputs": [
+            {
+                "name": "_tokenAmount",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "_rate",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "sweepDust",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "symbol",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "string",
+                "internalType": "string"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "timelock",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "toggleWhitelist",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "totalSupply",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "transfer",
+        "inputs": [
+            {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "transferFrom",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "to",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "value",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "tvlFeed",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "contract IShiftTvlFeed"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "updateExecutor",
+        "inputs": [
+            {
+                "name": "_newExecutor",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateFeeCollector",
+        "inputs": [
+            {
+                "name": "_newFeeCollector",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateFreshness",
+        "inputs": [
+            {
+                "name": "_newFreshness",
+                "type": "uint16",
+                "internalType": "uint16"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateMaintenanceFee",
+        "inputs": [
+            {
+                "name": "_annualFeeBps",
+                "type": "uint16",
+                "internalType": "uint16"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateMaxTvl",
+        "inputs": [
+            {
+                "name": "_amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateMinDeposit",
+        "inputs": [
+            {
+                "name": "_amount",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updatePerformanceFee",
+        "inputs": [
+            {
+                "name": "_performanceFeeBps",
+                "type": "uint16",
+                "internalType": "uint16"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateRequestValidity",
+        "inputs": [
+            {
+                "name": "_newRequestValidity",
+                "type": "uint16",
+                "internalType": "uint16"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateTimelock",
+        "inputs": [
+            {
+                "name": "_newTimelock",
+                "type": "uint32",
+                "internalType": "uint32"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "whitelistEnabled",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "bool",
+                "internalType": "bool"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "withdraw",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "event",
+        "name": "Approval",
+        "inputs": [
+            {
+                "name": "owner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "spender",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "value",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "DepositAllowed",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "expirationTime",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "DepositRequested",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "Deposited",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "ExecutorUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "newValue",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "FeeCollectorUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "newValue",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "FreshnessUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint16",
+                "indexed": false,
+                "internalType": "uint16"
+            },
+            {
+                "name": "newValue",
+                "type": "uint16",
+                "indexed": false,
+                "internalType": "uint16"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "MaintenanceFeeUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "newValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "MaxTvlUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "newValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "MinDepositUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "newValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "PerformanceFeeUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "newValue",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "RequestValidityUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint16",
+                "indexed": false,
+                "internalType": "uint16"
+            },
+            {
+                "name": "newValue",
+                "type": "uint16",
+                "indexed": false,
+                "internalType": "uint16"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "TimelockUpdated",
+        "inputs": [
+            {
+                "name": "oldValue",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            },
+            {
+                "name": "newValue",
+                "type": "uint32",
+                "indexed": false,
+                "internalType": "uint32"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "Transfer",
+        "inputs": [
+            {
+                "name": "from",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "to",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "value",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "WhitelistToggled",
+        "inputs": [
+            {
+                "name": "enabled",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "WhitelistUpdated",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": false,
+                "internalType": "address"
+            },
+            {
+                "name": "isWhitelisted",
+                "type": "bool",
+                "indexed": false,
+                "internalType": "bool"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "WithdrawCanceled",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "shareAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "WithdrawRequested",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "shareAmount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "Withdrawn",
+        "inputs": [
+            {
+                "name": "user",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "amount",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "error",
+        "name": "AlreadyAllowed",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "AlreadyClaimed",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "AlreadyRequested",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "BatchNotResolved",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "BatchResolved",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "BatchResolvedOrOngoing",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "DepositBelowMinimum",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "ERC20InsufficientAllowance",
+        "inputs": [
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "allowance",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "needed",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ERC20InsufficientBalance",
+        "inputs": [
+            {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "balance",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "needed",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ERC20InvalidApprover",
+        "inputs": [
+            {
+                "name": "approver",
+                "type": "address",
+                "internalType": "address"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ERC20InvalidReceiver",
+        "inputs": [
+            {
+                "name": "receiver",
+                "type": "address",
+                "internalType": "address"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ERC20InvalidSender",
+        "inputs": [
+            {
+                "name": "sender",
+                "type": "address",
+                "internalType": "address"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ERC20InvalidSpender",
+        "inputs": [
+            {
+                "name": "spender",
+                "type": "address",
+                "internalType": "address"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ExceedsMaxTVL",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "InsufficientTokensForBatch",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "Locked",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "MinDepositExceedsMaxTvl",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "MoreThan18Decimals",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NewMaxTVLBelowCurrentTVL",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NoDustToSweep",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NoSharesToWithdraw",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NoValidRequest",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotTVLFeed",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "NotWhitelisted",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "OverflowOnNormalization",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "PRBMath_MulDiv18_Overflow",
+        "inputs": [
+            {
+                "name": "x",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "y",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "PRBMath_MulDiv_Overflow",
+        "inputs": [
+            {
+                "name": "x",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "y",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "denominator",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ParamOutOfBounds",
+        "inputs": [
+            {
+                "name": "_param",
+                "type": "string",
+                "internalType": "string"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "Paused",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "ReentrancyGuardReentrantCall",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "RequestExpired",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "RequestStillValid",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "SafeERC20FailedOperation",
+        "inputs": [
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "StaleTvlData",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "Unauthorized",
+        "inputs": [
+            {
+                "name": "_role",
+                "type": "string",
+                "internalType": "string"
+            }
+        ]
+    },
+    {
+        "type": "error",
+        "name": "ZeroAddress",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "ZeroCalculated",
+        "inputs": []
+    },
+    {
+        "type": "error",
+        "name": "ZeroToken",
+        "inputs": []
+    }
+]
