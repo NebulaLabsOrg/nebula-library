@@ -23,9 +23,9 @@ const extendedInstance = new Extended({
 });
 
 console.log('Get token quantity');
-console.log('Calling: extended.getWalletBalance');
-const walletBalance = await extendedInstance.getWalletBalance();
-console.log(walletBalance);
+console.log('Calling: extended.getEarnedPoints');
+const response = await extendedInstance.getEarnedPoints();
+console.log(response);
 
 // Cleanup: close the Extended instance
 await extendedInstance.close();
