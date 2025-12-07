@@ -324,18 +324,37 @@ export async function vmGetEarnedPoints(_instance){
         const response = await _instance.get('/user/rewards/earned');
         const rewards = response.data.data;
         let total = 0;
+        
+        // Calculate total points from all seasons
         rewards.forEach(season => {
             season.epochRewards.forEach(reward => {
                 total += Number(reward.pointsReward);
             });
         });
-        const latestSeason = rewards[rewards.length - 1];
-        const latestEpoch = latestSeason.epochRewards[latestSeason.epochRewards.length - 1];
+        
+        // Find the latest season (highest seasonId or last in array)
+        const latestSeason = rewards.reduce((latest, season) => {
+            if (!latest || season.seasonId > latest.seasonId) {
+                return season;
+            }
+            return latest;
+        }, null);
+        
+        // Find epoch with highest epochId in the latest season
+        let latestEpoch = latestSeason.epochRewards.reduce((latest, reward) => {
+            if (!latest || reward.epochId > latest.epochId) {
+                return reward;
+            }
+            return latest;
+        }, null);
+        
         return createResponse(true, 'success', { 
             total: total.toString(),
             latest: {
+                epochId: latestEpoch.epochId,
                 amount: latestEpoch.pointsReward,
-                period: (latestEpoch.startDate).replace(/-/g, '/') + '-' + (latestEpoch.endDate).replace(/-/g, '/')
+                startPeriod: latestEpoch.startDate.replace(/-/g, '/'),
+                endPeriod: latestEpoch.endDate.replace(/-/g, '/')
             }
         }, 'extended.getEarnedPoints');
     } catch (error) {
