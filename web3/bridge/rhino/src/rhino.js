@@ -14,14 +14,12 @@ export class Rhino {
     * @param {string} _fromChainType - The type of the source chain (EVM or PARADEX).
     * @param {string} [_mode='pay'] - The bridge mode.
     * @param {number} [_timeoutMin=10] - (Optional) Timeout in minutes for the bridge operation.
-    * @param {object|null} [_rpcProvider=null] - (Optional) The RPC provider for blockchain interaction only for PARADEX.
     */
-    constructor(_apiKey, _prvKey, _fromChainType, _mode = 'pay', _timeoutMin = 10, _rpcProvider = null) {
+    constructor(_apiKey, _prvKey, _fromChainType, _mode = 'pay', _timeoutMin = 10) {
         this.privateKey = _prvKey; // For Both EVM and Paradex is enough the Evm Private Key
         this.fromChainType = _fromChainType;
         this.mode = _mode;
         this.timeoutSeconds = _timeoutMin * 60;
-        this.rpcProvider = _rpcProvider;
         this.rhinoSdk = RhinoSdk({
             apiKey: _apiKey,
         });
@@ -56,7 +54,7 @@ export class Rhino {
             }, {
                 //Callbacks
                 timeoutSeconds: this.timeoutSeconds,
-                getChainAdapter: async chainConfig => await chainAdapter(this.fromChainType, this.rpcProvider, _fromAddress, this.privateKey, chainConfig),
+                getChainAdapter: async chainConfig => await chainAdapter(this.fromChainType, _fromAddress, this.privateKey, chainConfig),
                 hooks: {
                     checkQuote: quote => {
                         if (_maxFeeUSD === '0') return Promise.resolve(true);

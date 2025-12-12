@@ -7,7 +7,7 @@ const apiKey = process.env.API_KEY;
 const privateKey = process.env.PRV_KEY;
 const maxFeeUSD = '5';
 const mode = 'pay';
-const rpcProvider = 'https://1rpc.io/arb';
+const rpcProvider = 'https://1rpc.io/base';
 const paradexAccount = process.env.PARADEX_ACCOUNT;
 const evmAccount = process.env.EVM_ACCOUNT;
 const starknetAccount = process.env.STARKNET_ACCOUNT;
@@ -43,7 +43,7 @@ async function bridgeTest({
 const tests = {
   'evm-paradex': {
     _fromChainType: ChainType.EVM,
-    _fromChain: SupportedChains.ARBITRUM_ONE,
+    _fromChain: SupportedChains.BASE,
     _toChain: SupportedChains.PARADEX,
     _fromAccount: evmAccount,
     _toAccount: paradexAccount
@@ -51,14 +51,14 @@ const tests = {
   'paradex-evm': {
     _fromChainType: ChainType.PARADEX,
     _fromChain: SupportedChains.PARADEX,
-    _toChain: SupportedChains.ARBITRUM_ONE,
+    _toChain: SupportedChains.BASE,
     _fromAccount: paradexAccount,
     _toAccount: evmAccount,
     _rpc: rpcProvider
   },
   'evm-starknet': {
     _fromChainType: ChainType.EVM,
-    _fromChain: SupportedChains.ARBITRUM_ONE,
+    _fromChain: SupportedChains.BASE,
     _toChain: SupportedChains.STARKNET,
     _fromAccount: evmAccount,
     _toAccount: starknetAccount
@@ -66,7 +66,7 @@ const tests = {
   'starknet-evm': {
     _fromChainType: ChainType.STARKNET,
     _fromChain: SupportedChains.STARKNET,
-    _toChain: SupportedChains.ARBITRUM_ONE,
+    _toChain: SupportedChains.BASE,
     _fromAccount: starknetAccount,
     _toAccount: evmAccount
   }
