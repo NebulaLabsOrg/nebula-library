@@ -19,7 +19,7 @@ Automate communication and streamline notifications with seamless integrations.
 
 | **Module**           | **Purpose**                                         | **Dependencies**           | **Path**                                |
 |----------------------|-----------------------------------------------------|----------------------------|-----------------------------------------|
-| `TgNotifier`   | Telegram bot client for sending notifications       | `node-telegram-bot-api`    | `nebula-library/telegram-bot/index.js`    |
+| `TgNotifier`   | Telegram bot client for sending and managing notifications | `node-telegram-bot-api`    | `nebula-library/telegram-bot/index.js`    |
 
 ---
 
@@ -31,37 +31,37 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 
 | **Module**   | **Purpose**                 | **Dependencies**      | **Path**                                   |
 |--------------|-----------------------------|-----------------------|--------------------------------------------|
-| `Bybit`      | Interface with Bybit exchange| `bybit-api`, `uuid`   | `nebula-library/web3/cex/bybit/index.js`   |
+| `Bybit`      | REST/WebSocket client for Bybit exchange (spot, futures, account) | `bybit-api`, `uuid`   | `nebula-library/web3/cex/bybit/index.js`   |
 
 #### 🏦 Decentralized Exchanges (DEX) Aggregators
 
 | **Module**     | **Purpose**                         | **Dependencies**        | **Path**                                              |
 |----------------|-------------------------------------|-------------------------|-------------------------------------------------------|
-| `Kyberswap`    | Access Kyberswap DEX aggregator     | `ethers`, `axios`       | `nebula-library/web3/dex/aggregator/kyberswap/index.js` |
+| `Kyberswap`    | Aggregator for DEX swaps and quotes via Kyberswap API | `ethers`, `axios`       | `nebula-library/web3/dex/aggregator/kyberswap/index.js` |
 
 #### 📈 Perpetual Exchanges (Perp)
 
 | **Module**   | **Purpose**                              | **Dependencies**                  | **Path**                                               |
 |--------------|------------------------------------------|-----------------------------------|--------------------------------------------------------|
-| `Paradex`    | Connect to Paradex perpetual exchange    | `starknet`, `axios`, `bignumber.js` | `nebula-library/web3/dex/perp/paradex/index.js`         |
-| `Extended`   | **Extended DEX with Python SDK** - StarkNet perpetuals with automated signatures | `axios`,`x10-python-trading-starknet`   | `nebula-library/web3/dex/perp/extended/index.js`        |
-| `DefX`       | Connect to Defx perpetual exchange       | `axios`                             | `nebula-library/web3/dex/perp/defx/index.js`            |
+| `Paradex`    | Starknet-based perpetual DEX client for Paradex | `starknet`, `axios`, `bignumber.js` | `nebula-library/web3/dex/perp/paradex/index.js`         |
+| `Extended`   | Advanced perpetual DEX client (StarkNet, Python SDK, auto-signatures) | `axios`,`x10-python-trading-starknet`   | `nebula-library/web3/dex/perp/extended/index.js`        |
+| `DefX`       | Perpetual DEX client for DefX protocol       | `axios`                             | `nebula-library/web3/dex/perp/defx/index.js`            |
 
 #### 🌉 Bridges
 
 | **Module**   | **Purpose**                                   | **Dependencies**                          | **Path**                                         |
 |--------------|-----------------------------------------------|-------------------------------------------|--------------------------------------------------|
-| `Rhino`      | Access Rhino Bridge (EVM, Paradex, Starknet)  | `ethers`, `@rhino.fi/sdk`, `@paradex/sdk` | `nebula-library/web3/bridge/rhino/index.js`      |
+| `Rhino`      | Multi-chain bridge client (EVM, Paradex, Starknet)  | `ethers`, `@rhino.fi/sdk`, `@paradex/sdk` | `nebula-library/web3/bridge/rhino/index.js`      |
 
-#### 🪙 Token & Data Utilities
+
+#### 🪙 Token, Price & Data Utilities
 
 | **Module**   | **Purpose**                                                      | **Dependencies** | **Path**                                   |
 |--------------|------------------------------------------------------------------|------------------|--------------------------------------------|
-| `ERC20`      | Interact with ERC20 tokens                                       | `ethers`         | `nebula-library/web3/token/ERC20/index.js` |
-| `Moralis`    | Web3 data provider (token, wallet, nft, price, DeFi, blockchain) | `axios`          | `nebula-library/web3/data/moralis/index.js`|
-| `Defillama`  | Web3 data provider (token, market, price, DeFi) | `axios`          | `nebula-library/web3/data/defillama/index.js`|
-
----
+| `ERC20`      | ERC20 token contract interface and utilities                      | `ethers`         | `nebula-library/web3/token/ERC20/index.js` |
+| `Moralis`    | Unified Web3 data API (tokens, wallets, NFTs, prices, DeFi, blockchain info) | `axios`          | `nebula-library/web3/data/moralis/index.js`|
+| `Defillama`  | DeFi and token data aggregator (markets, prices, protocols)       | `axios`          | `nebula-library/web3/data/defillama/index.js`|
+| `Pyth`       | Real-time price feeds from Pyth Network (Hermes API)              | `@pythnetwork/hermes-client` | `nebula-library/web3/data/price/pyth/index.js`|
 
 ### 📦 Scraper Module
 
@@ -69,8 +69,8 @@ Automate data extraction from websites and APIs.
 
 | **Module**   | **Purpose**                                    | **Dependencies**         | **Path**                           |
 |--------------|------------------------------------------------|--------------------------|------------------------------------|
-| `Extended`    | Scrapes data from specified Extended pages    | `playwright`            | `nebula-library/scraper/extended/index.js`  |
-| `DefX`    | Scrapes data from specified DefX pages    | `playwright`            | `nebula-library/scraper/defx/index.js`  |
+| `Extended`    | Web scraper for Extended protocol pages (Playwright-based)    | `playwright`            | `nebula-library/scraper/extended/index.js`  |
+| `DefX`    | Web scraper for DefX protocol pages (Playwright-based)    | `playwright`            | `nebula-library/scraper/defx/index.js`  |
 
 #### Notice
  Make sure to install:
@@ -98,15 +98,15 @@ Automate data extraction from websites and APIs.
 
 #### Key Utility Groups
 
-- `consoleLog`: Simple logging utility with support for info, warning, and error levels.
-- `ethers`: Utilities for parsing and formatting big numbers, useful for token calculations.
-- `gas`: Utility to manage gas.
-- `http`: Utility to manage http calls.
-- `response`: Standard response.
-- `retry`: Retries a function with customizable backoff strategy and attempt limits.
-- `throttler`: Controls the rate of function execution to prevent exceeding API limits or resource exhaustion.
-- `tx`: Utility to manage txs.
-- `perp`: Perp utility for market nomenclature for market compatibility
+- `consoleLog`: Logging utility with color-coded info, warning, and error output.
+- `ethers`: Big number parsing/formatting and token math helpers.
+- `gas`: Gas estimation and management utilities.
+- `http`: HTTP request helpers (fetch, retry, error handling).
+- `response`: Standardized API response formatting.
+- `retry`: Function retry logic with backoff and attempt limits.
+- `throttler`: Rate limiter for async functions and API calls.
+- `tx`: Transaction management helpers (sign, send, monitor).
+- `perp`: Perpetual market symbol and compatibility utilities.
 
 Explore the full list in [`./utils/src`](./utils/src).
 
