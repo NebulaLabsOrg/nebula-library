@@ -1,0 +1,11 @@
+{
+  "name": "pyth",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@pythnetwork/hermes-client": "^2.1.0"
+  },
+  "devDependencies": {
+    "dotenv": "^17.2.1"
+  }
+}
