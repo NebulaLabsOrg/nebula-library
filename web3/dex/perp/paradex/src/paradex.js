@@ -8,6 +8,7 @@ import {
     vmGetLiquidityVaultPerformance
 } from './view.model.js';
 import { wmSubmitOrder, wmSubmitCancelOrder, wmSubmitCloseOrder } from './write.model.js';
+import { pmGetXpAccountBalance, pmGetXpTransferById, pmTransferXp } from './points-model.js';
 import { clearParadexHeaders } from './utils.js';
 import { PARADEX_CHAIN_ID } from './constants.js';
 import { paradexEnum } from './enum.js';
@@ -291,7 +292,7 @@ export class Paradex {
      * @param {number|string} _orderQty - The quantity of the order.
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order submission result or an error message.
      */
-    async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty){
+    async submitOrder(_type, _symbol, _side, _marketUnit, _orderQty) {
         return this.throttler.enqueue(async () => {
             const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
             if (!response.success) {
@@ -312,7 +313,7 @@ export class Paradex {
      * @param {string} _orderId - The unique identifier of the order to cancel.
      * @returns {Promise<Object>} A Promise that resolves with the response containing the order cancellation result or an error message.
      */
-    async submitCancelOrder(_orderId){
+    async submitCancelOrder(_orderId) {
         return this.throttler.enqueue(async () => {
             const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
             if (!response.success) {
@@ -337,7 +338,7 @@ export class Paradex {
      * @param {boolean} _closeAll - Whether to close the entire position (true) or a partial amount (false).
      * @returns {Promise<Object>} A Promise that resolves with the response containing the close order submission result or an error message.
      */
-    async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll){
+    async submitCloseOrder(_type, _symbol, _orderQty, _marketUnit, _closeAll) {
         return this.throttler.enqueue(async () => {
             const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
             if (!response.success) {
@@ -347,5 +348,81 @@ export class Paradex {
             this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
             return await wmSubmitCloseOrder(this.instance, this.chainId, this.account, _type, _symbol, _orderQty, _marketUnit, _closeAll);
         }, 5);
+    }
+
+    // =============================================================================
+    // Points Methods
+    // =============================================================================
+
+    /**
+     * Transfers XP (experience points) to another address on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to transfer XP with the specified parameters.
+     *
+     * @async
+     * @method transferXp
+     * @param {string} _toAddress - The recipient's address to transfer XP to.
+     * @param {number} _amount - The amount of XP to transfer.
+     * @param {Object} [_opt={}] - Optional transfer configuration.
+     * @param {string} [_opt.season] - The season identifier for the transfer (defaults to season two).
+     * @param {boolean} [_opt.isPrivate] - Whether the transfer should be private (defaults to false).
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the transfer details or an error message.
+     */
+    async transferXp(_toAddress, _amount, _opt = {}) {
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.transferXp -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+
+            const options = {
+                season: _opt.season || paradexEnum.seasons.two,
+                isPrivate: _opt.isPrivate || false
+            };
+            return await pmTransferXp(this.instance, _toAddress, _amount, options);
+        });
+    }
+
+    /**
+     * Retrieves XP (experience points) account balance for a specific season on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to fetch the XP balance.
+     *
+     * @async
+     * @method getXpAccountBalance
+     * @param {string} [_season=paradexEnum.seasons.two] - The season identifier to retrieve XP balance for (defaults to season two).
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the XP balance data or an error message.
+     */
+    async getXpAccountBalance(_season = paradexEnum.seasons.two) {
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getXpAccountBalance -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await pmGetXpAccountBalance(this.instance, _season);
+        });
+    }
+
+    /**
+     * Retrieves details of a specific XP transfer by its ID on Paradex.
+     * Authenticates the user, sets the authorization header, and calls the function to fetch the transfer details.
+     *
+     * @async
+     * @method getXpTransferById
+     * @param {string} _transferId - The unique identifier of the XP transfer to retrieve.
+     * @returns {Promise<Object>} A Promise that resolves with the response containing the transfer details or an error message.
+     */
+    async getXpTransferById(_transferId) {
+        return this.throttler.enqueue(async () => {
+            const response = await amAuthenticateUser(this.instance, this.chainId, this.account);
+            if (!response.success) {
+                return createResponse(false, response.message, response.data, `paradex.getXpTransferById -- ${response.source}`);
+            }
+            clearParadexHeaders(this.instance);
+            this.instance.defaults.headers['Authorization'] = `Bearer ${response.data.jwt_token}`;
+            return await pmGetXpTransferById(this.instance, _transferId);
+        });
     }
 }

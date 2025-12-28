@@ -25,5 +25,10 @@ export const paradexEnum = Object.freeze({
             market: 'MARKET',
             limit: 'LIMIT'
         }
+    },
+    seasons:{
+        preseason: 'preseason',
+        one: 'season1',
+        two: 'season2'
     }
 });
