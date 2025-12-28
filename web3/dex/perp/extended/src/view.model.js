@@ -20,7 +20,8 @@ export async function vmGetWalletStatus(_instance) {
             {
                 balance: data.balance,
                 equity: data.equity,
-                leverage: data.leverage
+                leverage: data.leverage,
+                updatedTime: data.updatedTime
             },
             'extended.getWalletStatus'
         );
