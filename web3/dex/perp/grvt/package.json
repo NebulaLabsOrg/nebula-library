@@ -1,0 +1,28 @@
+{
+  "name": "@nebula-labs/grvt",
+  "version": "1.0.0",
+  "description": "GRVT Extended - Production-ready DEX perpetual trading integration following NebulaLabs architecture",
+  "type": "module",
+  "main": "index.js",
+  "keywords": [
+    "grvt",
+    "dex",
+    "perpetual",
+    "trading",
+    "defi",
+    "nebula-labs"
+  ],
+  "author": "NebulaLabs",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ethers": "^6.0.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.0.0"
+  },
+  "scripts": {
+    "example": "node example/example.complete-flow.js",
+    "setup": "sh ./setup.sh"
+  }
+}
