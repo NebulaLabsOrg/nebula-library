@@ -13,6 +13,7 @@ import {
     getBaseUrl,
     getAuthUrl,
     getMarketDataUrl,
+    getWebSocketUrl,
     ensureAuthenticated,
     authenticate,
     findPythonPath,
@@ -132,6 +133,9 @@ export class Grvt {
         });
         
         this.pythonService = null;
+        
+        // WebSocket URL based on environment
+        this.wsUrl = getWebSocketUrl(this.environment);
         
         // Start authentication for trading account
         this.trading.authPromise = authenticate(
@@ -314,14 +318,18 @@ export class Grvt {
     }
     
     /**
-     * Get order status
-     * @param {string} orderId - Order ID
-     * @returns {Promise<Object>} Order status response
+     * Get order status (WebSocket subscription)
+     * @param {string} symbol - Market symbol
+     * @param {Function} onOrderUpdate - Callback function for order updates
+     * @returns {Promise<Object>} WebSocket subscription response with control functions
      */
-    async getOrderStatus(orderId) {
-        await ensureAuthenticated(this);
+    async getOrderStatus(symbol, onOrderUpdate) {
+        if (this.trading.authPromise) {
+            await this.trading.authPromise;
+        }
+        
         const { vmGetOrderStatus } = await import('./view.model.js');
-        return vmGetOrderStatus(this.instance, orderId);
+        return vmGetOrderStatus(this, symbol, onOrderUpdate);
     }
     
     

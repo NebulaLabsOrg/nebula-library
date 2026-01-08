@@ -4,12 +4,11 @@
  */
 export const grvtEnum = Object.freeze({
     orderState: {
-        new: 'NEW',
-        partially_filled: 'PARTIALLY_FILLED',
+        pending: 'PENDING',
+        open: 'OPEN',
         filled: 'FILLED',
-        cancelled: 'CANCELLED',
         rejected: 'REJECTED',
-        expired: 'EXPIRED'
+        cancelled: 'CANCELLED'
     },
     orderSide: {
         buy: 'BUY',

@@ -23,9 +23,10 @@ export const GRVT_MARKET_DATA_MAINNET_URL = 'https://market-data.grvt.io';
 export const GRVT_MARKET_DATA_TESTNET_URL = 'https://market-data.testnet.grvt.io';
 export const GRVT_MARKET_DATA_STAGING_URL = 'https://market-data.staging.gravitymarkets.io';
 
-// WebSocket URLs
-export const GRVT_MAINNET_WS = 'wss://ws.grvt.io';
-export const GRVT_TESTNET_WS = 'wss://ws.testnet.grvt.io';
+// WebSocket URLs (for real-time order updates, trades, market data)
+export const GRVT_MAINNET_WS_URL = 'wss://trades.grvt.io/ws/full';
+export const GRVT_TESTNET_WS_URL = 'wss://trades-testnet.grvt.io/ws/full';
+export const GRVT_STAGING_WS_URL = 'wss://trades.staging.gravitymarkets.io/ws/full';
 
 // Order TimeInForce
 export const MARKET_TIME_IN_FORCE = 'IOC';      // Immediate Or Cancel

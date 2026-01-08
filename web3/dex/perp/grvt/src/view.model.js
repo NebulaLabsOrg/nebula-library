@@ -1,5 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { ethers } from 'ethers';
+import WebSocket from 'ws';
 
 /**
  * @async
@@ -461,53 +462,175 @@ export async function vmGetOpenPositionDetail(_instance, _subAccountId, _symbol)
 /**
  * @async
  * @function vmGetOrderStatus
- * @description Retrieves order status by ID (HTTP API)
- * @param {Object} _instance - HTTP client instance (axios)
- * @param {string} _orderId - Order ID
- * @returns {Promise<Object>} Response with order details
+ * @description Subscribes to real-time order updates via WebSocket
+ * @param {Object} _grvtInstance - Grvt instance with authentication and config
+ * @param {string} _symbol - Market symbol (e.g., 'BTC_USDT_Perp')
+ * @param {Function} _onOrderUpdate - Callback function for order updates
+ * @returns {Promise<Object>} Response with WebSocket connection and unsubscribe function
  */
-export async function vmGetOrderStatus(_instance, _orderId) {
-    try {
-        if (!_orderId) {
-            throw new Error('Order ID is required');
-        }
-        
-        const response = await _instance.get(`/full/v1/order`, {
-            params: {
-                order_id: _orderId
+export async function vmGetOrderStatus(_grvtInstance, _symbol, _onOrderUpdate) {
+    return new Promise((resolve, reject) => {
+        try {
+            if (!_grvtInstance.trading?.sessionCookie) {
+                return reject(createResponse(false, 'Not authenticated', null, 'grvt.getOrderStatus'));
             }
-        });
-        
-        const data = response.data;
-        
-        if (!data || !data.result) {
-            return createResponse(false, 'No order found', null, 'grvt.getOrderStatus');
+            if (!_symbol) {
+                return reject(createResponse(false, 'Symbol is required', null, 'grvt.getOrderStatus'));
+            }
+
+            const headers = {
+                'Cookie': _grvtInstance.trading.sessionCookie,
+                'X-Grvt-Account-Id': _grvtInstance.trading.apiKey
+            };
+
+            const ws = new WebSocket(_grvtInstance.wsUrl, { headers });
+            const selector = `${_grvtInstance.trading.accountId}-${_symbol}`;
+            let subscribed = false;
+
+            ws.on('open', () => {
+                // Send subscription message
+                const subscribeMessage = {
+                    jsonrpc: '2.0',
+                    method: 'subscribe',
+                    params: {
+                        stream: 'v1.order',
+                        selectors: [selector]
+                    },
+                    id: 123
+                };
+
+                ws.send(JSON.stringify(subscribeMessage));
+            });
+
+            ws.on('message', (data) => {
+                try {
+                    const message = JSON.parse(data.toString());
+
+                    // Handle subscription confirmation
+                    if (message.id === 123 && message.result !== undefined) {
+                        subscribed = true;
+                        
+                        // Return WebSocket control functions
+                        resolve(createResponse(
+                            true,
+                            'Subscribed to order updates',
+                            {
+                                selector,
+                                unsubscribe: () => {
+                                    return new Promise((resolveUnsub, rejectUnsub) => {
+                                        const unsubscribeMessage = {
+                                            jsonrpc: '2.0',
+                                            method: 'unsubscribe',
+                                            params: {
+                                                stream: 'v1.order',
+                                                selectors: [selector]
+                                            },
+                                            id: 124
+                                        };
+                                        
+                                        ws.send(JSON.stringify(unsubscribeMessage), (error) => {
+                                            if (error) {
+                                                rejectUnsub(error);
+                                            } else {
+                                                ws.close();
+                                                resolveUnsub();
+                                            }
+                                        });
+                                    });
+                                },
+                                close: () => ws.close(),
+                                isConnected: () => ws.readyState === WebSocket.OPEN
+                            },
+                            'grvt.getOrderStatus'
+                        ));
+                    }
+
+                    // Handle order updates
+                    if (message.stream === 'v1.order' && message.feed) {
+                        const feed = message.feed;
+                        const leg = feed.legs?.[0] || {};
+
+                        const orderUpdate = {
+                            stream: message.stream,
+                            selector: message.selector,
+                            sequenceNumber: message.sequence_number,
+                            order: {
+                                orderId: feed.order_id,
+                                subAccountId: feed.sub_account_id,
+                                symbol: leg.instrument,
+                                side: leg.is_buying_asset ? 'BUY' : 'SELL',
+                                size: leg.size,
+                                limitPrice: leg.limit_price,
+                                isMarket: feed.is_market,
+                                timeInForce: feed.time_in_force,
+                                postOnly: feed.post_only,
+                                reduceOnly: feed.reduce_only,
+                                status: feed.state?.status,
+                                rejectReason: feed.state?.reject_reason,
+                                bookSize: feed.state?.book_size?.[0],
+                                tradedSize: feed.state?.traded_size?.[0],
+                                avgFillPrice: feed.state?.avg_fill_price?.[0],
+                                updateTime: feed.state?.update_time,
+                                clientOrderId: feed.metadata?.client_order_id,
+                                createTime: feed.metadata?.create_time,
+                                trigger: feed.metadata?.trigger,
+                                broker: feed.metadata?.broker,
+                                signature: feed.signature,
+                                builder: feed.builder,
+                                builderFee: feed.builder_fee
+                            }
+                        };
+
+                        if (_onOrderUpdate) {
+                            _onOrderUpdate(orderUpdate);
+                        }
+                        
+                        // Close WebSocket if order reaches a final state
+                        const finalStates = ['FILLED', 'REJECTED', 'CANCELLED'];
+                        if (finalStates.includes(feed.state?.status)) {
+                            setTimeout(() => ws.close(), 100); // Small delay to ensure callback completes
+                        }
+                    }
+
+                    // Handle errors
+                    if (message.error) {
+                        reject(createResponse(
+                            false,
+                            `WebSocket error: ${JSON.stringify(message.error)}`,
+                            null,
+                            'grvt.getOrderStatus'
+                        ));
+                        ws.close();
+                    }
+                } catch (error) {
+                    console.error('Failed to parse WebSocket message:', error);
+                }
+            });
+
+            ws.on('error', (error) => {
+                if (!subscribed) {
+                    reject(createResponse(
+                        false,
+                        `WebSocket connection error: ${error.message}`,
+                        null,
+                        'grvt.getOrderStatus'
+                    ));
+                }
+            });
+
+            ws.on('close', () => {
+                if (!subscribed) {
+                    reject(createResponse(
+                        false,
+                        'WebSocket closed before subscription',
+                        null,
+                        'grvt.getOrderStatus'
+                    ));
+                }
+            });
+
+        } catch (error) {
+            reject(createResponse(false, error.message, null, 'grvt.getOrderStatus'));
         }
-        
-        const order = data.result;
-        
-        const detail = {
-            orderId: order.order_id || _orderId,
-            symbol: order.instrument || order.market || '',
-            orderType: order.order_type || order.type || '',
-            status: order.state || order.status || '',
-            side: order.is_buy ? 'BUY' : 'SELL',
-            qty: order.size || order.qty || '0',
-            qtyExe: order.filled_size || order.filled_qty || '0',
-            avgPrice: order.average_price || order.avg_price || '0',
-            limitPrice: order.limit_price || '0',
-            createdAt: order.create_time || order.created_at || '',
-            updatedAt: order.update_time || order.updated_at || ''
-        };
-        
-        // Calculate executed value
-        const filledSize = parseFloat(detail.qtyExe);
-        const avgPrice = parseFloat(detail.avgPrice);
-        detail.qtyExeUsd = (filledSize * avgPrice).toString();
-        
-        return createResponse(true, 'success', detail, 'grvt.getOrderStatus');
-    } catch (error) {
-        const message = error.response?.data?.error?.message || error.message || 'Failed to get order status';
-        return createResponse(false, message, null, 'grvt.getOrderStatus');
-    }
+    });
 }

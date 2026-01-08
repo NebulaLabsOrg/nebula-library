@@ -102,6 +102,12 @@ console.log('Calling: grvtInstance.getWalletStatus()');
 const walletStatus = await grvtInstance.getWalletStatus();
 console.log(walletStatus);
 
+console.log('Get order status');
+console.log('Calling: grvtInstance.getOrderStatus()');
+const orderStatus = await grvtInstance.getOrderStatus(formatPerpMarket('ETH', grvt));
+console.log(orderStatus);
+
+
 console.log('Placing a market order');
 console.log('Calling: grvtInstance.submitOrder()');
 const orderResult = await grvtInstance.submitOrder(
