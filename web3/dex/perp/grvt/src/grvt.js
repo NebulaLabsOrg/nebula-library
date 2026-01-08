@@ -89,7 +89,8 @@ export class Grvt {
         this.authenticated = false;
         this.authPromise = null; // Store authentication promise
         
-        // Initialize HTTP instance for API calls
+        // Initialize HTTP instance for Trading API (trades.grvt.io)
+        // Used for: wallet, positions, orders, transfers (requires auth)
         const baseUrl = getBaseUrl(this.environment);
         this.instance = createInstance(baseUrl, {
             'Content-Type': 'application/json',
@@ -97,6 +98,14 @@ export class Grvt {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Origin': baseUrl,
             'Referer': baseUrl + '/'
+        });
+        
+        // Initialize HTTP instance for Market Data API (market-data.grvt.io)
+        // Used for: instruments, ticker, orderbook, candles (public, no auth)
+        const marketDataUrl = getMarketDataUrl(this.environment);
+        this.marketDataInstance = createInstance(marketDataUrl, {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
         });
         
         this.pythonService = null;
@@ -197,11 +206,40 @@ export class Grvt {
      * @returns {Promise<Object>} Market data response
      */
     async getMarketData(symbol = '') {
-        await ensureAuthenticated(this);
         const { vmGetMarketData } = await import('./view.model.js');
-        return vmGetMarketData(this, symbol);
+        return vmGetMarketData(this.marketDataInstance, symbol);
     }
-    
+
+    /**
+     * Get market order size
+     * @param {string} symbol - Market symbol
+     * @returns {Promise<Object>} Market order size response
+     */
+    async getMarketOrderSize(symbol) {
+        const { vmGetMarketOrderSize } = await import('./view.model.js');
+        return vmGetMarketOrderSize(this.marketDataInstance, symbol);
+    }
+
+    /**
+     * Get funding rate hour
+     * @param {string} symbol - Market symbol
+     * @returns {Promise<Object>} Funding rate response
+     */
+    async getFundingRateHour(symbol) {
+        const { vmGetFundingRateHour } = await import('./view.model.js');
+        return vmGetFundingRateHour(this.marketDataInstance, symbol);
+    }
+
+    /**
+     * Get market open interest
+     * @param {string} symbol - Market symbol
+     * @returns {Promise<Object>} Market open interest response
+     */
+    async getMarketOpenInterest(symbol) {
+        const { vmGetMarketOpenInterest } = await import('./view.model.js');
+        return vmGetMarketOpenInterest(this.marketDataInstance, symbol);
+    }
+
     /**
      * Get open positions
      * @returns {Promise<Object>} Open positions response
@@ -209,7 +247,7 @@ export class Grvt {
     async getOpenPositions() {
         await ensureAuthenticated(this);
         const { vmGetOpenPositions } = await import('./view.model.js');
-        return vmGetOpenPositions(this);
+        return vmGetOpenPositions(this.instance, this.trading.accountId);
     }
     
     /**
@@ -220,7 +258,7 @@ export class Grvt {
     async getOpenPositionDetail(symbol) {
         await ensureAuthenticated(this);
         const { vmGetOpenPositionDetail } = await import('./view.model.js');
-        return vmGetOpenPositionDetail(this, symbol);
+        return vmGetOpenPositionDetail(this.instance, this.trading.accountId, symbol);
     }
     
     /**

@@ -125,52 +125,235 @@ export async function vmGetWalletBalance(_instance) {
 /**
  * @async
  * @function vmGetMarketData
- * @description Retrieves market data for all or specific symbol
- * @param {Object} _extended - Extended instance
+ * @description Retrieves market data for all or specific symbol via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
  * @param {string} [_symbol=''] - Optional symbol filter
  * @returns {Promise<Object>} Response with market data
  */
-export async function vmGetMarketData(_extended, _symbol = '') {
+export async function vmGetMarketData(_instance, _symbol = '') {
     try {
-        const markets = await _extended._sendCommand('get_markets');
-        
-        if (markets.error) {
-            throw new Error(markets.error);
-        }
-        
         // If specific symbol requested
         if (_symbol) {
-            const market = markets.find(m => m.name === _symbol || m.instrument === _symbol);
-            if (!market) {
+            const response = await _instance.post('/full/v1/instrument', {
+                instrument: _symbol
+            });
+            
+            if (!response.data || !response.data.result) {
                 return createResponse(false, `Market ${_symbol} not found`, null, 'grvt.getMarketData');
             }
-            return createResponse(true, 'success', [market], 'grvt.getMarketData');
+            
+            return createResponse(true, 'success', [response.data.result], 'grvt.getMarketData');
         }
         
         // Return all active markets
-        const activeMarkets = markets.filter(market => market.active !== false);
-        return createResponse(true, 'success', activeMarkets, 'grvt.getMarketData');
+        const response = await _instance.post('/full/v1/all_instruments', {
+            is_active: true
+        });
+        
+        if (!response.data || !response.data.result) {
+            throw new Error('Invalid response from API');
+        }
+        
+        return createResponse(true, 'success', response.data.result, 'grvt.getMarketData');
         
     } catch (error) {
-        const message = error.message || 'Failed to get market data';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get market data';
         return createResponse(false, message, null, 'grvt.getMarketData');
     }
 }
 
 /**
  * @async
+ * @function vmGetMarketOrderSize
+ * @description Retrieves market order size information for a given symbol via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _symbol - The market symbol for which to retrieve order size information
+ * @returns {Promise<Object>} A promise that resolves to a response object containing the minimum quantity, quantity step, and tick size information, or an error message
+ */
+export async function vmGetMarketOrderSize(_instance, _symbol) {
+    try {
+        const response = await _instance.post('/full/v1/instrument', {
+            instrument: _symbol
+        });
+        
+        if (!response.data || !response.data.result) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'grvt.getMarketOrderSize');
+        }
+        
+        const instrument = response.data.result;
+        
+        // Get ticker for current price
+        const tickerResponse = await _instance.post('/full/v1/ticker', {
+            instrument: _symbol
+        });
+        
+        const ticker = tickerResponse.data?.result;
+        const markPriceStr = ticker?.mark_price || '1';
+        
+        // Calculate decimals from min_size and tick_size
+        const countDecimals = (value) => {
+            if (!value) return 0;
+            const str = value.toString();
+            if (str.includes('.')) {
+                return str.split('.')[1].length;
+            }
+            return 0;
+        };
+        
+        const tickSize = parseFloat(instrument.tick_size);
+        const tokenDecimals = countDecimals(instrument.min_size);
+        const priceDecimals = countDecimals(instrument.tick_size);
+        
+        // Use ethers BigNumber for precise calculations
+        const PRECISION = 18;
+        const minSizeBN = ethers.parseUnits(instrument.min_size, PRECISION);
+        const maxPosSizeBN = ethers.parseUnits(instrument.max_position_size, PRECISION);
+        const markPriceBN = ethers.parseUnits(markPriceStr, PRECISION);
+        
+        // Calculate secCoin values: value * markPrice
+        const minQtySecBN = (minSizeBN * markPriceBN) / ethers.parseUnits('1', PRECISION);
+        const maxQtySecBN = (maxPosSizeBN * markPriceBN) / ethers.parseUnits('1', PRECISION);
+        
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                mainCoin: {
+                    minQty: instrument.min_size,
+                    qtyStep: instrument.min_size,
+                    maxMktQty: instrument.max_position_size,
+                    maxLimQty: instrument.max_position_size
+                },
+                secCoin: {
+                    minQty: Math.round(parseFloat(ethers.formatUnits(minQtySecBN, PRECISION))).toString(),
+                    qtyStep: Math.round(parseFloat(ethers.formatUnits(minQtySecBN, PRECISION))).toString(),
+                    maxMktQty: Math.round(parseFloat(ethers.formatUnits(maxQtySecBN, PRECISION))).toString(),
+                    maxLimQty: Math.round(parseFloat(ethers.formatUnits(maxQtySecBN, PRECISION))).toString()
+                },
+                priceDecimals: priceDecimals
+            },
+            'grvt.getMarketOrderSize'
+        );
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get market order size';
+        return createResponse(false, message, null, 'grvt.getMarketOrderSize');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetFundingRateHour
+ * @description Retrieves the annualized funding rate for a given market symbol via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _symbol - The market symbol for which to retrieve the funding rate
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the annualized funding rate or an error message
+ */
+export async function vmGetFundingRateHour(_instance, _symbol) {
+    try {
+        const response = await _instance.post('/full/v1/ticker', {
+            instrument: _symbol
+        });
+        
+        if (!response.data || !response.data.result) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'grvt.getFundingRateHour');
+        }
+        
+        const ticker = response.data.result;
+        
+        // funding_rate is already in percentage for 8-hour periods
+        // Example: 0.01 = 0.01% per 8 hours
+        // Annualize: rate * 3 periods/day * 365 days = rate * 1095
+        
+        // Use ethers BigNumber for precise calculations
+        const PRECISION = 18;
+        const fundingRatePercent = ticker.funding_rate || '0';
+        
+        const rateBN = ethers.parseUnits(fundingRatePercent, PRECISION);
+        const multiplier = ethers.parseUnits('1095', PRECISION); // 3 * 365
+        
+        const fundingRateAnnualBN = (rateBN * multiplier) / ethers.parseUnits('1', PRECISION);
+        
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                fundingRate: ethers.formatUnits(fundingRateAnnualBN, PRECISION)
+            },
+            'grvt.getFundingRateHour'
+        );
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get funding rate';
+        return createResponse(false, message, null, 'grvt.getFundingRateHour');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetMarketOpenInterest
+ * @description Retrieves the open interest for a given market symbol via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _symbol - The market symbol for which to retrieve the open interest
+ * @returns {Promise<Object>} A Promise that resolves with a response object containing the open interest data or an error message
+ */
+export async function vmGetMarketOpenInterest(_instance, _symbol) {
+    try {
+        const response = await _instance.post('/full/v1/ticker', {
+            instrument: _symbol
+        });
+        
+        if (!response.data || !response.data.result) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'grvt.getMarketOpenInterest');
+        }
+        
+        const ticker = response.data.result;
+        
+        // Calculate openInterestUsd using ethers BigNumber for precision
+        const PRECISION = 18;
+        const openInterestBase = ticker.open_interest || '0';
+        const markPrice = ticker.mark_price || '0';
+        
+        const openInterestBN = ethers.parseUnits(openInterestBase, PRECISION);
+        const markPriceBN = ethers.parseUnits(markPrice, PRECISION);
+        
+        const openInterestUsdBN = (openInterestBN * markPriceBN) / ethers.parseUnits('1', PRECISION);
+        
+        return createResponse(
+            true,
+            'success',
+            {
+                symbol: _symbol,
+                openInterest: openInterestBase,
+                openInterestUsd: ethers.formatUnits(openInterestUsdBN, PRECISION)
+            },
+            'grvt.getMarketOpenInterest'
+        );
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get market open interest';
+        return createResponse(false, message, null, 'grvt.getMarketOpenInterest');
+    }
+}
+
+/**
+ * @async
  * @function vmGetOpenPositions
- * @description Retrieves all open positions
- * @param {Object} _extended - Extended instance
+ * @description Retrieves all open positions via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _subAccountId - Sub account ID
  * @returns {Promise<Object>} Response with positions summary
  */
-export async function vmGetOpenPositions(_extended) {
+export async function vmGetOpenPositions(_instance, _subAccountId) {
     try {
-        const positions = await _extended._sendCommand('get_positions');
+        const response = await _instance.post('/full/v1/positions', {
+            sub_account_id: _subAccountId
+        });
         
-        if (positions.error) {
-            throw new Error(positions.error);
+        if (!response.data || !response.data.result) {
+            throw new Error('Invalid response from positions API');
         }
+        
+        const positions = response.data.result;
         
         // Filter only positions with non-zero size
         const openPositions = positions.filter(pos => {
@@ -183,13 +366,12 @@ export async function vmGetOpenPositions(_extended) {
             'success',
             { 
                 openPositions: openPositions.length, 
-                markets: openPositions.map(pos => pos.market || pos.instrument),
-                positions: openPositions
+                markets: openPositions.map(pos => pos.market || pos.instrument)
             },
             'grvt.getOpenPositions'
         );
     } catch (error) {
-        const message = error.message || 'Failed to get open positions';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get open positions';
         return createResponse(false, message, null, 'grvt.getOpenPositions');
     }
 }
@@ -197,22 +379,27 @@ export async function vmGetOpenPositions(_extended) {
 /**
  * @async
  * @function vmGetOpenPositionDetail
- * @description Retrieves details for specific open position
- * @param {Object} _extended - Extended instance
+ * @description Retrieves details for specific open position via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _subAccountId - Sub account ID
  * @param {string} _symbol - Market symbol
  * @returns {Promise<Object>} Response with position details
  */
-export async function vmGetOpenPositionDetail(_extended, _symbol) {
+export async function vmGetOpenPositionDetail(_instance, _subAccountId, _symbol) {
     try {
         if (!_symbol) {
             throw new Error('Symbol is required');
         }
         
-        const positions = await _extended._sendCommand('get_positions');
+        const response = await _instance.post('/full/v1/positions', {
+            sub_account_id: _subAccountId
+        });
         
-        if (positions.error) {
-            throw new Error(positions.error);
+        if (!response.data || !response.data.result) {
+            throw new Error('Invalid response from positions API');
         }
+        
+        const positions = response.data.result;
         
         const position = positions.find(p => 
             (p.market === _symbol || p.instrument === _symbol)
@@ -242,7 +429,7 @@ export async function vmGetOpenPositionDetail(_extended, _symbol) {
         
         return createResponse(true, 'success', detail, 'grvt.getOpenPositionDetail');
     } catch (error) {
-        const message = error.message || 'Failed to get open position detail';
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get open position detail';
         return createResponse(false, message, null, 'grvt.getOpenPositionDetail');
     }
 }
