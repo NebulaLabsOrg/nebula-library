@@ -10,10 +10,9 @@
  */
 
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetMarketData, vmGetOpenPositionDetail } from './view.model.js';
+import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail } from './view.model.js';
 import { 
     formatOrderQuantity, 
-    calculateMidPrice, 
     countDecimals, 
     calculateSlippagePrice,
     validateOrderParams,
@@ -28,7 +27,7 @@ import {
 /**
  * @async
  * @function wmSubmitOrder
- * @description Submits order via Python SDK
+ * @description Submits order via Python SDK with WebSocket monitoring
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {number} _slippage - Slippage percentage
  * @param {string} _type - Order type (MARKET or LIMIT)
@@ -36,30 +35,35 @@ import {
  * @param {string} _side - Order side (BUY or SELL)
  * @param {string} _marketUnit - Market unit (main or secondary)
  * @param {number|string} _orderQty - Order quantity
- * @returns {Promise<Object>} Response with order ID
+ * @param {Function} [_onOrderUpdate] - Optional callback for order status updates
+ * @returns {Promise<Object>} Response with order ID and WebSocket control functions
  */
-export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
+export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _marketUnit, _orderQty, _onOrderUpdate) {
     try {
-        // 1. Get market data
-        const marketData = await vmGetMarketData(_grvt.marketDataInstance, _symbol);
-        if (!marketData.success) {
-            throw new Error(marketData.message);
+        // 1. Get market prices
+        const pricesResponse = await vmGetMarketDataPrices(_grvt.marketDataInstance, _symbol);
+        if (!pricesResponse.success) {
+            throw new Error(pricesResponse.message);
         }
         
-        const market = marketData.data[0];
-        const marketStats = market.market_stats || {};
-        const tradingConfig = market.trading_config || {};
+        const prices = pricesResponse.data;
+        const midPrice = parseFloat(prices.midPrice);
         
-        // 2. Extract parameters
-        const askPrice = parseFloat(marketStats.ask_price || market.ask_price || 0);
-        const bidPrice = parseFloat(marketStats.bid_price || market.bid_price || 0);
-        const qtyStep = parseFloat(tradingConfig.min_order_size_change || tradingConfig.size_step || 0.001);
-        const minQty = parseFloat(tradingConfig.min_order_size || tradingConfig.min_size || 0);
-        const priceStep = parseFloat(tradingConfig.min_price_change || tradingConfig.price_step || 0.01);
-        const priceDecimals = countDecimals(priceStep);
+        // 2. Get market order size configuration
+        const orderSizeResponse = await vmGetMarketOrderSize(_grvt.marketDataInstance, _symbol);
+        if (!orderSizeResponse.success) {
+            throw new Error(orderSizeResponse.message);
+        }
         
-        // 3. Calculate price
-        const midPrice = calculateMidPrice(askPrice, bidPrice);
+        const orderSizeConfig = orderSizeResponse.data;
+        const qtyStep = parseFloat(orderSizeConfig.mainCoin.qtyStep);
+        const minQty = parseFloat(orderSizeConfig.mainCoin.minQty);
+        const priceDecimals = orderSizeConfig.priceDecimals;
+        
+        // Calculate price step from priceDecimals
+        const priceStep = parseFloat('0.' + '0'.repeat(priceDecimals - 1) + '1');
+        
+        // 3. Calculate order price
         const isBuy = _side === grvtEnum.orderSide.long;
         const actPrice = _type === grvtEnum.orderType.market
             ? calculateSlippagePrice(midPrice, _slippage, isBuy)
@@ -114,17 +118,34 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
         
         const orderId = orderResult.external_id || orderResult.order_id;
         
-        // 8. Return order submission result
+        // 8. Setup WebSocket monitoring if callback provided
+        let wsSubscription = null;
+            try {
+                // Import and setup WebSocket monitoring
+                const { vmGetOrderStatus } = await import('./view.model.js');
+                wsSubscription = await vmGetOrderStatus(_grvt, _symbol, _onOrderUpdate);
+            } catch (wsError) {
+                console.error('Failed to setup WebSocket monitoring:', wsError);
+                // Continue without monitoring - don't fail the entire order
+            }
+        // 9. Return order submission result with WebSocket control
         return createResponse(
             true,
-            'Order submitted successfully',
+            'success',
             {
                 symbol: _symbol,
                 orderId: orderId,
                 qty: qty,
                 price: roundedPrice,
                 side: _side,
-                type: _type
+                type: _type,
+                // Include WebSocket control functions if monitoring is active
+                ...(wsSubscription && {
+                    selector: wsSubscription.data?.selector,
+                    unsubscribe: wsSubscription.data?.unsubscribe,
+                    close: wsSubscription.data?.close,
+                    isConnected: wsSubscription.data?.isConnected
+                })
             },
             'grvt.submitOrder'
         );
@@ -215,25 +236,30 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
         // 3. Determine opposite side
         const closeSide = side === 'long' ? grvtEnum.orderSide.short : grvtEnum.orderSide.long;
         
-        // 4. Get market data
-        const marketData = await vmGetMarketData(_grvt.marketDataInstance, _symbol);
-        if (!marketData.success) {
-            throw new Error(marketData.message);
+        // 4. Get market prices
+        const pricesResponse = await vmGetMarketDataPrices(_grvt.marketDataInstance, _symbol);
+        if (!pricesResponse.success) {
+            throw new Error(pricesResponse.message);
         }
         
-        const market = marketData.data[0];
-        const marketStats = market.market_stats || {};
-        const tradingConfig = market.trading_config || {};
+        const prices = pricesResponse.data;
+        const midPrice = parseFloat(prices.midPrice);
         
-        // 5. Extract parameters and calculate price
-        const askPrice = parseFloat(marketStats.ask_price || market.ask_price || 0);
-        const bidPrice = parseFloat(marketStats.bid_price || market.bid_price || 0);
-        const qtyStep = parseFloat(tradingConfig.min_order_size_change || tradingConfig.size_step || 0.001);
-        const minQty = parseFloat(tradingConfig.min_order_size || tradingConfig.min_size || 0);
-        const priceStep = parseFloat(tradingConfig.min_price_change || tradingConfig.price_step || 0.01);
-        const priceDecimals = countDecimals(priceStep);
+        // 5. Get market order size configuration
+        const orderSizeResponse = await vmGetMarketOrderSize(_grvt.marketDataInstance, _symbol);
+        if (!orderSizeResponse.success) {
+            throw new Error(orderSizeResponse.message);
+        }
         
-        const midPrice = calculateMidPrice(askPrice, bidPrice);
+        const orderSizeConfig = orderSizeResponse.data;
+        const qtyStep = parseFloat(orderSizeConfig.mainCoin.qtyStep);
+        const minQty = parseFloat(orderSizeConfig.mainCoin.minQty);
+        const priceDecimals = orderSizeConfig.priceDecimals;
+        
+        // Calculate price step from priceDecimals
+        const priceStep = parseFloat('0.' + '0'.repeat(priceDecimals - 1) + '1');
+        
+        // 6. Calculate order price
         const isBuy = closeSide === grvtEnum.orderSide.long;
         const actPrice = _type === grvtEnum.orderType.market
             ? calculateSlippagePrice(midPrice, _slippage, isBuy)
@@ -241,7 +267,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
         
         const roundedPrice = roundToTickSize(actPrice, priceStep);
         
-        // 6. Format quantity
+        // 7. Format quantity
         const isQuoteOnSecCoin = (_marketUnit === grvtEnum.marketUnit.quoteOnSecCoin) && !_closeAll;
         const qty = formatOrderQuantity(
             closeQuantity,
@@ -250,7 +276,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             qtyStep
         );
         
-        // 7. Validate
+        // 8. Validate
         const validation = validateOrderParams({
             symbol: _symbol,
             side: closeSide,
@@ -264,7 +290,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             throw new Error(validation.message);
         }
         
-        // 8. Submit close order
+        // 9. Submit close order
         const sdkSide = closeSide === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;

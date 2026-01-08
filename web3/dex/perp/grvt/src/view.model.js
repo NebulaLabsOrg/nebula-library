@@ -173,6 +173,90 @@ export async function vmGetMarketData(_instance, _symbol = '') {
 
 /**
  * @async
+ * @function vmGetMarketDataPrices
+ * @description Retrieves real-time price data for a specific market via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _symbol - Market symbol (e.g., 'BTC_USDT_Perp')
+ * @returns {Promise<Object>} Response with comprehensive price and market data
+ */
+export async function vmGetMarketDataPrices(_instance, _symbol) {
+    try {
+        if (!_symbol) {
+            throw new Error('Symbol is required');
+        }
+
+        const response = await _instance.post('/full/v1/ticker', {
+            instrument: _symbol
+        });
+        
+        if (!response.data || !response.data.result) {
+            return createResponse(false, `Market ${_symbol} not found`, null, 'grvt.getMarketDataPrices');
+        }
+        
+        const ticker = response.data.result;
+        
+        // Convert event_time from nanoseconds to ISO string
+        let eventTime = ticker.event_time;
+        if (eventTime) {
+            const timestamp = parseInt(eventTime);
+            eventTime = new Date(timestamp / 1000000).toISOString();
+        }
+        
+        // Convert next_funding_time from nanoseconds to ISO string
+        let nextFundingTime = ticker.next_funding_time;
+        if (nextFundingTime) {
+            const timestamp = parseInt(nextFundingTime);
+            nextFundingTime = new Date(timestamp / 1000000).toISOString();
+        }
+        
+        return createResponse(
+            true,
+            'success',
+            {
+                instrument: ticker.instrument,
+                eventTime: eventTime,
+                // Prices
+                markPrice: ticker.mark_price,
+                indexPrice: ticker.index_price,
+                lastPrice: ticker.last_price,
+                lastSize: ticker.last_size,
+                midPrice: ticker.mid_price,
+                // Order book
+                bestBidPrice: ticker.best_bid_price,
+                bestBidSize: ticker.best_bid_size,
+                bestAskPrice: ticker.best_ask_price,
+                bestAskSize: ticker.best_ask_size,
+                // Funding rates
+                fundingRate8hCurr: ticker.funding_rate_8h_curr,
+                fundingRate8hAvg: ticker.funding_rate_8h_avg,
+                interestRate: ticker.interest_rate,
+                fundingRate: ticker.funding_rate,
+                nextFundingTime: nextFundingTime,
+                // Forward price
+                forwardPrice: ticker.forward_price,
+                // 24h volumes
+                buyVolume24hBase: ticker.buy_volume_24h_b,
+                sellVolume24hBase: ticker.sell_volume_24h_b,
+                buyVolume24hQuote: ticker.buy_volume_24h_q,
+                sellVolume24hQuote: ticker.sell_volume_24h_q,
+                // 24h price range
+                highPrice24h: ticker.high_price,
+                lowPrice24h: ticker.low_price,
+                openPrice24h: ticker.open_price,
+                // Open interest
+                openInterest: ticker.open_interest,
+                longShortRatio: ticker.long_short_ratio
+            },
+            'grvt.getMarketDataPrices'
+        );
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get market data prices';
+        return createResponse(false, message, null, 'grvt.getMarketDataPrices');
+    }
+}
+
+/**
+ * @async
  * @function vmGetMarketOrderSize
  * @description Retrieves market order size information for a given symbol via HTTP API
  * @param {Object} _instance - HTTP client instance (axios)

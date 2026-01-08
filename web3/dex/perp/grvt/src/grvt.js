@@ -263,6 +263,16 @@ export class Grvt {
     }
 
     /**
+     * Get market data prices (real-time ticker data)
+     * @param {string} symbol - Market symbol
+     * @returns {Promise<Object>} Real-time price data response
+     */
+    async getMarketDataPrices(symbol) {
+        const { vmGetMarketDataPrices } = await import('./view.model.js');
+        return vmGetMarketDataPrices(this.marketDataInstance, symbol);
+    }
+
+    /**
      * Get market order size
      * @param {string} symbol - Market symbol
      * @returns {Promise<Object>} Market order size response
@@ -344,11 +354,12 @@ export class Grvt {
      * @param {string} side - Order side (BUY or SELL)
      * @param {string} marketUnit - Market unit (main or secondary)
      * @param {number|string} orderQty - Order quantity
-     * @returns {Promise<Object>} Order submission response
+     * @param {Function} [onOrderUpdate] - Optional callback for order status updates
+     * @returns {Promise<Object>} Order submission response with WebSocket control
      */
-    async submitOrder(type, symbol, side, marketUnit, orderQty) {
+    async submitOrder(type, symbol, side, marketUnit, orderQty, onOrderUpdate) {
         const { wmSubmitOrder } = await import('./write.model.js');
-        return wmSubmitOrder(this, this.slippage, type, symbol, side, marketUnit, orderQty);
+        return wmSubmitOrder(this, this.slippage, type, symbol, side, marketUnit, orderQty, onOrderUpdate);
     }
     
     /**
