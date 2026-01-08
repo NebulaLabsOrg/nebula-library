@@ -21,6 +21,7 @@ const grvtInstance = new Grvt({
         apiKey: process.env.GRVT_TRADING_API_KEY
     },
     slippage: 0.5,
+    usePython: true, // Enable Python SDK for write operations
 });
 
 /*
@@ -84,6 +85,11 @@ console.log('Calling: grvtInstance.getMarketOpenInterest()');
 const openInterest = await grvtInstance.getMarketOpenInterest(formatPerpMarket('BTC', grvt));
 console.log(openInterest);
 
+console.log('Get open position detail')
+console.log('Calling: grvtInstance.getOpenPositionDetail()');
+const openPositionDetail = await grvtInstance.getOpenPositionDetail(formatPerpMarket('ETH', grvt));
+console.log(openPositionDetail);
+
 console.log('Get open positions')
 console.log('Calling: grvtInstance.getOpenPositions()');
 const openPositions = await grvtInstance.getOpenPositions();
@@ -91,9 +97,21 @@ console.log(openPositions);
 
 */
 
+console.log('Get wallet status');
+console.log('Calling: grvtInstance.getWalletStatus()');
+const walletStatus = await grvtInstance.getWalletStatus();
+console.log(walletStatus);
 
-
-
+console.log('Placing a market order');
+console.log('Calling: grvtInstance.submitOrder()');
+const orderResult = await grvtInstance.submitOrder(
+    grvtEnum.orderType.market,
+    formatPerpMarket('ETH', grvt),
+    grvtEnum.orderSide.long,
+    grvtEnum.marketUnit.quoteOnMainCoin,
+    '0.01' // 0.01 ETH
+);
+console.log(orderResult);
 
 
 

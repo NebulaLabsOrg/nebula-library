@@ -36,13 +36,21 @@ export async function vmGetWalletStatus(_instance, _subAccountId) {
         try {
             const totalEquity = account.total_equity || '0';
             const initialMargin = account.positions[0]?.notional || '0';
-            if (parseFloat(initialMargin) > 0 && parseFloat(totalEquity) > 0) {
-                // Use ethers v6 BigNumber for precise calculation
-                const marginBN = ethers.parseUnits(initialMargin, 18);
-                const equityBN = ethers.parseUnits(totalEquity, 18);
-                // leverage = margin / equity, scaled by 1e18 for precision, then format to 2 decimals
-                const leverageBN = marginBN * ethers.parseUnits('1', 18) / equityBN;
-                leverage = parseFloat(ethers.formatUnits(leverageBN, 18)).toFixed(2);
+            
+            // Use ethers v6 BigNumber for precise calculation
+            const PRECISION = 18;
+            const marginBN = ethers.parseUnits(initialMargin, PRECISION);
+            const equityBN = ethers.parseUnits(totalEquity, PRECISION);
+            
+            // Check if values are greater than zero using BigNumber
+            if (marginBN > 0n && equityBN > 0n) {
+                // leverage = margin / equity, scaled by 1e18 for precision
+                const leverageBN = (marginBN * ethers.parseUnits('1', PRECISION)) / equityBN;
+                const leverageFormatted = ethers.formatUnits(leverageBN, PRECISION);
+                
+                // Round to 2 decimals using BigNumber
+                const leverageRounded = ethers.parseUnits(leverageFormatted, 2);
+                leverage = ethers.formatUnits(leverageRounded, 2);
             }
         } catch (calcError) {
             console.error('Leverage calculation error:', calcError);
@@ -409,22 +417,38 @@ export async function vmGetOpenPositionDetail(_instance, _subAccountId, _symbol)
             return createResponse(false, `No position found for ${_symbol}`, null, 'grvt.getOpenPositionDetail');
         }
         
-        const size = parseFloat(position.size || 0);
+        // Use BigNumber for size check and calculations
+        const PRECISION = 18;
+        const sizeStr = position.size || '0';
+        const sizeBN = ethers.parseUnits(sizeStr, PRECISION);
         
-        if (size === 0) {
+        if (sizeBN === 0n) {
             return createResponse(false, 'Position size is zero', null, 'grvt.getOpenPositionDetail');
+        }
+        
+        // Determine side and calculate absolute qty using BigNumber
+        const isLong = sizeBN > 0n;
+        const absSizeBN = isLong ? sizeBN : -sizeBN;
+        const qty = ethers.formatUnits(absSizeBN, PRECISION);
+        
+        // Calculate qtyUsd if not provided: qty * markPrice
+        let qtyUsd = position.value || '0';
+        if (!position.value && position.mark_price) {
+            const markPriceBN = ethers.parseUnits(position.mark_price, PRECISION);
+            const qtyUsdBN = (absSizeBN * markPriceBN) / ethers.parseUnits('1', PRECISION);
+            qtyUsd = ethers.formatUnits(qtyUsdBN, PRECISION);
         }
         
         const detail = {
             symbol: _symbol,
             avgPrice: position.open_price || position.entry_price || '0',
             markPrice: position.mark_price || '0',
-            liquidationPrice: position.liquidation_price || '0',
-            unrealisedPnl: position.unrealised_pnl || '0',
-            realisedPnl: position.realised_pnl || '0',
-            side: size > 0 ? 'long' : 'short',
-            qty: Math.abs(size),
-            qtyUsd: position.value || (Math.abs(size) * parseFloat(position.mark_price || 0)).toString()
+            liquidationPrice: position.est_liquidation_price || '0',
+            unrealisedPnl: position.unrealized_pnl || '0',
+            realisedPnl: position.realized_pnl || '0',
+            side: isLong ? 'long' : 'short',
+            qty: qty,
+            qtyUsd: qtyUsd
         };
         
         return createResponse(true, 'success', detail, 'grvt.getOpenPositionDetail');
@@ -485,95 +509,5 @@ export async function vmGetOrderStatus(_instance, _orderId) {
     } catch (error) {
         const message = error.response?.data?.error?.message || error.message || 'Failed to get order status';
         return createResponse(false, message, null, 'grvt.getOrderStatus');
-    }
-}
-
-/**
- * @async
- * @function vmGetOrderHistory
- * @description Retrieves order history via Python SDK
- * @param {Object} _extended - Extended instance
- * @param {string} [_symbol=''] - Optional symbol filter
- * @param {number} [_limit=50] - Limit number of orders
- * @returns {Promise<Object>} Response with order history
- */
-export async function vmGetOrderHistory(_extended, _symbol = '', _limit = 50) {
-    try {
-        const params = { limit: _limit };
-        if (_symbol) {
-            params.instrument = _symbol;
-        }
-        
-        const orders = await _extended._sendCommand('get_order_history', params);
-        
-        if (orders.error) {
-            throw new Error(orders.error);
-        }
-        
-        return createResponse(
-            true,
-            'success',
-            {
-                count: orders.length,
-                orders: orders
-            },
-            'grvt.getOrderHistory'
-        );
-    } catch (error) {
-        const message = error.message || 'Failed to get order history';
-        return createResponse(false, message, null, 'grvt.getOrderHistory');
-    }
-}
-
-/**
- * @async
- * @function vmGetAccountInfo
- * @description Retrieves comprehensive account information
- * @param {Object} _extended - Extended instance
- * @returns {Promise<Object>} Response with account details
- */
-export async function vmGetAccountInfo(_extended) {
-    try {
-        const accountInfo = await _extended._sendCommand('get_account_info');
-        
-        if (accountInfo.error) {
-            throw new Error(accountInfo.error);
-        }
-        
-        return createResponse(
-            true,
-            'success',
-            accountInfo,
-            'grvt.getAccountInfo'
-        );
-    } catch (error) {
-        const message = error.message || 'Failed to get account info';
-        return createResponse(false, message, null, 'grvt.getAccountInfo');
-    }
-}
-
-/**
- * @async
- * @function vmGetTransferHistory
- * @description Gets transfer history between funding and trading accounts
- * @param {Object} _extended - Extended instance  
- * @param {number} [_limit=50] - Maximum number of records
- * @param {string} [_cursor=null] - Pagination cursor
- * @returns {Promise<Object>} Response with transfer history
- */
-export async function vmGetTransferHistory(_extended, _limit = 50, _cursor = null) {
-    try {
-        const params = { limit: _limit };
-        if (_cursor) params.cursor = _cursor;
-        
-        const result = await _extended._sendCommand('transfer_history', { params });
-        
-        if (result.error) {
-            throw new Error(result.error);
-        }
-        
-        return createResponse(true, 'success', result, 'grvt.getTransferHistory');
-    } catch (error) {
-        return createResponse(false, error.message, null, 'grvt.getTransferHistory');
     }
 }

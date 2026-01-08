@@ -11,14 +11,15 @@ import json
 import sys
 import time
 import random
+import logging
 from typing import Dict, Any
 
 try:
-    from grvt_pysdk.grvt_raw_sync import GrvtRawSync
-    from grvt_pysdk.grvt_raw_base import GrvtApiConfig, GrvtError
-    from grvt_pysdk.grvt_raw_env import GrvtEnv
-    from grvt_pysdk.grvt_raw_signing import sign_order
-    from grvt_pysdk import grvt_raw_types as types
+    from pysdk.grvt_raw_sync import GrvtRawSync
+    from pysdk.grvt_raw_base import GrvtApiConfig, GrvtError
+    from pysdk.grvt_raw_env import GrvtEnv
+    from pysdk.grvt_raw_signing import sign_order
+    from pysdk import grvt_raw_types as types
 except ImportError as e:
     print(json.dumps({'error': f'Failed to import GRVT SDK: {str(e)}'}), file=sys.stderr)
     sys.exit(1)
@@ -29,12 +30,38 @@ class GrvtService:
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        # Support both account_id and trading_account_id for backward compatibility
+        if 'trading_account_id' in config and 'account_id' not in config:
+            config['account_id'] = config['trading_account_id']
+        # Support both api_key and trading_api_key
+        if 'trading_api_key' in config and 'api_key' not in config:
+            config['api_key'] = config['trading_api_key']
+        # Support both private_key and trading_private_key
+        if 'trading_private_key' in config and 'private_key' not in config:
+            config['private_key'] = config['trading_private_key']
         self.api = None
         self._initialize()
     
     def _initialize(self):
         """Initialize GRVT API"""
         try:
+            # Setup logger
+            logger = logging.getLogger('grvt')
+            logger.setLevel(logging.WARNING)  # Reduce noise
+            handler = logging.StreamHandler(sys.stderr)
+            handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            logger.addHandler(handler)
+            
+            # Map parameters from Node.js naming to service naming
+            # Node.js sends: trading_account_id, trading_private_key, trading_api_key
+            # Service uses: account_id, private_key, api_key
+            self.account_id = self.config.get('trading_account_id') or self.config.get('account_id')
+            self.private_key = self.config.get('trading_private_key') or self.config.get('private_key')
+            self.api_key = self.config.get('trading_api_key') or self.config.get('api_key')
+            
+            if not self.account_id or not self.private_key or not self.api_key:
+                raise Exception('Missing required credentials: account_id, private_key, api_key')
+            
             # Determine environment
             env_str = self.config.get('environment', 'testnet').lower()
             if env_str == 'mainnet':
@@ -47,9 +74,10 @@ class GrvtService:
             # Create API config
             api_config = GrvtApiConfig(
                 env=env,
-                trading_account_id=self.config['account_id'],
-                private_key=self.config['private_key'],
-                api_key=self.config['api_key']
+                trading_account_id=self.account_id,
+                private_key=self.private_key,
+                api_key=self.api_key,
+                logger=logger
             )
             
             # Initialize API
@@ -63,7 +91,7 @@ class GrvtService:
         try:
             resp = self.api.account_summary_v1(
                 types.ApiSubAccountSummaryRequest(
-                    sub_account_id=self.config['account_id']
+                    sub_account_id=self.account_id
                 )
             )
             
@@ -124,7 +152,7 @@ class GrvtService:
         """Get all positions"""
         try:
             resp = self.api.positions_v1(
-                types.ApiPositionsRequest(sub_account_id=self.config['account_id'])
+                types.ApiPositionsRequest(sub_account_id=self.account_id)
             )
             
             if isinstance(resp, GrvtError):
@@ -182,7 +210,7 @@ class GrvtService:
             
             # Build order
             order = types.Order(
-                sub_account_id=self.config['account_id'],
+                sub_account_id=self.account_id,
                 time_in_force=time_in_force,
                 is_market=is_market,
                 post_only=params.get('post_only', False),
@@ -212,8 +240,8 @@ class GrvtService:
             instruments_data = inst_resp.result if hasattr(inst_resp, 'result') else inst_resp
             instruments = {inst.instrument: inst for inst in instruments_data}
             
-            # Sign order
-            signed_order = sign_order(order, self.config, self.api.account, instruments)
+            # Sign order using api.config and api.account (not self.config dict)
+            signed_order = sign_order(order, self.api.config, self.api.account, instruments)
             
             # Submit order
             resp = self.api.create_order_v1(types.ApiCreateOrderRequest(order=signed_order))
@@ -236,7 +264,7 @@ class GrvtService:
         try:
             resp = self.api.cancel_order_v1(
                 types.ApiCancelOrderRequest(
-                    sub_account_id=self.config['account_id'],
+                    sub_account_id=self.account_id,
                     order_id=params['external_id']
                 )
             )
@@ -251,7 +279,7 @@ class GrvtService:
     def cancel_all_orders(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Cancel all orders"""
         try:
-            request_params = {'sub_account_id': self.config['account_id']}
+            request_params = {'sub_account_id': self.account_id}
             
             if params.get('instrument'):
                 request_params['instrument'] = params['instrument']
@@ -280,9 +308,9 @@ class GrvtService:
             
             if direction == 'to_trading':
                 from_sub = '0'  # Funding account
-                to_sub = self.config['account_id']  # Trading account
+                to_sub = self.account_id  # Trading account
             else:  # to_funding
-                from_sub = self.config['account_id']  # Trading account
+                from_sub = self.account_id  # Trading account
                 to_sub = '0'  # Funding account
             
             transfer_request = types.ApiTransferRequest(
@@ -324,7 +352,7 @@ class GrvtService:
         """Get transfer history"""
         try:
             request_params = {
-                'sub_account_id': self.config['account_id']
+                'sub_account_id': self.account_id
             }
             
             if params.get('limit'):
@@ -402,7 +430,7 @@ class GrvtService:
         """Get order history"""
         try:
             request_params = {
-                'sub_account_id': self.config['account_id'],
+                'sub_account_id': self.account_id,
                 'limit': params.get('limit', 50)
             }
             

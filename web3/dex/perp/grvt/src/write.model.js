@@ -1,15 +1,16 @@
 /**
- * GRVT Extended Write Model
+ * GRVT Write Model
  * Following NebulaLabs architecture pattern
  * 
  * Write Layer (wm* functions):
- * - Use Python SDK via _extended._sendCommand()
+ * - Use Python SDK via _grvt._sendCommand()
  * - Call view functions internally for data
  * - Perform BigNumber calculations internally
  * - Embedded WebSocket monitoring for order state
  * - Use spawn/subprocess for isolation when calling Python SDK
  */
 
+import WebSocket from 'ws';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { vmGetMarketData, vmGetOpenPositionDetail } from './view.model.js';
 import { 
@@ -32,7 +33,7 @@ import {
  * @async
  * @function wmSubmitOrder
  * @description Submits order via Python SDK with embedded WebSocket monitoring
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {number} _slippage - Slippage percentage
  * @param {string} _type - Order type (MARKET or LIMIT)
  * @param {string} _symbol - Market symbol
@@ -41,10 +42,10 @@ import {
  * @param {number|string} _orderQty - Order quantity
  * @returns {Promise<Object>} Response with order ID and status after monitoring
  */
-export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
+export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _marketUnit, _orderQty) {
     try {
         // 1. Get market data
-        const marketData = await vmGetMarketData(_extended, _symbol);
+        const marketData = await vmGetMarketData(_grvt.marketDataInstance, _symbol);
         if (!marketData.success) {
             throw new Error(marketData.message);
         }
@@ -63,7 +64,7 @@ export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side,
         
         // 3. Calculate price with BigNumber
         const midPrice = calculateMidPrice(askPrice, bidPrice);
-        const isBuy = _side === extendedEnum.order.long;
+        const isBuy = _side === grvtEnum.orderSide.long;
         const actPrice = _type === grvtEnum.orderType.market
             ? calculateSlippagePrice(midPrice, _slippage, isBuy)
             : midPrice;
@@ -72,7 +73,7 @@ export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side,
         const roundedPrice = roundToTickSize(actPrice, priceStep);
         
         // 4. Format quantity
-        const isQuoteOnSecCoin = _marketUnit === extendedEnum.order.quoteOnSecCoin;
+        const isQuoteOnSecCoin = _marketUnit === grvtEnum.marketUnit.quoteOnSecCoin;
         const qty = formatOrderQuantity(
             _orderQty,
             isQuoteOnSecCoin,
@@ -95,13 +96,16 @@ export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side,
         }
         
         // 6. Prepare order parameters
-        const sdkSide = _side === extendedEnum.order.long ? 'BUY' : 'SELL';
+        const sdkSide = _side === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
         const postOnly = sdkOrderType === 'LIMIT';
         
-        // 7. Submit order via SDK
-        const orderResult = await _extended._sendCommand('place_order', {
+        // 7. SETUP WEBSOCKET MONITORING FIRST (before submitting order)
+        const monitorPromise = _setupOrderMonitor(_grvt, _symbol, ORDER_MONITOR_TIMEOUT_SEC);
+        
+        // 8. Submit order via SDK
+        const orderResult = await _grvt._sendCommand('place_order', {
             market_name: _symbol,
             side: sdkSide,
             amount: qty.toString(),
@@ -116,17 +120,12 @@ export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side,
         }
         
         const orderId = orderResult.external_id || orderResult.order_id;
+        console.log('[GRVT] Order submitted:', orderId);
         
-        // 8. EMBEDDED WEBSOCKET MONITORING
-        // Monitor order state until terminal status
-        const finalState = await _monitorOrderState(
-            _extended,
-            orderId,
-            _symbol,
-            ORDER_MONITOR_TIMEOUT_SEC
-        );
+        // 9. Wait for WebSocket to report final state
+        const finalState = await monitorPromise;
         
-        // 9. Return final state
+        // 10. Return final state
         return createResponse(
             finalState.success !== false,
             finalState.message || 'Order submitted and monitored',
@@ -150,96 +149,173 @@ export async function wmSubmitOrder(_extended, _slippage, _type, _symbol, _side,
 
 /**
  * @async
- * @function _monitorOrderState
- * @description EMBEDDED: Monitor order via WebSocket until terminal state
+ * @function _setupOrderMonitor
+ * @description EMBEDDED: Setup WebSocket and monitor orders BEFORE submission
  * @private
- * @param {Object} _extended - Extended instance
- * @param {string} _orderId - Order ID to monitor
- * @param {string} _symbol - Symbol for filtering
+ * @param {Object} _grvt - Grvt instance (for WebSocket connection)
+ * @param {string} _symbol - Symbol to monitor
  * @param {number} _timeoutSec - Timeout in seconds
  * @returns {Promise<Object>} Final order state
  */
-async function _monitorOrderState(_extended, _orderId, _symbol, _timeoutSec = 120) {
-    return new Promise((resolve) => {
-        let finalState = null;
-        let checkInterval = null;
+async function _setupOrderMonitor(_grvt, _symbol, _timeoutSec = 120) {
+    return new Promise((resolve, reject) => {
+        // Wait for trading authentication
+        if (!_grvt.trading.authenticated || !_grvt.trading.sessionCookie) {
+            return reject(new Error('Trading account not authenticated'));
+        }
+
+        // Get WebSocket URL based on environment
+        const wsUrl = _getWebSocketUrl(_grvt.environment);
         
-        const checkOrderStatus = async () => {
-            try {
-                // Get positions to check order status
-                const positions = await _extended._sendCommand('get_positions');
-                
-                if (positions.error) {
-                    console.error('Error checking positions:', positions.error);
-                    return;
-                }
-                
-                const position = positions.find(p => 
-                    p.market === _symbol || p.instrument === _symbol
-                );
-                
-                if (position && position.last_order_id === _orderId) {
-                    const orderStatus = position.last_order_status;
-                    
-                    // Check if terminal state
-                    const terminalStates = [
-                        grvtEnum.orderState.filled,
-                        grvtEnum.orderState.cancelled,
-                        grvtEnum.orderState.rejected,
-                        grvtEnum.orderState.expired
-                    ];
-                    
-                    if (terminalStates.includes(orderStatus)) {
-                        finalState = {
-                            success: orderStatus === grvtEnum.orderState.filled,
-                            status: orderStatus,
-                            filledQty: position.size || '0',
-                            avgPrice: position.open_price || position.entry_price || '0',
-                            message: `Order ${orderStatus.toLowerCase()}`
-                        };
-                        
-                        clearInterval(checkInterval);
-                        resolve(finalState);
-                    }
-                }
-            } catch (error) {
-                console.error('Error monitoring order:', error);
+        // Create WebSocket with authentication
+        const ws = new WebSocket(wsUrl, {
+            headers: {
+                'Cookie': _grvt.trading.sessionCookie,
+                'X-Grvt-Account-Id': _grvt.trading.accountId
+            }
+        });
+        
+        let timeoutHandle = null;
+        let isResolved = false;
+        
+        const cleanup = () => {
+            if (timeoutHandle) clearTimeout(timeoutHandle);
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.close();
             }
         };
         
-        // Check every ORDER_MONITOR_INTERVAL_MS (500ms)
-        checkInterval = setInterval(checkOrderStatus, ORDER_MONITOR_INTERVAL_MS);
+        const resolveOnce = (state) => {
+            if (isResolved) return;
+            isResolved = true;
+            cleanup();
+            resolve(state);
+        };
         
-        // Timeout after specified seconds
-        setTimeout(() => {
-            clearInterval(checkInterval);
-            if (!finalState) {
-                finalState = {
+        // Terminal states that end monitoring
+        const terminalStates = [
+            grvtEnum.orderState.filled,
+            grvtEnum.orderState.cancelled,
+            grvtEnum.orderState.rejected,
+            grvtEnum.orderState.expired
+        ];
+        
+        ws.on('open', () => {
+            // Subscribe to order state updates using JSONRPC 2.0 format
+            // Selector format: "SUB_ACCOUNT_ID-SYMBOL" (e.g., "6362711632345717-BTC_USDT_Perp")
+            const selector = `${_grvt.trading.accountId}-${_symbol}`;
+            const subscribeMessage = {
+                jsonrpc: '2.0',
+                method: 'subscribe',
+                params: {
+                    stream: 'v1.state',
+                    selectors: [selector]
+                },
+                id: Date.now()
+            };
+            console.log('[GRVT WS] Connected and subscribing to:', selector);
+            ws.send(JSON.stringify(subscribeMessage));
+        });
+        
+        ws.on('message', (data) => {
+            try {
+                const message = JSON.parse(data.toString());
+                console.log('[GRVT WS] Received:', JSON.stringify(message, null, 2));
+                
+                // Check if it's a feed data message (not subscription confirmation)
+                if (message.feed && message.data) {
+                    const orderData = message.data;
+                    console.log(`[GRVT WS] Order update - order_id: ${orderData.order_id}, status: ${orderData.status}`);
+                    
+                    const orderStatus = orderData.status;
+                    
+                    // Check if terminal state reached (any order for this symbol)
+                    if (terminalStates.includes(orderStatus)) {
+                        const filledQty = orderData.filled_quantity || '0';
+                        const avgPrice = orderData.avg_price || '0';
+                        
+                        console.log(`[GRVT WS] Terminal state reached: ${orderStatus}`);
+                        resolveOnce({
+                            success: orderStatus === grvtEnum.orderState.filled,
+                            status: orderStatus,
+                            filledQty: filledQty.toString(),
+                            avgPrice: avgPrice.toString(),
+                            message: `Order ${orderStatus.toLowerCase()}`
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('[GRVT WS] Error parsing message:', error);
+            }
+        });
+        
+        ws.on('error', (error) => {
+            console.error('WebSocket error:', error);
+            if (!isResolved) {
+                resolveOnce({
+                    success: false,
+                    status: 'ERROR',
+                    message: `WebSocket error: ${error.message}`
+                });
+            }
+        });
+        
+        ws.on('close', () => {
+            if (!isResolved) {
+                resolveOnce({
+                    success: false,
+                    status: 'DISCONNECTED',
+                    message: 'WebSocket connection closed unexpectedly'
+                });
+            }
+        });
+        
+        // Set timeout
+        timeoutHandle = setTimeout(() => {
+            if (!isResolved) {
+                resolveOnce({
                     success: false,
                     status: 'TIMEOUT',
                     message: `Order monitoring timeout after ${_timeoutSec}s`
-                };
-                resolve(finalState);
+                });
             }
         }, _timeoutSec * 1000);
     });
 }
 
 /**
+ * Get WebSocket URL based on environment
+ * @private
+ * @param {string} environment - Environment name
+ * @returns {string} WebSocket URL
+ */
+function _getWebSocketUrl(environment) {
+    switch (environment.toLowerCase()) {
+        case 'testnet':
+            return 'wss://trades.dev.gravitymarkets.io/ws/full';
+        case 'staging':
+            return 'wss://trades.staging.gravitymarkets.io/ws/full';
+        case 'mainnet':
+        default:
+            return 'wss://trades.grvt.io/ws/full';
+    }
+}
+
+/**
  * @async
  * @function wmSubmitCancelOrder
  * @description Cancels order via Python SDK
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string} _externalId - Order ID
  * @returns {Promise<Object>} Response with cancel confirmation
  */
-export async function wmSubmitCancelOrder(_extended, _externalId) {
+export async function wmSubmitCancelOrder(_grvt, _externalId) {
     try {
         if (!_externalId) {
             throw new Error('External ID is required');
         }
         
-        const cancelResult = await _extended._sendCommand('cancel_order_by_external_id', {
+        const cancelResult = await _grvt._sendCommand('cancel_order_by_external_id', {
             external_id: _externalId.toString()
         });
         
@@ -267,7 +343,7 @@ export async function wmSubmitCancelOrder(_extended, _externalId) {
  * @async
  * @function wmSubmitCloseOrder
  * @description Closes position via Python SDK with reduce_only
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {number} _slippage - Slippage percentage
  * @param {string} _type - Order type
  * @param {string} _symbol - Market symbol
@@ -276,14 +352,14 @@ export async function wmSubmitCancelOrder(_extended, _externalId) {
  * @param {boolean} _closeAll - Close entire position
  * @returns {Promise<Object>} Response with close confirmation and monitoring
  */
-export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll) {
+export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll) {
     try {
         if (!_symbol) {
             throw new Error('Symbol is required');
         }
         
         // 1. Get position details
-        const positionResponse = await vmGetOpenPositionDetail(_extended, _symbol);
+        const positionResponse = await vmGetOpenPositionDetail(_grvt.instance, _grvt.trading.accountId, _symbol);
         if (!positionResponse.success) {
             throw new Error(positionResponse.message || `No open position found for ${_symbol}`);
         }
@@ -303,10 +379,10 @@ export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _
         }
         
         // 3. Determine opposite side
-        const closeSide = side === 'long' ? extendedEnum.order.short : extendedEnum.order.long;
+        const closeSide = side === 'long' ? grvtEnum.orderSide.short : grvtEnum.orderSide.long;
         
         // 4. Get market data
-        const marketData = await vmGetMarketData(_extended, _symbol);
+        const marketData = await vmGetMarketData(_grvt.marketDataInstance, _symbol);
         if (!marketData.success) {
             throw new Error(marketData.message);
         }
@@ -324,7 +400,7 @@ export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _
         const priceDecimals = countDecimals(priceStep);
         
         const midPrice = calculateMidPrice(askPrice, bidPrice);
-        const isBuy = closeSide === extendedEnum.order.long;
+        const isBuy = closeSide === grvtEnum.orderSide.long;
         const actPrice = _type === grvtEnum.orderType.market
             ? calculateSlippagePrice(midPrice, _slippage, isBuy)
             : midPrice;
@@ -332,7 +408,7 @@ export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _
         const roundedPrice = roundToTickSize(actPrice, priceStep);
         
         // 6. Format quantity
-        const isQuoteOnSecCoin = (_marketUnit === extendedEnum.order.quoteOnSecCoin) && !_closeAll;
+        const isQuoteOnSecCoin = (_marketUnit === grvtEnum.marketUnit.quoteOnSecCoin) && !_closeAll;
         const qty = formatOrderQuantity(
             closeQuantity,
             isQuoteOnSecCoin,
@@ -355,12 +431,12 @@ export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _
         }
         
         // 8. Submit close order
-        const sdkSide = closeSide === extendedEnum.order.long ? 'BUY' : 'SELL';
+        const sdkSide = closeSide === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
         const postOnly = sdkOrderType === 'LIMIT';
         
-        const orderResult = await _extended._sendCommand('place_order', {
+        const orderResult = await _grvt._sendCommand('place_order', {
             market_name: _symbol,
             side: sdkSide,
             amount: qty.toString(),
@@ -379,7 +455,7 @@ export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _
         
         // 9. EMBEDDED WEBSOCKET MONITORING
         const finalState = await _monitorOrderState(
-            _extended,
+            _grvt,
             orderId,
             _symbol,
             ORDER_MONITOR_TIMEOUT_SEC
@@ -408,19 +484,19 @@ export async function wmSubmitCloseOrder(_extended, _slippage, _type, _symbol, _
  * @async
  * @function wmSubmitWithdrawal
  * @description Submits withdrawal via Python SDK
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string} _amount - Withdrawal amount
  * @param {string} [_starkAddress] - Recipient address
  * @returns {Promise<Object>} Response with withdrawal ID
  */
-export async function wmSubmitWithdrawal(_extended, _amount, _starkAddress = null) {
+export async function wmSubmitWithdrawal(_grvt, _amount, _starkAddress = null) {
     try {
         if (!_amount || parseFloat(_amount) <= 0) {
             throw new Error('Amount must be a positive number');
         }
         
         // Check available balance
-        const accountInfo = await _extended._sendCommand('get_account_info');
+        const accountInfo = await _grvt._sendCommand('get_account_info');
         if (accountInfo.error) {
             throw new Error(`Failed to get account info: ${accountInfo.error}`);
         }
@@ -445,7 +521,7 @@ export async function wmSubmitWithdrawal(_extended, _amount, _starkAddress = nul
             withdrawalParams.stark_address = _starkAddress;
         }
         
-        const withdrawalResult = await _extended._sendCommand('withdraw', withdrawalParams);
+        const withdrawalResult = await _grvt._sendCommand('withdraw', withdrawalParams);
         
         if (withdrawalResult.error) {
             throw new Error(withdrawalResult.error);
@@ -472,18 +548,18 @@ export async function wmSubmitWithdrawal(_extended, _amount, _starkAddress = nul
  * @async
  * @function wmCancelAllOrders
  * @description Cancels all open orders via Python SDK
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string} [_symbol] - Optional symbol to cancel orders for specific market
  * @returns {Promise<Object>} Response with cancel confirmation
  */
-export async function wmCancelAllOrders(_extended, _symbol = null) {
+export async function wmCancelAllOrders(_grvt, _symbol = null) {
     try {
         const params = {};
         if (_symbol) {
             params.instrument = _symbol;
         }
         
-        const cancelResult = await _extended._sendCommand('cancel_all_orders', params);
+        const cancelResult = await _grvt._sendCommand('cancel_all_orders', params);
         
         if (cancelResult.error) {
             throw new Error(cancelResult.error);
@@ -511,14 +587,14 @@ export async function wmCancelAllOrders(_extended, _symbol = null) {
  * @async
  * @function wmTransferToTrading
  * @description Transfers funds from Funding account to Trading account
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string|number} _amount - Amount to transfer
  * @param {string} [_currency='USDC'] - Currency to transfer
  * @returns {Promise<Object>} Response with transfer result
  */
-export async function wmTransferToTrading(_extended, _amount, _currency = 'USDC') {
+export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
     try {
-        const result = await _extended._sendCommand('transfer', {
+        const result = await _grvt._sendCommand('transfer', {
             params: {
                 amount: _amount.toString(),
                 currency: _currency,
@@ -540,14 +616,14 @@ export async function wmTransferToTrading(_extended, _amount, _currency = 'USDC'
  * @async
  * @function wmTransferToFunding
  * @description Transfers funds from Trading account to Funding account (required before withdrawal)
- * @param {Object} _extended - Extended instance
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string|number} _amount - Amount to transfer
  * @param {string} [_currency='USDC'] - Currency to transfer
  * @returns {Promise<Object>} Response with transfer result
  */
-export async function wmTransferToFunding(_extended, _amount, _currency = 'USDC') {
+export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
     try {
-        const result = await _extended._sendCommand('transfer', {
+        const result = await _grvt._sendCommand('transfer', {
             params: {
                 amount: _amount.toString(),
                 currency: _currency,

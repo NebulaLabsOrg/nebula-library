@@ -13,11 +13,17 @@ export const grvtEnum = Object.freeze({
     },
     orderSide: {
         buy: 'BUY',
-        sell: 'SELL'
+        sell: 'SELL',
+        long: 'BUY',    // Alias for buy
+        short: 'SELL'   // Alias for sell
     },
     orderType: {
         market: 'MARKET',
         limit: 'LIMIT'
+    },
+    marketUnit: {
+        quoteOnMainCoin: 'main',
+        quoteOnSecCoin: 'secondary'
     },
     timeInForce: {
         ioc: 'IOC',      // Immediate Or Cancel (market orders)

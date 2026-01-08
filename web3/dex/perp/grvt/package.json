@@ -22,6 +22,7 @@
     "dotenv": "^16.0.0"
   },
   "scripts": {
+    "test.pyservice": "cd test && node py-service.test.js",
     "example": "node example/example.complete-flow.js",
     "setup": "sh ./setup.sh"
   }

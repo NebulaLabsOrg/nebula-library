@@ -1,6 +1,5 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { grvtEnum } from './enum.js';
-import { vmGetTransferHistory } from './view.model.js';
 import { 
     wmSubmitOrder,
     wmSubmitCancelOrder,
@@ -83,22 +82,46 @@ export class Grvt {
         this.usePython = config.usePython ?? false; // Default false - most ops use HTTP API
         this.pythonPath = 'python3'; // Default, will be updated in _initPythonService
         
-        // Authentication state
+        // Authentication state for trading account
+        this.trading.sessionCookie = null;
+        this.trading.authenticated = false;
+        this.trading.authPromise = null;
+        
+        // Authentication state for funding account
+        this.funding.sessionCookie = null;
+        this.funding.authenticated = false;
+        this.funding.authPromise = null;
+        
+        // Backward compatibility (uses trading by default)
         this.sessionCookie = null;
         this.accountId = null;
         this.authenticated = false;
-        this.authPromise = null; // Store authentication promise
+        this.authPromise = null;
         
-        // Initialize HTTP instance for Trading API (trades.grvt.io)
-        // Used for: wallet, positions, orders, transfers (requires auth)
         const baseUrl = getBaseUrl(this.environment);
-        this.instance = createInstance(baseUrl, {
+        
+        // Initialize HTTP instance for Trading API with trading account
+        // Used for: positions, orders (requires trading auth)
+        this.tradingInstance = createInstance(baseUrl, {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Origin': baseUrl,
             'Referer': baseUrl + '/'
         });
+        
+        // Initialize HTTP instance for Trading API with funding account
+        // Used for: withdrawals, transfers (requires funding auth)
+        this.fundingInstance = createInstance(baseUrl, {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Origin': baseUrl,
+            'Referer': baseUrl + '/'
+        });
+        
+        // Alias for backward compatibility (uses trading by default)
+        this.instance = this.tradingInstance;
         
         // Initialize HTTP instance for Market Data API (market-data.grvt.io)
         // Used for: instruments, ticker, orderbook, candles (public, no auth)
@@ -110,18 +133,38 @@ export class Grvt {
         
         this.pythonService = null;
         
-        // Start authentication (store promise)
-        this.authPromise = authenticate(
+        // Start authentication for trading account
+        this.trading.authPromise = authenticate(
             this.environment,
             this.trading.apiKey,
             this.trading.accountId,
-            this.instance
+            this.tradingInstance
         ).then(result => {
+            this.trading.sessionCookie = result.sessionCookie;
+            // DON'T overwrite trading.accountId - keep the original numeric sub_account_id from config
+            // result.accountId contains the API key, not the numeric account ID
+            this.trading.authenticated = result.authenticated;
+            // Backward compatibility
             this.sessionCookie = result.sessionCookie;
-            this.accountId = result.accountId;
+            this.accountId = result.accountId; // This may contain API key for legacy code
             this.authenticated = result.authenticated;
+            this.authPromise = null; // Mark as complete
         }).catch(error => {
-            console.error('Failed to authenticate:', error);
+            console.error('Failed to authenticate trading account:', error);
+            throw error;
+        });
+        
+        // Start authentication for funding account
+        this.funding.authPromise = authenticate(
+            this.environment,
+            this.funding.apiKey,
+            null, // Funding doesn't need accountId for auth
+            this.fundingInstance
+        ).then(result => {
+            this.funding.sessionCookie = result.sessionCookie;
+            this.funding.authenticated = result.authenticated;
+        }).catch(error => {
+            console.error('Failed to authenticate funding account:', error);
             throw error;
         });
         
@@ -184,7 +227,10 @@ export class Grvt {
      */
     async getWalletStatus() {
         return this.throttler.enqueue(async () => {
-            await ensureAuthenticated(this);
+            // Wait for trading authentication to complete
+            if (this.trading.authPromise) {
+                await this.trading.authPromise;
+            }
             const { vmGetWalletStatus } = await import('./view.model.js');
             return vmGetWalletStatus(this.instance, this.trading.accountId);
         }, 3);
@@ -195,7 +241,9 @@ export class Grvt {
      * @returns {Promise<Object>} Wallet balance response
      */
     async getWalletBalance() {
-        await ensureAuthenticated(this);
+        if (this.trading.authPromise) {
+            await this.trading.authPromise;
+        }
         const { vmGetWalletBalance } = await import('./view.model.js');
         return vmGetWalletBalance(this.instance);
     }
@@ -245,7 +293,9 @@ export class Grvt {
      * @returns {Promise<Object>} Open positions response
      */
     async getOpenPositions() {
-        await ensureAuthenticated(this);
+        if (this.trading.authPromise) {
+            await this.trading.authPromise;
+        }
         const { vmGetOpenPositions } = await import('./view.model.js');
         return vmGetOpenPositions(this.instance, this.trading.accountId);
     }
@@ -256,7 +306,9 @@ export class Grvt {
      * @returns {Promise<Object>} Position detail response
      */
     async getOpenPositionDetail(symbol) {
-        await ensureAuthenticated(this);
+        if (this.trading.authPromise) {
+            await this.trading.authPromise;
+        }
         const { vmGetOpenPositionDetail } = await import('./view.model.js');
         return vmGetOpenPositionDetail(this.instance, this.trading.accountId, symbol);
     }
@@ -272,27 +324,6 @@ export class Grvt {
         return vmGetOrderStatus(this.instance, orderId);
     }
     
-    /**
-     * Get order history
-     * @param {string} [symbol=''] - Optional symbol filter
-     * @param {number} [limit=50] - Limit number of orders
-     * @returns {Promise<Object>} Order history response
-     */
-    async getOrderHistory(symbol = '', limit = 50) {
-        await ensureAuthenticated(this);
-        const { vmGetOrderHistory } = await import('./view.model.js');
-        return vmGetOrderHistory(this, symbol, limit);
-    }
-    
-    /**
-     * Get account info
-     * @returns {Promise<Object>} Account info response
-     */
-    async getAccountInfo() {
-        await ensureAuthenticated(this);
-        const { vmGetAccountInfo } = await import('./view.model.js');
-        return vmGetAccountInfo(this);
-    }
     
     // =========================
     // WRITE METHODS (SDK CALLS)
