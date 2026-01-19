@@ -200,11 +200,11 @@ class GrvtService:
             is_market = params.get('order_type', 'LIMIT') == 'MARKET'
             time_in_force = types.TimeInForce.IMMEDIATE_OR_CANCEL if is_market else types.TimeInForce.GOOD_TILL_TIME
             
-            # Build order leg
+            # Build order leg - MARKET orders should NOT have limit_price
             order_leg = types.OrderLeg(
                 instrument=params['market_name'],
                 size=params['amount'],
-                limit_price=params['price'],
+                limit_price=params.get('price', '0'),  # Use '0' for MARKET orders
                 is_buying_asset=params['side'] == 'BUY'
             )
             

@@ -1,6 +1,6 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { ethers } from 'ethers';
-import WebSocket from 'ws';
+// WebSocket monitoring rimosso
 
 /**
  * @async
@@ -60,60 +60,6 @@ export async function vmGetWalletStatus(_instance, _subAccountId) {
         
         // Convert updatedTime to readable format (assuming nanosecond timestamp)
         let updatedTime = account.event_time || aggregatedResponse.data.event_time;
-        if (updatedTime) {
-            const timestamp = parseInt(updatedTime);
-            updatedTime = new Date(timestamp / 1000000).toISOString();
-        }
-        
-        return createResponse(
-            true,
-            'success',
-            {
-                equity: aggregated.total_equity || '0',
-                vault: aggregated.total_vault_investments_balance || '0',
-                leverage: leverage,
-                updatedTime: updatedTime
-            },
-            'grvt.getWalletStatus'
-        );
-    } catch (error) {
-        const message = error.response?.data?.error?.message || error.message || 'Failed to get wallet status';
-        return createResponse(false, message, null, 'grvt.getWalletStatus');
-    }
-}
-
-/**
- * @async
- * @function vmGetWalletBalance
- * @description Retrieves aggregated account summary via HTTP API
- * @param {Object} _instance - HTTP client instance (axios)
- * @returns {Promise<Object>} Response with available balance, PnL
- */
-export async function vmGetWalletBalance(_instance) {
-    try {
-        const response = await _instance.post('/full/v1/aggregated_account_summary', {});
-        
-        const data = response.data;
-        
-        if (!data || !data.result) {
-            throw new Error('Invalid response from API');
-        }
-        
-        const result = data.result;
-
-        // Calculate available for withdrawal using BigNumber: total_equity - total_sub_account_equity
-        let availableForWithdrawal = '0';
-        try {
-            const totalEquity = result.total_equity || '0';
-            const totalSubAccountEquity = result.total_sub_account_equity || '0';
-            const equityBN = ethers.parseUnits(totalEquity, 18);
-            const subEquityBN = ethers.parseUnits(totalSubAccountEquity, 18);
-            const withdrawalBN = equityBN - subEquityBN;
-            availableForWithdrawal = ethers.formatUnits(withdrawalBN, 18);
-        } catch (calcError) {
-            console.error('Available for withdrawal calculation error:', calcError);
-            availableForWithdrawal = '0';
-        }
         
         return createResponse(
             true,
@@ -546,175 +492,45 @@ export async function vmGetOpenPositionDetail(_instance, _subAccountId, _symbol)
 /**
  * @async
  * @function vmGetOrderStatus
- * @description Subscribes to real-time order updates via WebSocket
- * @param {Object} _grvtInstance - Grvt instance with authentication and config
+ * @description Retrieves the current status of an order via HTTP API
+ * @param {Object} _grvtInstance - Grvt instance with HTTP client (should have .instance and .trading.accountId)
  * @param {string} _symbol - Market symbol (e.g., 'BTC_USDT_Perp')
- * @param {Function} _onOrderUpdate - Callback function for order updates
- * @returns {Promise<Object>} Response with WebSocket connection and unsubscribe function
+ * @param {string} _orderId - Order ID to check
+ * @returns {Promise<Object>} Response with order status
  */
-export async function vmGetOrderStatus(_grvtInstance, _symbol, _onOrderUpdate) {
-    return new Promise((resolve, reject) => {
-        try {
-            if (!_grvtInstance.trading?.sessionCookie) {
-                return reject(createResponse(false, 'Not authenticated', null, 'grvt.getOrderStatus'));
-            }
-            if (!_symbol) {
-                return reject(createResponse(false, 'Symbol is required', null, 'grvt.getOrderStatus'));
-            }
-
-            const headers = {
-                'Cookie': _grvtInstance.trading.sessionCookie,
-                'X-Grvt-Account-Id': _grvtInstance.trading.apiKey
-            };
-
-            const ws = new WebSocket(_grvtInstance.wsUrl, { headers });
-            const selector = `${_grvtInstance.trading.accountId}-${_symbol}`;
-            let subscribed = false;
-
-            ws.on('open', () => {
-                // Send subscription message
-                const subscribeMessage = {
-                    jsonrpc: '2.0',
-                    method: 'subscribe',
-                    params: {
-                        stream: 'v1.order',
-                        selectors: [selector]
-                    },
-                    id: 123
-                };
-
-                ws.send(JSON.stringify(subscribeMessage));
-            });
-
-            ws.on('message', (data) => {
-                try {
-                    const message = JSON.parse(data.toString());
-
-                    // Handle subscription confirmation
-                    if (message.id === 123 && message.result !== undefined) {
-                        subscribed = true;
-                        
-                        // Return WebSocket control functions
-                        resolve(createResponse(
-                            true,
-                            'Subscribed to order updates',
-                            {
-                                selector,
-                                unsubscribe: () => {
-                                    return new Promise((resolveUnsub, rejectUnsub) => {
-                                        const unsubscribeMessage = {
-                                            jsonrpc: '2.0',
-                                            method: 'unsubscribe',
-                                            params: {
-                                                stream: 'v1.order',
-                                                selectors: [selector]
-                                            },
-                                            id: 124
-                                        };
-                                        
-                                        ws.send(JSON.stringify(unsubscribeMessage), (error) => {
-                                            if (error) {
-                                                rejectUnsub(error);
-                                            } else {
-                                                ws.close();
-                                                resolveUnsub();
-                                            }
-                                        });
-                                    });
-                                },
-                                close: () => ws.close(),
-                                isConnected: () => ws.readyState === WebSocket.OPEN
-                            },
-                            'grvt.getOrderStatus'
-                        ));
-                    }
-
-                    // Handle order updates
-                    if (message.stream === 'v1.order' && message.feed) {
-                        const feed = message.feed;
-                        const leg = feed.legs?.[0] || {};
-
-                        const orderUpdate = {
-                            stream: message.stream,
-                            selector: message.selector,
-                            sequenceNumber: message.sequence_number,
-                            order: {
-                                orderId: feed.order_id,
-                                subAccountId: feed.sub_account_id,
-                                symbol: leg.instrument,
-                                side: leg.is_buying_asset ? 'BUY' : 'SELL',
-                                size: leg.size,
-                                limitPrice: leg.limit_price,
-                                isMarket: feed.is_market,
-                                timeInForce: feed.time_in_force,
-                                postOnly: feed.post_only,
-                                reduceOnly: feed.reduce_only,
-                                status: feed.state?.status,
-                                rejectReason: feed.state?.reject_reason,
-                                bookSize: feed.state?.book_size?.[0],
-                                tradedSize: feed.state?.traded_size?.[0],
-                                avgFillPrice: feed.state?.avg_fill_price?.[0],
-                                updateTime: feed.state?.update_time,
-                                clientOrderId: feed.metadata?.client_order_id,
-                                createTime: feed.metadata?.create_time,
-                                trigger: feed.metadata?.trigger,
-                                broker: feed.metadata?.broker,
-                                signature: feed.signature,
-                                builder: feed.builder,
-                                builderFee: feed.builder_fee
-                            }
-                        };
-
-                        if (_onOrderUpdate) {
-                            _onOrderUpdate(orderUpdate);
-                        }
-                        
-                        // Close WebSocket if order reaches a final state
-                        const finalStates = ['FILLED', 'REJECTED', 'CANCELLED'];
-                        if (finalStates.includes(feed.state?.status)) {
-                            setTimeout(() => ws.close(), 100); // Small delay to ensure callback completes
-                        }
-                    }
-
-                    // Handle errors
-                    if (message.error) {
-                        reject(createResponse(
-                            false,
-                            `WebSocket error: ${JSON.stringify(message.error)}`,
-                            null,
-                            'grvt.getOrderStatus'
-                        ));
-                        ws.close();
-                    }
-                } catch (error) {
-                    console.error('Failed to parse WebSocket message:', error);
-                }
-            });
-
-            ws.on('error', (error) => {
-                if (!subscribed) {
-                    reject(createResponse(
-                        false,
-                        `WebSocket connection error: ${error.message}`,
-                        null,
-                        'grvt.getOrderStatus'
-                    ));
-                }
-            });
-
-            ws.on('close', () => {
-                if (!subscribed) {
-                    reject(createResponse(
-                        false,
-                        'WebSocket closed before subscription',
-                        null,
-                        'grvt.getOrderStatus'
-                    ));
-                }
-            });
-
-        } catch (error) {
-            reject(createResponse(false, error.message, null, 'grvt.getOrderStatus'));
+export async function vmGetOrderStatus(_grvtInstance, _symbol, _orderId) {
+    try {
+        if (!_grvtInstance?.instance || !_grvtInstance?.trading?.accountId) {
+            throw new Error('Not authenticated');
         }
-    });
+        if (!_symbol) {
+            throw new Error('Symbol is required');
+        }
+        if (!_orderId) {
+            throw new Error('Order ID is required');
+        }
+
+        // Call the API to get all orders for the symbol
+        const response = await _grvtInstance.instance.post('/full/v1/orders', {
+            sub_account_id: _grvtInstance.trading.accountId,
+            instrument: _symbol
+        });
+
+        if (!response.data || !response.data.result) {
+            throw new Error('Invalid response from orders API');
+        }
+
+        // Find the order by orderId
+        const orders = response.data.result;
+        const order = orders.find(o => o.order_id === _orderId || o.external_id === _orderId);
+
+        if (!order) {
+            return createResponse(false, `Order ${_orderId} not found for ${_symbol}`, null, 'grvt.getOrderStatus');
+        }
+
+        return createResponse(true, 'success', order, 'grvt.getOrderStatus');
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get order status';
+        return createResponse(false, message, null, 'grvt.getOrderStatus');
+    }
 }

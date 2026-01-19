@@ -99,18 +99,28 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
         const sdkSide = _side === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
-        const postOnly = sdkOrderType === 'LIMIT';
         
-        // 7. Submit order via SDK
-        const orderResult = await _grvt._sendCommand('place_order', {
+        // 7. Build order parameters - MARKET orders must NOT include price
+        const orderParams = {
             market_name: _symbol,
             side: sdkSide,
             amount: qty.toString(),
-            price: roundedPrice.toString(),
             order_type: sdkOrderType,
-            time_in_force: timeInForce,
-            post_only: postOnly
-        });
+            time_in_force: timeInForce
+        };
+        
+        // Only add price and post_only for LIMIT orders
+        if (sdkOrderType === 'LIMIT') {
+            orderParams.price = roundedPrice.toString();
+            orderParams.post_only = true;
+        }
+        
+        console.log('[GRVT] Order params:', JSON.stringify(orderParams, null, 2));
+        
+        // 8. Submit order via SDK
+        const orderResult = await _grvt._sendCommand('place_order', orderParams);
+
+        console.log('[GRVT] Order Result:', orderResult);
         
         if (orderResult.error) {
             throw new Error(orderResult.error);
@@ -118,17 +128,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
         
         const orderId = orderResult.external_id || orderResult.order_id;
         
-        // 8. Setup WebSocket monitoring if callback provided
-        let wsSubscription = null;
-            try {
-                // Import and setup WebSocket monitoring
-                const { vmGetOrderStatus } = await import('./view.model.js');
-                wsSubscription = await vmGetOrderStatus(_grvt, _symbol, _onOrderUpdate);
-            } catch (wsError) {
-                console.error('Failed to setup WebSocket monitoring:', wsError);
-                // Continue without monitoring - don't fail the entire order
-            }
-        // 9. Return order submission result with WebSocket control
+        // 8. Return order submission result (WS monitoring removed)
         return createResponse(
             true,
             'success',
@@ -138,14 +138,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                 qty: qty,
                 price: roundedPrice,
                 side: _side,
-                type: _type,
-                // Include WebSocket control functions if monitoring is active
-                ...(wsSubscription && {
-                    selector: wsSubscription.data?.selector,
-                    unsubscribe: wsSubscription.data?.unsubscribe,
-                    close: wsSubscription.data?.close,
-                    isConnected: wsSubscription.data?.isConnected
-                })
+                type: _type
             },
             'grvt.submitOrder'
         );
@@ -290,22 +283,29 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             throw new Error(validation.message);
         }
         
-        // 9. Submit close order
+        // 9. Prepare close order parameters
         const sdkSide = closeSide === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
-        const postOnly = sdkOrderType === 'LIMIT';
         
-        const orderResult = await _grvt._sendCommand('place_order', {
+        // Build order parameters - MARKET orders must NOT include price
+        const orderParams = {
             market_name: _symbol,
             side: sdkSide,
             amount: qty.toString(),
-            price: roundedPrice.toString(),
             order_type: sdkOrderType,
             time_in_force: timeInForce,
-            post_only: postOnly,
             reduce_only: true
-        });
+        };
+        
+        // Only add price and post_only for LIMIT orders
+        if (sdkOrderType === 'LIMIT') {
+            orderParams.price = roundedPrice.toString();
+            orderParams.post_only = true;
+        }
+        
+        // 10. Submit close order
+        const orderResult = await _grvt._sendCommand('place_order', orderParams);
         
         if (orderResult.error) {
             throw new Error(orderResult.error);

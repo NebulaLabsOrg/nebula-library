@@ -1,3 +1,4 @@
+// File rimosso: non più necessario dopo la rimozione della parte WebSocket
 import { Grvt, grvtEnum } from '../index.js';
 import { formatPerpMarket } from '../../../../../utils/src/perp.utils.js';
 import 'dotenv/config';
