@@ -23,6 +23,7 @@
   },
   "scripts": {
     "test.pyservice": "cd test && node py-service.test.js",
+    "test.mock": "node test/order-monitoring.mock.test.js",
     "example": "node example/example.complete-flow.js",
     "setup": "sh ./setup.sh"
   }

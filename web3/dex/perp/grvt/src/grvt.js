@@ -354,54 +354,41 @@ export class Grvt {
      * @param {string} marketUnit - Market unit (main or secondary)
      * @param {number|string} orderQty - Order quantity
      * @param {Function} [onOrderUpdate] - Optional callback for order status updates
-     * @returns {Promise<Object>} Order submission response with WebSocket control
+     * @param {number} [retry=0] - Number of retry attempts if order is REJECTED
+     * @param {number} [timeout=60000] - Maximum timeout in milliseconds (resets when qtyExe changes)
+     * @returns {Promise<Object>} Order submission response with monitoring
      */
-    async submitOrder(type, symbol, side, marketUnit, orderQty, onOrderUpdate) {
+    async submitOrder(type, symbol, side, marketUnit, orderQty, onOrderUpdate, retry = 0, timeout = 60000) {
         const { wmSubmitOrder } = await import('./write.model.js');
-        return wmSubmitOrder(this, this.slippage, type, symbol, side, marketUnit, orderQty, onOrderUpdate);
+        return wmSubmitOrder(this, this.slippage, type, symbol, side, marketUnit, orderQty, onOrderUpdate, retry, timeout);
     }
     
     /**
      * Submit cancel order
      * @param {string} externalId - Order ID to cancel
+     * @param {number} [retry=0] - Number of retry attempts if cancel fails
      * @returns {Promise<Object>} Cancel confirmation response
      */
-    async submitCancelOrder(externalId) {
+    async submitCancelOrder(externalId, retry = 0) {
         const { wmSubmitCancelOrder } = await import('./write.model.js');
-        return wmSubmitCancelOrder(this, externalId);
+        return wmSubmitCancelOrder(this, externalId, retry);
     }
     
     /**
-     * Submit close order
+     * Submit close order with automatic monitoring
      * @param {string} type - Order type
      * @param {string} symbol - Market symbol
      * @param {string} marketUnit - Market unit
      * @param {number} orderQty - Quantity
      * @param {boolean} [closeAll=false] - Close entire position
-     * @returns {Promise<Object>} Close order response
+     * @param {Function} [onOrderUpdate=null] - Optional callback for order status updates
+     * @param {number} [retry=0] - Number of retry attempts if order is REJECTED
+     * @param {number} [timeout=60000] - Maximum timeout in milliseconds (resets when qtyExe changes)
+     * @returns {Promise<Object>} Close order response with final status
      */
-    async submitCloseOrder(type, symbol, marketUnit, orderQty, closeAll = false) {
+    async submitCloseOrder(type, symbol, marketUnit, orderQty, closeAll = false, onOrderUpdate = null, retry = 0, timeout = 60000) {
         const { wmSubmitCloseOrder } = await import('./write.model.js');
-        return wmSubmitCloseOrder(this, this.slippage, type, symbol, marketUnit, orderQty, closeAll);
-    }
-    
-    /**
-     * Submit withdrawal
-     * @param {string} amount - Withdrawal amount
-     * @param {string} [starkAddress=null] - Recipient address
-     * @returns {Promise<Object>} Withdrawal response
-     */
-    async submitWithdrawal(amount, starkAddress = null) {
-        return wmSubmitWithdrawal(this, amount, 'USDC', 'STRK', starkAddress);
-    }
-    
-    /**
-     * Cancel all orders
-     * @param {string} [symbol=null] - Optional symbol to cancel orders for specific market
-     * @returns {Promise<Object>} Cancel all response
-     */
-    async cancelAllOrders(symbol = null) {
-        return wmCancelAllOrders(this, symbol);
+        return wmSubmitCloseOrder(this, this.slippage, type, symbol, marketUnit, orderQty, closeAll, onOrderUpdate, retry, timeout);
     }
     
     /**
@@ -422,15 +409,5 @@ export class Grvt {
      */
     async transferToFunding(amount, currency = 'USDC') {
         return wmTransferToFunding(this, amount, currency);
-    }
-    
-    /**
-     * Get transfer history
-     * @param {number} [limit=50] - Max records
-     * @param {string} [cursor=null] - Pagination cursor
-     * @returns {Promise<Object>} Transfer history response
-     */
-    async getTransferHistory(limit = 50, cursor = null) {
-        return vmGetTransferHistory(this, limit, cursor);
     }
 }

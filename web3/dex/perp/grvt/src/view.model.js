@@ -106,7 +106,7 @@ export async function vmGetWalletBalance(_instance) {
         const response = await _instance.post('/full/v1/aggregated_account_summary', {});
         
         const data = response.data;
-        
+
         if (!data || !data.result) {
             throw new Error('Invalid response from API');
         }

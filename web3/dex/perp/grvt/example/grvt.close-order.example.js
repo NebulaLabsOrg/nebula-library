@@ -1,9 +1,8 @@
-// File rimosso: non più necessario dopo la rimozione della parte WebSocket
 import { Grvt, grvtEnum } from '../index.js';
 import { formatPerpMarket } from '../../../../../utils/src/perp.utils.js';
 import 'dotenv/config';
 
-// GRVT Example - Basic Usage
+// GRVT Example - Close Order Test
 // Testnet API rate limit: 1500 requests per minute
 // For enum reference: https://api-docs.grvt.io/
 
@@ -25,11 +24,28 @@ const grvtInstance = new Grvt({
     usePython: true, // Enable Python SDK for write operations
 });
 
-console.log('Get order status');
-console.log('Calling: grvtInstance.getOrderStatus()');
-const orderStatus = await grvtInstance.getOrderStatus(formatPerpMarket('ETH', grvt));
-console.log(orderStatus);
+console.log('Submit close order (with monitoring)');
+console.log('Calling: grvtInstance.submitCloseOrder()');
+// Callback to log order updates
+const onOrderUpdate = (orderData) => {
+    console.log('Order update received:', {
+        status: orderData.status,
+        qtyExe: orderData.qtyExe,
+        avgPrice: orderData.avgPrice,
+        timestamp: new Date().toISOString()
+    });
+};
+const closeResult = await grvtInstance.submitCloseOrder(
+    grvtEnum.orderType.limit,
+    formatPerpMarket('ETH', grvt),
+    grvtEnum.marketUnit.quoteOnMainCoin,
+    0,
+    true, // closeAll
+    onOrderUpdate,
+    2, // retry
+    120000 // timeout
+);
+console.log(closeResult);
 
-
-// Cleanup: close the Extended instance to prevent memory leaks
+// Cleanup: close the instance to prevent memory leaks
 await grvtInstance.close();

@@ -1,22 +1,24 @@
+import { randomUUID } from 'crypto';
+import { ethers } from 'ethers';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail } from './view.model.js';
-import { 
-    formatOrderQuantity, 
-    countDecimals, 
+import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetOrderStatusById } from './view.model.js';
+import {
+    formatOrderQuantity,
+    countDecimals,
     calculateSlippagePrice,
     validateOrderParams,
     roundToTickSize
 } from './utils.js';
 import { grvtEnum } from './enum.js';
-import { 
-    MARKET_TIME_IN_FORCE, 
+import {
+    MARKET_TIME_IN_FORCE,
     LIMIT_TIME_IN_FORCE
 } from './constant.js';
 
 /**
  * @async
  * @function wmSubmitOrder
- * @description Submits order via Python SDK with WebSocket monitoring
+ * @description Submits order via Python SDK with automatic monitoring and retry logic
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {number} _slippage - Slippage percentage
  * @param {string} _type - Order type (MARKET or LIMIT)
@@ -25,37 +27,39 @@ import {
  * @param {string} _marketUnit - Market unit (main or secondary)
  * @param {number|string} _orderQty - Order quantity
  * @param {Function} [_onOrderUpdate] - Optional callback for order status updates
- * @returns {Promise<Object>} Response with order ID and WebSocket control functions
+ * @param {number} [_retry=0] - Number of retry attempts if order is REJECTED
+ * @param {number} [_timeout=60000] - Maximum timeout in milliseconds (resets when qtyExe changes)
+ * @returns {Promise<Object>} Response with order ID and final status
  */
-export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _marketUnit, _orderQty, _onOrderUpdate) {
+export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _marketUnit, _orderQty, _onOrderUpdate, _retry = 0, _timeout = 60000) {
     try {
         // 1. Get market prices
         const pricesResponse = await vmGetMarketDataPrices(_grvt.marketDataInstance, _symbol);
         if (!pricesResponse.success) {
             throw new Error(pricesResponse.message);
         }
-        
+
         const prices = pricesResponse.data;
         const midPrice = parseFloat(prices.midPrice);
-        
+
         // 2. Get market order size configuration
         const orderSizeResponse = await vmGetMarketOrderSize(_grvt.marketDataInstance, _symbol);
         if (!orderSizeResponse.success) {
             throw new Error(orderSizeResponse.message);
         }
-        
+
         const orderSizeConfig = orderSizeResponse.data;
         const qtyStep = parseFloat(orderSizeConfig.mainCoin.qtyStep);
         const minQty = parseFloat(orderSizeConfig.mainCoin.minQty);
         const priceDecimals = orderSizeConfig.priceDecimals;
-        
+
         // Calculate price step from priceDecimals
         const priceStep = parseFloat('0.' + '0'.repeat(priceDecimals - 1) + '1');
-        
+
         // 3. Calculate order price
         const isBuy = _side === grvtEnum.orderSide.long;
         let actPrice;
-        
+
         if (_type === grvtEnum.orderType.market) {
             actPrice = calculateSlippagePrice(midPrice, _slippage, isBuy);
         } else {
@@ -63,7 +67,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             const bidPrice = parseFloat(prices.bestBidPrice || 0);
             const askPrice = parseFloat(prices.bestAskPrice || 0);
             const spread = askPrice - bidPrice;
-            
+
             if (isBuy) {
                 // LONG: use BID if BID=ASK or spread > priceStep, otherwise midPrice
                 if (bidPrice === askPrice || spread > priceStep) {
@@ -80,10 +84,11 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                 }
             }
         }
-        
+
+
         // Round to tick size
         const roundedPrice = roundToTickSize(actPrice, priceStep);
-        
+
         // 4. Format quantity
         const isQuoteOnSecCoin = _marketUnit === grvtEnum.marketUnit.quoteOnSecCoin;
         const qty = formatOrderQuantity(
@@ -92,7 +97,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             actPrice,
             qtyStep
         );
-        
+
         // 5. Validate order parameters
         const validation = validateOrderParams({
             symbol: _symbol,
@@ -102,16 +107,16 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             price: roundedPrice,
             minQty: minQty
         });
-        
+
         if (!validation.success) {
             throw new Error(validation.message);
         }
-        
+
         // 6. Prepare order parameters
         const sdkSide = _side === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
-        
+
         // 7. Build order parameters - MARKET orders must NOT include price
         const orderParams = {
             market_name: _symbol,
@@ -120,28 +125,214 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             order_type: sdkOrderType,
             time_in_force: timeInForce
         };
-        
+
         // Only add price and post_only for LIMIT orders
         if (sdkOrderType === 'LIMIT') {
             orderParams.price = roundedPrice.toString();
             orderParams.post_only = true;
         }
-        
+
         // 8. Submit order via SDK
         const orderResult = await _grvt._sendCommand('place_order', orderParams);
-        
+
         if (orderResult.error) {
             throw new Error(orderResult.error);
         }
-        
+
         // Use the order_id returned by GRVT as externalId
         const externalId = orderResult.order_id || orderResult.client_order_id;
-        
+
         if (!externalId) {
             throw new Error('No order_id returned from GRVT');
         }
-        
-        // 9. Return order submission result
+
+        // 9. If retry/timeout logic is enabled, monitor the order
+        if (_retry > 0 || (_onOrderUpdate && typeof _onOrderUpdate === 'function')) {
+            let attemptCount = 0;
+            let currentOrderId = externalId;
+            let lastQtyExe = '0.0';
+            let lastStatus = null;
+            let lastAvgPrice = '0.0';
+            let timeoutTimestamp = Date.now() + _timeout;
+
+            while (attemptCount <= _retry) {
+                try {
+                    // Wait a bit before checking status (give server time to process)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    // Get order status
+                    const statusResponse = await vmGetOrderStatusById(_grvt.instance, _grvt.trading.accountId, currentOrderId);
+
+                    if (!statusResponse.success) {
+                        // If we can't get status, break the loop
+                        break;
+                    }
+
+                    const orderStatus = statusResponse.data;
+                    const currentStatus = orderStatus.status;
+                    const currentQtyExe = orderStatus.qtyExe || '0.0';
+                    const currentAvgPrice = orderStatus.avgPrice || '0.0';
+
+                    // Check if data has changed
+                    const dataChanged =
+                        currentStatus !== lastStatus ||
+                        currentQtyExe !== lastQtyExe ||
+                        currentAvgPrice !== lastAvgPrice;
+
+                    // Call callback if provided and data changed
+                    if (_onOrderUpdate && typeof _onOrderUpdate === 'function' && dataChanged) {
+                        _onOrderUpdate({
+                            symbol: _symbol,
+                            externalId: currentOrderId,
+                            orderId: currentOrderId,
+                            status: currentStatus,
+                            ...orderStatus
+                        });
+
+                        // Update last known values
+                        lastStatus = currentStatus;
+                        lastAvgPrice = currentAvgPrice;
+                    }
+
+                    // Check if qtyExe changed - reset timeout
+                    if (currentQtyExe !== lastQtyExe && parseFloat(currentQtyExe) > 0) {
+                        lastQtyExe = currentQtyExe;
+                        timeoutTimestamp = Date.now() + _timeout;
+                    }
+
+                    // Check for final states
+                    if (currentStatus === 'FILLED' || currentStatus === 'CANCELLED' || currentStatus === 'EXPIRED') {
+                        return createResponse(
+                            true,
+                            `Order ${currentStatus.toLowerCase()}`,
+                            {
+                                symbol: _symbol,
+                                externalId: currentOrderId,
+                                orderId: currentOrderId,
+                                qty: qty,
+                                price: roundedPrice,
+                                side: _side,
+                                type: _type,
+                                finalStatus: currentStatus,
+                                ...orderStatus
+                            },
+                            'grvt.submitOrder'
+                        );
+                    }
+
+                    // Check for REJECTED state
+                    if (currentStatus === 'REJECTED') {
+                        if (attemptCount < _retry) {
+                            attemptCount++;
+
+                            // Cancel the rejected order first with retry
+                            try {
+                                await wmSubmitCancelOrder(_grvt, currentOrderId, 2);
+                            } catch (cancelError) {
+                                // Ignore cancel errors for rejected orders
+                            }
+
+                            // Wait a bit before retrying
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+
+                            // Retry placing the order
+                            const retryOrderResult = await _grvt._sendCommand('place_order', orderParams);
+
+                            if (retryOrderResult.error) {
+                                throw new Error(retryOrderResult.error);
+                            }
+
+                            currentOrderId = retryOrderResult.order_id || retryOrderResult.client_order_id;
+
+                            if (!currentOrderId) {
+                                throw new Error('No order_id returned from retry');
+                            }
+
+                            // Reset timeout for new order
+                            timeoutTimestamp = Date.now() + _timeout;
+                            lastQtyExe = '0.0';
+
+                            continue;
+                        } else {
+                            // Max retries reached, return with REJECTED status
+                            return createResponse(
+                                false,
+                                'Order rejected after maximum retry attempts',
+                                {
+                                    symbol: _symbol,
+                                    externalId: currentOrderId,
+                                    orderId: currentOrderId,
+                                    qty: qty,
+                                    price: roundedPrice,
+                                    side: _side,
+                                    type: _type,
+                                    finalStatus: 'REJECTED',
+                                    attempts: attemptCount,
+                                    ...orderStatus
+                                },
+                                'grvt.submitOrder'
+                            );
+                        }
+                    }
+
+                    // Check timeout
+                    if (Date.now() > timeoutTimestamp) {
+                        // Timeout exceeded - cancel order automatically with retry
+                        await wmSubmitCancelOrder(_grvt, currentOrderId, 2);
+
+                        // Get final status after cancel
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const finalStatusResponse = await vmGetOrderStatusById(_grvt.instance, _grvt.trading.accountId, currentOrderId);
+
+                        const finalStatus = finalStatusResponse.success ? finalStatusResponse.data : {};
+
+                        return createResponse(
+                            true,
+                            'Order cancelled due to timeout',
+                            {
+                                symbol: _symbol,
+                                externalId: currentOrderId,
+                                orderId: currentOrderId,
+                                qty: qty,
+                                price: roundedPrice,
+                                side: _side,
+                                type: _type,
+                                finalStatus: 'TIMEOUT_CANCELLED',
+                                ...finalStatus
+                            },
+                            'grvt.submitOrder'
+                        );
+                    }
+
+                    // Continue monitoring (wait before next check)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                } catch (monitorError) {
+                    // If monitoring fails, break the loop
+                    console.error('Error during order monitoring:', monitorError.message);
+                    break;
+                }
+            }
+
+            // If we exit the loop (max retries or error), return current state
+            return createResponse(
+                true,
+                'Order monitoring completed',
+                {
+                    symbol: _symbol,
+                    externalId: currentOrderId,
+                    orderId: currentOrderId,
+                    qty: qty,
+                    price: roundedPrice,
+                    side: _side,
+                    type: _type,
+                    attempts: attemptCount
+                },
+                'grvt.submitOrder'
+            );
+        }
+
+        // 10. Return order submission result (no monitoring)
         return createResponse(
             true,
             'success',
@@ -156,7 +347,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             },
             'grvt.submitOrder'
         );
-        
+
     } catch (error) {
         const message = error.response?.data?.error?.message || error.message || 'Failed to submit order';
         return createResponse(false, message, null, 'grvt.submitOrder');
@@ -166,46 +357,61 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
 /**
  * @async
  * @function wmSubmitCancelOrder
- * @description Cancels order via Python SDK using external_id
+ * @description Cancels order via Python SDK using external_id with automatic retry
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string} _externalId - External order ID to cancel
+ * @param {number} [_retry=0] - Number of retry attempts if cancel fails
  * @returns {Promise<Object>} Response with cancel confirmation
  */
-export async function wmSubmitCancelOrder(_grvt, _externalId) {
-    try {
-        if (!_externalId) {
-            throw new Error('External ID is required');
-        }
-        
-        const cancelParams = {
-            external_id: _externalId.toString()
-        };
-        
-        const cancelResult = await _grvt._sendCommand('cancel_order_by_external_id', cancelParams);
-        
-        if (cancelResult.error) {
-            throw new Error(cancelResult.error);
-        }
-        
-        return createResponse(
-            true,
-            'success',
-            { 
-                externalId: _externalId,
-            },
-            'grvt.submitCancelOrder'
-        );
-        
-    } catch (error) {
-        const message = error.response?.data?.error?.message || error.message || 'Failed to cancel order';
-        return createResponse(false, message, null, 'grvt.submitCancelOrder');
+export async function wmSubmitCancelOrder(_grvt, _externalId, _retry = 0) {
+    if (!_externalId) {
+        return createResponse(false, 'External ID is required', null, 'grvt.submitCancelOrder');
     }
+
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= _retry; attempt++) {
+        try {
+            const cancelParams = {
+                external_id: _externalId.toString()
+            };
+
+            const cancelResult = await _grvt._sendCommand('cancel_order_by_external_id', cancelParams);
+
+            if (cancelResult.error) {
+                throw new Error(cancelResult.error);
+            }
+
+            return createResponse(
+                true,
+                'success',
+                {
+                    externalId: _externalId,
+                    attempts: attempt + 1
+                },
+                'grvt.submitCancelOrder'
+            );
+
+        } catch (error) {
+            lastError = error;
+
+            // If this is not the last attempt, wait before retrying
+            if (attempt < _retry) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                continue;
+            }
+        }
+    }
+
+    // All attempts failed
+    const message = lastError?.response?.data?.error?.message || lastError?.message || 'Failed to cancel order';
+    return createResponse(false, message, { externalId: _externalId, attempts: _retry + 1 }, 'grvt.submitCancelOrder');
 }
 
 /**
  * @async
  * @function wmSubmitCloseOrder
- * @description Closes position via Python SDK with reduce_only
+ * @description Closes position via Python SDK with reduce_only and automatic monitoring
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {number} _slippage - Slippage percentage
  * @param {string} _type - Order type
@@ -213,64 +419,79 @@ export async function wmSubmitCancelOrder(_grvt, _externalId) {
  * @param {string} _marketUnit - Market unit
  * @param {number} _orderQty - Quantity
  * @param {boolean} _closeAll - Close entire position
- * @returns {Promise<Object>} Response with close confirmation
+ * @param {Function} [_onOrderUpdate] - Optional callback for order status updates
+ * @param {number} [_retry=0] - Number of retry attempts if order is REJECTED
+ * @param {number} [_timeout=60000] - Maximum timeout in milliseconds (resets when qtyExe changes)
+ * @returns {Promise<Object>} Response with close confirmation and final status
  */
-export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll) {
+export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _marketUnit, _orderQty, _closeAll, _onOrderUpdate, _retry = 0, _timeout = 60000) {
     try {
         if (!_symbol) {
             throw new Error('Symbol is required');
         }
-        
-        // 1. Get position details
+
+        // Wait for authentication if needed
+        if (_grvt.trading && _grvt.trading.authPromise) {
+            await _grvt.trading.authPromise;
+        }
+
+        let closeSide;
+        let closeQuantity;
+        let positionSize = '0';
+        let positionSide = null;
+
         const positionResponse = await vmGetOpenPositionDetail(_grvt.instance, _grvt.trading.accountId, _symbol);
         if (!positionResponse.success) {
             throw new Error(positionResponse.message || `No open position found for ${_symbol}`);
         }
-        
+
         const positionDetail = positionResponse.data;
-        const { side, qty: positionQty } = positionDetail;
-        
-        if (!positionQty || positionQty === 0) {
-            throw new Error('Position size is zero');
+        positionSide = positionDetail.side;
+        positionSize = positionDetail.qty;
+
+        if (!positionSide || !positionSize || parseFloat(positionSize) === 0) {
+            throw new Error('Position size is zero or position not found');
         }
-        
-        // 2. Determine close quantity
-        const closeQuantity = _closeAll ? positionQty : _orderQty;
-        
-        if (closeQuantity <= 0) {
-            throw new Error('Close quantity must be greater than zero');
+
+        // 2. Determine close quantity and opposite side
+        if (_closeAll) {
+            closeQuantity = parseFloat(positionSize);
+        } else {
+            if (!_orderQty || _orderQty <= 0) {
+                throw new Error('Order quantity must be greater than zero when closeAll=false');
+            }
+            closeQuantity = _orderQty;
         }
-        
-        // 3. Determine opposite side
-        const closeSide = side === 'long' ? grvtEnum.orderSide.short : grvtEnum.orderSide.long;
-        
-        // 4. Get market prices
+
+        closeSide = positionSide === 'long' ? grvtEnum.orderSide.short : grvtEnum.orderSide.long;
+
+        // 2. Get market prices
         const pricesResponse = await vmGetMarketDataPrices(_grvt.marketDataInstance, _symbol);
         if (!pricesResponse.success) {
             throw new Error(pricesResponse.message);
         }
-        
+
         const prices = pricesResponse.data;
         const midPrice = parseFloat(prices.midPrice);
-        
-        // 5. Get market order size configuration
+
+        // 3. Get market order size configuration
         const orderSizeResponse = await vmGetMarketOrderSize(_grvt.marketDataInstance, _symbol);
         if (!orderSizeResponse.success) {
             throw new Error(orderSizeResponse.message);
         }
-        
+
         const orderSizeConfig = orderSizeResponse.data;
         const qtyStep = parseFloat(orderSizeConfig.mainCoin.qtyStep);
         const minQty = parseFloat(orderSizeConfig.mainCoin.minQty);
         const priceDecimals = orderSizeConfig.priceDecimals;
-        
+
         // Calculate price step from priceDecimals
         const priceStep = parseFloat('0.' + '0'.repeat(priceDecimals - 1) + '1');
-        
-        // 6. Calculate order price
+
+        // 4. Calculate order price
         const isBuy = closeSide === grvtEnum.orderSide.long;
         let actPrice;
-        
+
         if (_type === grvtEnum.orderType.market) {
             actPrice = calculateSlippagePrice(midPrice, _slippage, isBuy);
         } else {
@@ -278,7 +499,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             const bidPrice = parseFloat(prices.bestBidPrice || 0);
             const askPrice = parseFloat(prices.bestAskPrice || 0);
             const spread = askPrice - bidPrice;
-            
+
             if (isBuy) {
                 // LONG: use BID if BID=ASK or spread > priceStep, otherwise midPrice
                 if (bidPrice === askPrice || spread > priceStep) {
@@ -295,10 +516,10 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                 }
             }
         }
-        
+
         const roundedPrice = roundToTickSize(actPrice, priceStep);
-        
-        // 7. Format quantity
+
+        // 5. Format quantity
         const isQuoteOnSecCoin = (_marketUnit === grvtEnum.marketUnit.quoteOnSecCoin) && !_closeAll;
         const qty = formatOrderQuantity(
             closeQuantity,
@@ -306,8 +527,8 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             actPrice,
             qtyStep
         );
-        
-        // 8. Validate
+
+        // 6. Validate
         const validation = validateOrderParams({
             symbol: _symbol,
             side: closeSide,
@@ -316,19 +537,16 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             price: roundedPrice,
             minQty: minQty
         });
-        
+
         if (!validation.success) {
             throw new Error(validation.message);
         }
-        
-        // 9. Prepare close order parameters
+
+        // 7. Prepare close order parameters
         const sdkSide = closeSide === grvtEnum.orderSide.long ? 'BUY' : 'SELL';
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
-        
-        // Generate unique external_id for tracking
-        const externalId = randomUUID();
-        
+
         // Build order parameters - MARKET orders must NOT include price
         const orderParams = {
             market_name: _symbol,
@@ -336,23 +554,210 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             amount: qty.toString(),
             order_type: sdkOrderType,
             time_in_force: timeInForce,
-            reduce_only: true,
-            external_id: externalId
+            reduce_only: true
         };
-        
+
         // Only add price and post_only for LIMIT orders
         if (sdkOrderType === 'LIMIT') {
             orderParams.price = roundedPrice.toString();
             orderParams.post_only = true;
         }
-        
-        // 10. Submit close order
+
+        // 8. Submit close order
         const orderResult = await _grvt._sendCommand('place_order', orderParams);
-        
+
         if (orderResult.error) {
             throw new Error(orderResult.error);
         }
-        
+
+        // Use the order_id returned by GRVT as externalId
+        const externalId = orderResult.order_id || orderResult.client_order_id;
+
+        if (!externalId) {
+            throw new Error('No order_id returned from GRVT');
+        }
+
+        // 9. If retry/timeout logic is enabled, monitor the order
+        if (_retry > 0 || (_onOrderUpdate && typeof _onOrderUpdate === 'function')) {
+            let attemptCount = 0;
+            let currentOrderId = externalId;
+            let lastQtyExe = '0.0';
+            let lastStatus = null;
+            let lastAvgPrice = '0.0';
+            let timeoutTimestamp = Date.now() + _timeout;
+
+            while (attemptCount <= _retry) {
+                try {
+                    // Wait a bit before checking status (give server time to process)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    // Get order status
+                    const statusResponse = await vmGetOrderStatusById(_grvt.instance, _grvt.trading.accountId, currentOrderId);
+
+                    if (!statusResponse.success) {
+                        throw new Error(statusResponse.message || 'Failed to get order status');
+                    }
+
+                    const orderStatus = statusResponse.data;
+                    const currentStatus = orderStatus.status;
+                    const currentQtyExe = orderStatus.qtyExe || '0.0';
+                    const currentAvgPrice = orderStatus.avgPrice || '0.0';
+
+                    // Check if data has changed
+                    const dataChanged =
+                        currentStatus !== lastStatus ||
+                        currentQtyExe !== lastQtyExe ||
+                        currentAvgPrice !== lastAvgPrice;
+
+                    // Call callback if provided and data changed
+                    if (_onOrderUpdate && typeof _onOrderUpdate === 'function' && dataChanged) {
+                        _onOrderUpdate({
+                            symbol: _symbol,
+                            externalId: currentOrderId,
+                            orderId: currentOrderId,
+                            status: currentStatus,
+                            ...orderStatus
+                        });
+
+                        // Update last known values
+                        lastStatus = currentStatus;
+                        lastAvgPrice = currentAvgPrice;
+                    }
+
+                    // Check if qtyExe changed - reset timeout
+                    if (currentQtyExe !== lastQtyExe && parseFloat(currentQtyExe) > 0) {
+                        lastQtyExe = currentQtyExe;
+                        timeoutTimestamp = Date.now() + _timeout;
+                    }
+
+                    // Check for final states
+                    if (currentStatus === 'FILLED' || currentStatus === 'CANCELLED' || currentStatus === 'EXPIRED') {
+                        return createResponse(
+                            true,
+                            `Close order ${currentStatus.toLowerCase()}`,
+                            {
+                                symbol: _symbol,
+                                externalId: currentOrderId,
+                                orderId: currentOrderId,
+                                closedQty: qty,
+                                price: roundedPrice,
+                                finalStatus: currentStatus,
+                                ...orderStatus
+                            },
+                            'grvt.submitCloseOrder'
+                        );
+                    }
+
+                    // Check for REJECTED state
+                    if (currentStatus === 'REJECTED') {
+                        if (attemptCount < _retry) {
+                            attemptCount++;
+
+                            // Cancel the rejected order with retry
+                            await wmSubmitCancelOrder(_grvt, currentOrderId, 2);
+
+                            // Re-submit the close order with same parameters (always reduce_only)
+                            const retryOrderParams = {
+                                market_name: _symbol,
+                                side: sdkSide,
+                                amount: qty.toString(),
+                                order_type: sdkOrderType,
+                                time_in_force: timeInForce,
+                                reduce_only: true,
+                                external_id: randomUUID()
+                            };
+
+                            // Only add price and post_only for LIMIT orders
+                            if (sdkOrderType === 'LIMIT') {
+                                retryOrderParams.price = roundedPrice.toString();
+                                retryOrderParams.post_only = true;
+                            }
+
+                            const retryResult = await _grvt._sendCommand('place_order', retryOrderParams);
+                            currentOrderId = retryResult.order_id || retryResult.client_order_id;
+
+                            if (!currentOrderId) {
+                                throw new Error('No order_id returned from retry attempt');
+                            }
+
+                            // Reset timeout for new order
+                            timeoutTimestamp = Date.now() + _timeout;
+                            lastQtyExe = '0.0';
+
+                            continue;
+                        } else {
+                            // Max retries reached, return with REJECTED status
+                            return createResponse(
+                                false,
+                                'Close order rejected after maximum retry attempts',
+                                {
+                                    symbol: _symbol,
+                                    externalId: currentOrderId,
+                                    orderId: currentOrderId,
+                                    closedQty: qty,
+                                    price: roundedPrice,
+                                    finalStatus: 'REJECTED',
+                                    attempts: attemptCount,
+                                    ...orderStatus
+                                },
+                                'grvt.submitCloseOrder'
+                            );
+                        }
+                    }
+
+                    // Check timeout
+                    if (Date.now() > timeoutTimestamp) {
+                        // Timeout exceeded - cancel order automatically with retry
+                        await wmSubmitCancelOrder(_grvt, currentOrderId, 2);
+
+                        // Get final status after cancel
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const finalStatusResponse = await vmGetOrderStatusById(_grvt.instance, _grvt.trading.accountId, currentOrderId);
+
+                        const finalStatus = finalStatusResponse.success ? finalStatusResponse.data : {};
+
+                        return createResponse(
+                            true,
+                            'Close order cancelled due to timeout',
+                            {
+                                symbol: _symbol,
+                                externalId: currentOrderId,
+                                orderId: currentOrderId,
+                                closedQty: qty,
+                                price: roundedPrice,
+                                finalStatus: 'TIMEOUT_CANCELLED',
+                                ...finalStatus
+                            },
+                            'grvt.submitCloseOrder'
+                        );
+                    }
+
+                    // Continue monitoring (wait before next check)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                } catch (monitorError) {
+                    // If monitoring fails, break the loop
+                    console.error('Error during close order monitoring:', monitorError.message);
+                    break;
+                }
+            }
+
+            // If we exit the loop (max retries or error), return current state
+            return createResponse(
+                true,
+                'Close order monitoring completed',
+                {
+                    symbol: _symbol,
+                    externalId: currentOrderId,
+                    orderId: currentOrderId,
+                    closedQty: qty,
+                    price: roundedPrice,
+                    attempts: attemptCount
+                },
+                'grvt.submitCloseOrder'
+            );
+        }
+
         return createResponse(
             true,
             'Close order submitted successfully',
@@ -365,115 +770,14 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             },
             'grvt.submitCloseOrder'
         );
-        
+
     } catch (error) {
         const message = error.response?.data?.error?.message || error.message || 'Failed to submit close order';
         return createResponse(false, message, null, 'grvt.submitCloseOrder');
     }
 }
 
-/**
- * @async
- * @function wmSubmitWithdrawal
- * @description Submits withdrawal via Python SDK
- * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string} _amount - Withdrawal amount
- * @param {string} [_starkAddress] - Recipient address
- * @returns {Promise<Object>} Response with withdrawal ID
- */
-export async function wmSubmitWithdrawal(_grvt, _amount, _starkAddress = null) {
-    try {
-        if (!_amount || parseFloat(_amount) <= 0) {
-            throw new Error('Amount must be a positive number');
-        }
-        
-        // Check available balance
-        const accountInfo = await _grvt._sendCommand('get_account_info');
-        if (accountInfo.error) {
-            throw new Error(`Failed to get account info: ${accountInfo.error}`);
-        }
-        
-        const availableForWithdrawal = parseFloat(accountInfo.available_for_withdrawal || 0);
-        const withdrawalAmount = parseFloat(_amount);
-        
-        if (withdrawalAmount > availableForWithdrawal) {
-            throw new Error(
-                `Insufficient balance for withdrawal. Available: ${availableForWithdrawal}, Requested: ${withdrawalAmount}`
-            );
-        }
-        
-        // Submit withdrawal
-        const withdrawalParams = {
-            amount: _amount.toString(),
-            currency: 'USDC',
-            chain_id: 'STRK'
-        };
-        
-        if (_starkAddress) {
-            withdrawalParams.stark_address = _starkAddress;
-        }
-        
-        const withdrawalResult = await _grvt._sendCommand('withdraw', withdrawalParams);
-        
-        if (withdrawalResult.error) {
-            throw new Error(withdrawalResult.error);
-        }
-        
-        return createResponse(
-            true,
-            'Withdrawal submitted successfully',
-            {
-                withdrawalId: withdrawalResult.withdrawal_id,
-                amount: _amount,
-                status: 'PENDING'
-            },
-            'grvt.submitWithdrawal'
-        );
-        
-    } catch (error) {
-        const message = error.response?.data?.error?.message || error.message || 'Failed to submit withdrawal';
-        return createResponse(false, message, null, 'grvt.submitWithdrawal');
-    }
-}
 
-/**
- * @async
- * @function wmCancelAllOrders
- * @description Cancels all open orders via Python SDK
- * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string} [_symbol] - Optional symbol to cancel orders for specific market
- * @returns {Promise<Object>} Response with cancel confirmation
- */
-export async function wmCancelAllOrders(_grvt, _symbol = null) {
-    try {
-        const params = {};
-        if (_symbol) {
-            params.instrument = _symbol;
-        }
-        
-        const cancelResult = await _grvt._sendCommand('cancel_all_orders', params);
-        
-        if (cancelResult.error) {
-            throw new Error(cancelResult.error);
-        }
-        
-        return createResponse(
-            true,
-            _symbol 
-                ? `All orders cancelled for ${_symbol}` 
-                : 'All orders cancelled',
-            {
-                symbol: _symbol,
-                cancelledCount: cancelResult.cancelled_count || 0
-            },
-            'grvt.cancelAllOrders'
-        );
-        
-    } catch (error) {
-        const message = error.message || 'Failed to cancel all orders';
-        return createResponse(false, message, null, 'grvt.cancelAllOrders');
-    }
-}
 
 /**
  * @async
@@ -493,11 +797,11 @@ export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
                 direction: 'to_trading'
             }
         });
-        
+
         if (result.error) {
             throw new Error(result.error);
         }
-        
+
         return createResponse(true, 'Funds transferred to trading account', result, 'grvt.transferToTrading');
     } catch (error) {
         return createResponse(false, error.message, null, 'grvt.transferToTrading');
@@ -522,11 +826,11 @@ export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
                 direction: 'to_funding'
             }
         });
-        
+
         if (result.error) {
             throw new Error(result.error);
         }
-        
+
         return createResponse(true, 'Funds transferred to funding account', result, 'grvt.transferToFunding');
     } catch (error) {
         return createResponse(false, error.message, null, 'grvt.transferToFunding');

@@ -102,47 +102,10 @@ console.log('Calling: grvtInstance.getWalletStatus()');
 const walletStatus = await grvtInstance.getWalletStatus();
 console.log(walletStatus);
 
-console.log('Placing a market order');
-console.log('Calling: grvtInstance.submitOrder()');
-const orderResult = await grvtInstance.submitOrder(
-    grvtEnum.orderType.limit,
-    formatPerpMarket('ETH', grvt),
-    grvtEnum.orderSide.long,
-    grvtEnum.marketUnit.quoteOnMainCoin,
-    '0.01' // 0.01 ETH
-);
-console.log(orderResult);
-
-// Get order status by client order ID
-if (orderResult.success && orderResult.data.externalId) {
-    console.log('Get order status by ID');
-    console.log('Calling: grvtInstance.getOrderStatusById()');
-    
-    // Wait a moment for order to be processed
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const orderStatus = await grvtInstance.getOrderStatusById(orderResult.data.externalId);
-    console.log(orderStatus);
-}
-
-console.log('Cancel order');
-console.log('Calling: grvtInstance.submitCancelOrder()');
-const cancelResult = await grvtInstance.submitCancelOrder(
-    orderResult.data.externalId
-);
-console.log(cancelResult);
-
-// Get order status by client order ID
-if (orderResult.success && orderResult.data.externalId) {
-    console.log('Get order status by ID');
-    console.log('Calling: grvtInstance.getOrderStatusById()');
-    
-    // Wait a moment for order to be processed
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const orderStatus = await grvtInstance.getOrderStatusById(orderResult.data.externalId);
-    console.log(orderStatus);
-}
+console.log('Get wallet balance');
+console.log('Calling: grvtInstance.getWalletBalance()');
+const walletBalance = await grvtInstance.getWalletBalance();
+console.log(walletBalance);
 
 // Cleanup: close the Extended instance to prevent memory leaks
 await grvtInstance.close();
