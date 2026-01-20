@@ -1,10 +1,8 @@
 import { randomUUID } from 'crypto';
-import { ethers } from 'ethers';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetOrderStatusById } from './view.model.js';
 import {
     formatOrderQuantity,
-    countDecimals,
     calculateSlippagePrice,
     validateOrderParams,
     roundToTickSize
@@ -760,7 +758,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
 
         return createResponse(
             true,
-            'Close order submitted successfully',
+            'success',
             {
                 symbol: _symbol,
                 orderId: externalId,
@@ -790,12 +788,27 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
  */
 export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
     try {
+        // Wait for Python service to initialize (max 5 seconds)
+        for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!_grvt.pythonService) {
+            throw new Error('Python service failed to initialize');
+        }
+        
         const result = await _grvt._sendCommand('transfer', {
-            params: {
-                amount: _amount.toString(),
-                currency: _currency,
-                direction: 'to_trading'
-            }
+            amount: _amount.toString(),
+            currency: _currency,
+            direction: 'to_trading',
+            funding_address: _grvt.funding.address,
+            funding_private_key: _grvt.funding.privateKey,
+            funding_api_key: _grvt.funding.apiKey,
+            trading_address: _grvt.trading.address,
+            trading_account_id: _grvt.trading.accountId,
+            trading_private_key: _grvt.trading.privateKey,
+            trading_api_key: _grvt.trading.apiKey,
+            environment: _grvt.environment
         });
 
         if (result.error) {
@@ -819,12 +832,27 @@ export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
  */
 export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
     try {
+        // Wait for Python service to initialize (max 5 seconds)
+        for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!_grvt.pythonService) {
+            throw new Error('Python service failed to initialize');
+        }
+        
         const result = await _grvt._sendCommand('transfer', {
-            params: {
-                amount: _amount.toString(),
-                currency: _currency,
-                direction: 'to_funding'
-            }
+            amount: _amount.toString(),
+            currency: _currency,
+            direction: 'to_funding',
+            funding_address: _grvt.funding.address,
+            funding_private_key: _grvt.funding.privateKey,
+            funding_api_key: _grvt.funding.apiKey,
+            trading_address: _grvt.trading.address,
+            trading_account_id: _grvt.trading.accountId,
+            trading_private_key: _grvt.trading.privateKey,
+            trading_api_key: _grvt.trading.apiKey,
+            environment: _grvt.environment
         });
 
         if (result.error) {
@@ -834,5 +862,88 @@ export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
         return createResponse(true, 'Funds transferred to funding account', result, 'grvt.transferToFunding');
     } catch (error) {
         return createResponse(false, error.message, null, 'grvt.transferToFunding');
+    }
+}
+/**
+ * @async
+ * @function wmVaultInvest
+ * @description Invests funds in a vault with automatic EIP712 signing
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
+ * @param {string} _vaultId - Vault ID to invest in
+ * @param {string|number} _amount - Amount to invest
+ * @param {string} [_currency='USDT'] - Currency to invest
+ * @returns {Promise<Object>} Response with investment result
+ */
+export async function wmVaultInvest(_grvt, _vaultId, _amount, _currency = 'USDT') {
+    try {
+        // Wait for Python service to initialize (max 5 seconds)
+        for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!_grvt.pythonService) {
+            throw new Error('Python service failed to initialize');
+        }
+        
+        const result = await _grvt._sendCommand('vault_invest', {
+            vault_id: _vaultId,
+            amount: _amount.toString(),
+            currency: _currency,
+            funding_address: _grvt.funding.address,
+            funding_private_key: _grvt.funding.privateKey,
+            funding_api_key: _grvt.funding.apiKey,
+            trading_account_id: _grvt.trading.accountId,
+            environment: _grvt.environment
+        });
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return createResponse(true, 'Successfully invested in vault', result, 'grvt.vaultInvest');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'grvt.vaultInvest');
+    }
+}
+
+/**
+ * @async
+ * @function wmVaultRedeem
+ * @description Redeems LP tokens from a vault with automatic EIP712 signing
+ * @param {Object} _grvt - Grvt instance (for Python SDK access)
+ * @param {string} _vaultId - Vault ID to redeem from
+ * @param {string|number} _amount - Amount of LP tokens to redeem
+ * @param {string} [_currency='USDT'] - Currency of the vault
+ * @returns {Promise<Object>} Response with redemption result
+ */
+export async function wmVaultRedeem(_grvt, _vaultId, _amount, _currency = 'USDT') {
+    try {
+        // Wait for Python service to initialize (max 5 seconds)
+        for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!_grvt.pythonService) {
+            throw new Error('Python service failed to initialize');
+        }
+        
+        const result = await _grvt._sendCommand('vault_redeem', {
+            vault_id: _vaultId,
+            amount: _amount.toString(),
+            currency: _currency,
+            funding_address: _grvt.funding.address,
+            funding_private_key: _grvt.funding.privateKey,
+            funding_api_key: _grvt.funding.apiKey,
+            trading_account_id: _grvt.trading.accountId,
+            environment: _grvt.environment
+        });
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        return createResponse(true, 'Successfully redeemed from vault', result, 'grvt.vaultRedeem');
+    } catch (error) {
+        return createResponse(false, error.message, null, 'grvt.vaultRedeem');
     }
 }

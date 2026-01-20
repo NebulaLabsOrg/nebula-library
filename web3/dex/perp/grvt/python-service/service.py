@@ -18,8 +18,10 @@ try:
     from pysdk.grvt_raw_sync import GrvtRawSync
     from pysdk.grvt_raw_base import GrvtApiConfig, GrvtError
     from pysdk.grvt_raw_env import GrvtEnv
-    from pysdk.grvt_raw_signing import sign_order
+    from pysdk.grvt_raw_signing import sign_order, sign_transfer
     from pysdk import grvt_raw_types as types
+    from pysdk import grvt_fixed_types as fixed_types
+    from eth_account import Account
 except ImportError as e:
     print(json.dumps({'error': f'Failed to import GRVT SDK: {str(e)}'}), file=sys.stderr)
     sys.exit(1)
@@ -58,22 +60,28 @@ class GrvtService:
             self.account_id = self.config.get('trading_account_id') or self.config.get('account_id')
             self.private_key = self.config.get('trading_private_key') or self.config.get('private_key')
             self.api_key = self.config.get('trading_api_key') or self.config.get('api_key')
+            self.funding_address = self.config.get('funding_address')
+            self.funding_private_key = self.config.get('funding_private_key')
+            self.funding_api_key = self.config.get('funding_api_key')
             
             if not self.account_id or not self.private_key or not self.api_key:
                 raise Exception('Missing required credentials: account_id, private_key, api_key')
             
+            # Create eth_account for signing transfers (use funding private key)
+            self.account = Account.from_key(self.funding_private_key or self.private_key)
+            
             # Determine environment
             env_str = self.config.get('environment', 'testnet').lower()
             if env_str == 'mainnet':
-                env = GrvtEnv.PROD
+                self.env = GrvtEnv.PROD
             elif env_str == 'staging':
-                env = GrvtEnv.STAGING
+                self.env = GrvtEnv.STAGING
             else:
-                env = GrvtEnv.TESTNET
+                self.env = GrvtEnv.TESTNET
             
             # Create API config
             api_config = GrvtApiConfig(
-                env=env,
+                env=self.env,
                 trading_account_id=self.account_id,
                 private_key=self.private_key,
                 api_key=self.api_key,
@@ -330,34 +338,77 @@ class GrvtService:
         try:
             # Determine direction: to_trading or to_funding
             direction = params.get('direction', 'to_trading')
+            amount = str(params['amount'])
+            currency = params.get('currency', 'USDC')
+            
+            # Get currency ID (3 for USDT, 4 for USDC)
+            currency_id = 4 if currency == 'USDC' else 3  # USDT = 3, USDC = 4
+            
+            # IMPORTANT: from_account_id and to_account_id are ALWAYS the same (funding address)
+            # We transfer between sub-accounts using sub_account_id
+            funding_address = self.funding_address or self.config.get('trading_address')
             
             if direction == 'to_trading':
-                from_sub = '0'  # Funding account
-                to_sub = self.account_id  # Trading account
+                from_sub = '0'  # Funding account (main)
+                to_sub = str(self.account_id)  # Trading account (sub)
             else:  # to_funding
-                from_sub = self.account_id  # Trading account
-                to_sub = '0'  # Funding account
+                from_sub = str(self.account_id)  # Trading account (sub)
+                to_sub = '0'  # Funding account (main)
             
-            transfer_request = types.ApiTransferRequest(
-                from_account_id=self.config.get('funding_address', self.config.get('trading_address')),
+            # Generate unique nonce and expiration
+            nonce = random.randint(0, 2**32 - 1)
+            expiration = str(int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000)  # 20 days
+            
+            # Create transfer object (following official SDK pattern)
+            transfer = fixed_types.Transfer(
+                from_account_id=funding_address,
                 from_sub_account_id=from_sub,
-                to_account_id=self.config.get('trading_address'),
+                to_account_id=funding_address,  # SAME as from_account_id!
                 to_sub_account_id=to_sub,
-                currency=params.get('currency', 'USDC'),
-                num_tokens=params['amount'],
+                currency=currency,
+                num_tokens=amount,
                 signature=types.Signature(
                     signer='',
                     r='',
                     s='',
                     v=0,
-                    expiration='',
-                    nonce=0
+                    expiration=expiration,
+                    nonce=nonce
                 ),
                 transfer_type=types.TransferType.STANDARD,
                 transfer_metadata=''
             )
             
-            resp = self.api.transfer_v1(transfer_request)
+            # Sign the transfer with funding private key
+            # IMPORTANT: Use funding API key for transfer authorization
+            api_config = GrvtApiConfig(
+                env=self.env,
+                trading_account_id=self.account_id,
+                private_key=self.funding_private_key or self.private_key,
+                api_key=self.funding_api_key or self.api_key,  # Use funding API key!
+                logger=logging.getLogger('grvt')
+            )
+            
+            signed_transfer = sign_transfer(transfer, api_config, self.account, currencyId=currency_id)
+            
+            # Create API instance with funding credentials for executing transfer
+            funding_api = GrvtRawSync(config=api_config)
+            
+            # Create API request
+            transfer_request = types.ApiTransferRequest(
+                from_account_id=signed_transfer.from_account_id,
+                from_sub_account_id=signed_transfer.from_sub_account_id,
+                to_account_id=signed_transfer.to_account_id,
+                to_sub_account_id=signed_transfer.to_sub_account_id,
+                currency=signed_transfer.currency,
+                num_tokens=signed_transfer.num_tokens,
+                signature=signed_transfer.signature,
+                transfer_type=signed_transfer.transfer_type,
+                transfer_metadata=signed_transfer.transfer_metadata
+            )
+            
+            # Execute transfer using funding API instance
+            resp = funding_api.transfer_v1(transfer_request)
             
             if isinstance(resp, GrvtError):
                 return {'error': str(resp)}
@@ -367,8 +418,10 @@ class GrvtService:
             return {
                 'success': True,
                 'tx_id': result.tx_id if hasattr(result, 'tx_id') else '',
+                'ack': result.ack if hasattr(result, 'ack') else True,
                 'direction': direction,
-                'amount': params['amount']
+                'amount': amount,
+                'currency': currency
             }
         except Exception as e:
             return {'error': str(e)}
@@ -472,6 +525,205 @@ class GrvtService:
             orders = resp.result if hasattr(resp, 'result') else resp
             
             return orders if isinstance(orders, list) else []
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def vault_invest(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Invest in a vault with automatic EIP712 signing"""
+        try:
+            from eth_account.messages import encode_typed_data
+            
+            # Extract parameters
+            vault_id = params['vault_id']
+            amount = str(params['amount'])
+            currency = params.get('currency', 'USDC')
+            funding_address = self.funding_address or self.config.get('trading_address')
+            
+            # Get currency ID (3 for USDT, 4 for USDC)
+            currency_id = 4 if currency == 'USDC' else 3
+            
+            # Generate unique nonce and expiration (20 days)
+            nonce = random.randint(0, 2**32 - 1)
+            expiration_ns = int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000
+            
+            # Build EIP712 message data for vault invest
+            # Following the pattern of transfer but with vault-specific fields
+            message_data = {
+                "mainAccountID": funding_address,
+                "vaultID": int(vault_id),
+                "tokenCurrency": currency_id,
+                "numTokens": int(float(amount) * 1_000_000),  # Convert to micro units (6 decimals)
+                "nonce": nonce,
+                "expiration": expiration_ns
+            }
+            
+            # Define EIP712 domain
+            chain_id = 326 if self.env == GrvtEnv.TESTNET else 1  # 326 for testnet, 1 for mainnet
+            domain_data = {
+                "name": "GRVT Exchange",
+                "version": "0",
+                "chainId": chain_id
+            }
+            
+            # Define EIP712 message type for vault invest
+            message_type = {
+                "VaultInvest": [
+                    {"name": "mainAccountID", "type": "address"},
+                    {"name": "vaultID", "type": "uint64"},
+                    {"name": "tokenCurrency", "type": "uint8"},
+                    {"name": "numTokens", "type": "uint64"},
+                    {"name": "nonce", "type": "uint32"},
+                    {"name": "expiration", "type": "int64"}
+                ]
+            }
+            
+            # Encode and sign the typed data
+            signable_message = encode_typed_data(domain_data, message_type, message_data)
+            signed_message = self.account.sign_message(signable_message)
+            
+            # Create signature object
+            signature = types.Signature(
+                signer=str(self.account.address),
+                r="0x" + signed_message.r.to_bytes(32, byteorder="big").hex(),
+                s="0x" + signed_message.s.to_bytes(32, byteorder="big").hex(),
+                v=signed_message.v,
+                expiration=str(expiration_ns),
+                nonce=nonce
+            )
+            
+            # Create API request with signature
+            invest_request = types.ApiVaultInvestRequest(
+                main_account_id=funding_address,
+                vault_id=vault_id,
+                currency=currency,
+                num_tokens=amount,
+                signature=signature
+            )
+            
+            # Use funding API instance for vault operations
+            api_config = GrvtApiConfig(
+                env=self.env,
+                trading_account_id=self.account_id,
+                private_key=self.funding_private_key or self.private_key,
+                api_key=self.funding_api_key or self.api_key,
+                logger=logging.getLogger('grvt')
+            )
+            funding_api = GrvtRawSync(config=api_config)
+            
+            # Execute vault invest
+            resp = funding_api.vault_invest_v1(invest_request)
+            
+            if isinstance(resp, GrvtError):
+                return {'error': str(resp)}
+            
+            result = resp.result if hasattr(resp, 'result') else resp
+            
+            return {
+                'success': True,
+                'ack': result.ack if hasattr(result, 'ack') else True,
+                'vault_id': vault_id,
+                'amount': amount,
+                'currency': currency
+            }
+        except Exception as e:
+            return {'error': str(e)}
+    
+    def vault_redeem(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Redeem from a vault with automatic EIP712 signing"""
+        try:
+            from eth_account.messages import encode_typed_data
+            
+            # Extract parameters
+            vault_id = params['vault_id']
+            amount = str(params['amount'])  # LP tokens amount
+            currency = params.get('currency', 'USDC')
+            funding_address = self.funding_address or self.config.get('trading_address')
+            
+            # Get currency ID (3 for USDT, 4 for USDC)
+            currency_id = 4 if currency == 'USDC' else 3
+            
+            # Generate unique nonce and expiration (20 days)
+            nonce = random.randint(0, 2**32 - 1)
+            expiration_ns = int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000
+            
+            # Build EIP712 message data for vault redeem
+            message_data = {
+                "mainAccountID": funding_address,
+                "vaultID": int(vault_id),
+                "tokenCurrency": currency_id,
+                "numTokens": int(float(amount) * 1_000_000),  # Convert to micro units (6 decimals)
+                "nonce": nonce,
+                "expiration": expiration_ns
+            }
+            
+            # Define EIP712 domain
+            chain_id = 326 if self.env == GrvtEnv.TESTNET else 1
+            domain_data = {
+                "name": "GRVT Exchange",
+                "version": "0",
+                "chainId": chain_id
+            }
+            
+            # Define EIP712 message type for vault redeem
+            message_type = {
+                "VaultRedeem": [
+                    {"name": "mainAccountID", "type": "address"},
+                    {"name": "vaultID", "type": "uint64"},
+                    {"name": "tokenCurrency", "type": "uint8"},
+                    {"name": "numTokens", "type": "uint64"},
+                    {"name": "nonce", "type": "uint32"},
+                    {"name": "expiration", "type": "int64"}
+                ]
+            }
+            
+            # Encode and sign the typed data
+            signable_message = encode_typed_data(domain_data, message_type, message_data)
+            signed_message = self.account.sign_message(signable_message)
+            
+            # Create signature object
+            signature = types.Signature(
+                signer=str(self.account.address),
+                r="0x" + signed_message.r.to_bytes(32, byteorder="big").hex(),
+                s="0x" + signed_message.s.to_bytes(32, byteorder="big").hex(),
+                v=signed_message.v,
+                expiration=str(expiration_ns),
+                nonce=nonce
+            )
+            
+            # Create API request with signature
+            redeem_request = types.ApiVaultRedeemRequest(
+                main_account_id=funding_address,
+                vault_id=vault_id,
+                currency=currency,
+                num_tokens=amount,
+                signature=signature
+            )
+            
+            # Use funding API instance for vault operations
+            api_config = GrvtApiConfig(
+                env=self.env,
+                trading_account_id=self.account_id,
+                private_key=self.funding_private_key or self.private_key,
+                api_key=self.funding_api_key or self.api_key,
+                logger=logging.getLogger('grvt')
+            )
+            funding_api = GrvtRawSync(config=api_config)
+            
+            # Execute vault redeem
+            resp = funding_api.vault_redeem_v1(redeem_request)
+            
+            if isinstance(resp, GrvtError):
+                return {'error': str(resp)}
+            
+            result = resp.result if hasattr(resp, 'result') else resp
+            
+            return {
+                'success': True,
+                'ack': result.ack if hasattr(result, 'ack') else True,
+                'vault_id': vault_id,
+                'amount': amount,
+                'currency': currency
+            }
         except Exception as e:
             return {'error': str(e)}
 

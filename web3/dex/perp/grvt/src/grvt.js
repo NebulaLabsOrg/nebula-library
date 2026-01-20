@@ -1,13 +1,10 @@
 import { createInstance } from '../../../../../utils/src/http.utils.js';
 import { grvtEnum } from './enum.js';
 import { 
-    wmSubmitOrder,
-    wmSubmitCancelOrder,
-    wmSubmitCloseOrder,
-    wmSubmitWithdrawal,
-    wmCancelAllOrders,
     wmTransferToTrading,
-    wmTransferToFunding
+    wmTransferToFunding,
+    wmVaultInvest,
+    wmVaultRedeem
 } from './write.model.js';
 import {
     getBaseUrl,
@@ -409,5 +406,27 @@ export class Grvt {
      */
     async transferToFunding(amount, currency = 'USDC') {
         return wmTransferToFunding(this, amount, currency);
+    }
+    
+    /**
+     * Invest funds in a vault
+     * @param {string} vaultId - Vault ID to invest in
+     * @param {string|number} amount - Amount to invest
+     * @param {string} [currency='USDC'] - Currency
+     * @returns {Promise<Object>} Investment response
+     */
+    async vaultInvest(vaultId, amount, currency = 'USDC') {
+        return wmVaultInvest(this, vaultId, amount, currency);
+    }
+    
+    /**
+     * Redeem LP tokens from a vault
+     * @param {string} vaultId - Vault ID to redeem from
+     * @param {string|number} amount - Amount of LP tokens to redeem
+     * @param {string} [currency='USDC'] - Currency
+     * @returns {Promise<Object>} Redemption response
+     */
+    async vaultRedeem(vaultId, amount, currency = 'USDC') {
+        return wmVaultRedeem(this, vaultId, amount, currency);
     }
 }
