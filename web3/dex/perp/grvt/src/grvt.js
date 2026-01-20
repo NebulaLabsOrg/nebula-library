@@ -328,18 +328,17 @@ export class Grvt {
     }
     
     /**
-     * Get order status (WebSocket subscription)
-     * @param {string} symbol - Market symbol
-     * @param {Function} onOrderUpdate - Callback function for order updates
-     * @returns {Promise<Object>} WebSocket subscription response with control functions
+     * Get order status by client order ID (HTTP API)
+     * @param {string} clientOrderId - Client order ID
+     * @returns {Promise<Object>} Order status response
      */
-    async getOrderStatus(symbol, onOrderUpdate) {
+    async getOrderStatusById(clientOrderId) {
         if (this.trading.authPromise) {
             await this.trading.authPromise;
         }
         
-        const { vmGetOrderStatus } = await import('./view.model.js');
-        return vmGetOrderStatus(this, symbol, onOrderUpdate);
+        const { vmGetOrderStatusById } = await import('./view.model.js');
+        return vmGetOrderStatusById(this.instance, this.trading.accountId, clientOrderId);
     }
     
     

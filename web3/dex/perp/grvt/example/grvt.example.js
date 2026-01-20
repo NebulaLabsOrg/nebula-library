@@ -113,7 +113,36 @@ const orderResult = await grvtInstance.submitOrder(
 );
 console.log(orderResult);
 
+// Get order status by client order ID
+if (orderResult.success && orderResult.data.externalId) {
+    console.log('Get order status by ID');
+    console.log('Calling: grvtInstance.getOrderStatusById()');
+    
+    // Wait a moment for order to be processed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const orderStatus = await grvtInstance.getOrderStatusById(orderResult.data.externalId);
+    console.log(orderStatus);
+}
 
+console.log('Cancel order');
+console.log('Calling: grvtInstance.submitCancelOrder()');
+const cancelResult = await grvtInstance.submitCancelOrder(
+    orderResult.data.externalId
+);
+console.log(cancelResult);
+
+// Get order status by client order ID
+if (orderResult.success && orderResult.data.externalId) {
+    console.log('Get order status by ID');
+    console.log('Calling: grvtInstance.getOrderStatusById()');
+    
+    // Wait a moment for order to be processed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const orderStatus = await grvtInstance.getOrderStatusById(orderResult.data.externalId);
+    console.log(orderStatus);
+}
 
 // Cleanup: close the Extended instance to prevent memory leaks
 await grvtInstance.close();

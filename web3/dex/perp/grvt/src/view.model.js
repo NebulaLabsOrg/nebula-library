@@ -1,6 +1,5 @@
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { ethers } from 'ethers';
-// WebSocket monitoring rimosso
 
 /**
  * @async
@@ -38,10 +37,22 @@ export async function vmGetWalletStatus(_instance, _subAccountId) {
             const totalEquity = account.total_equity || '0';
             const initialMargin = account.positions[0]?.notional || '0';
             
+            // Truncate values to max 18 decimals to avoid parseUnits errors
+            const truncateDecimals = (value, maxDecimals) => {
+                const parts = value.toString().split('.');
+                if (parts.length === 2 && parts[1].length > maxDecimals) {
+                    return parts[0] + '.' + parts[1].substring(0, maxDecimals);
+                }
+                return value.toString();
+            };
+            
             // Use ethers v6 BigNumber for precise calculation
             const PRECISION = 18;
-            const marginBN = ethers.parseUnits(initialMargin, PRECISION);
-            const equityBN = ethers.parseUnits(totalEquity, PRECISION);
+            const marginTruncated = truncateDecimals(initialMargin, PRECISION);
+            const equityTruncated = truncateDecimals(totalEquity, PRECISION);
+            
+            const marginBN = ethers.parseUnits(marginTruncated, PRECISION);
+            const equityBN = ethers.parseUnits(equityTruncated, PRECISION);
             
             // Check if values are greater than zero using BigNumber
             if (marginBN > 0n && equityBN > 0n) {
@@ -49,8 +60,9 @@ export async function vmGetWalletStatus(_instance, _subAccountId) {
                 const leverageBN = (marginBN * ethers.parseUnits('1', PRECISION)) / equityBN;
                 const leverageFormatted = ethers.formatUnits(leverageBN, PRECISION);
                 
-                // Round to 2 decimals using BigNumber
-                const leverageRounded = ethers.parseUnits(leverageFormatted, 2);
+                // Truncate and round to 2 decimals
+                const leverageTruncated = truncateDecimals(leverageFormatted, 2);
+                const leverageRounded = ethers.parseUnits(leverageTruncated, 2);
                 leverage = ethers.formatUnits(leverageRounded, 2);
             }
         } catch (calcError) {
@@ -60,6 +72,60 @@ export async function vmGetWalletStatus(_instance, _subAccountId) {
         
         // Convert updatedTime to readable format (assuming nanosecond timestamp)
         let updatedTime = account.event_time || aggregatedResponse.data.event_time;
+        if (updatedTime) {
+            const timestamp = parseInt(updatedTime);
+            updatedTime = new Date(timestamp / 1000000).toISOString();
+        }
+        
+        return createResponse(
+            true,
+            'success',
+            {
+                equity: aggregated.total_equity || '0',
+                vault: aggregated.total_vault_investments_balance || '0',
+                leverage: leverage,
+                updatedTime: updatedTime
+            },
+            'grvt.getWalletStatus'
+        );
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get wallet status';
+        return createResponse(false, message, null, 'grvt.getWalletStatus');
+    }
+}
+
+/**
+ * @async
+ * @function vmGetWalletBalance
+ * @description Retrieves aggregated account summary via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @returns {Promise<Object>} Response with available balance, PnL
+ */
+export async function vmGetWalletBalance(_instance) {
+    try {
+        const response = await _instance.post('/full/v1/aggregated_account_summary', {});
+        
+        const data = response.data;
+        
+        if (!data || !data.result) {
+            throw new Error('Invalid response from API');
+        }
+        
+        const result = data.result;
+
+        // Calculate available for withdrawal using BigNumber: total_equity - total_sub_account_equity
+        let availableForWithdrawal = '0';
+        try {
+            const totalEquity = result.total_equity || '0';
+            const totalSubAccountEquity = result.total_sub_account_equity || '0';
+            const equityBN = ethers.parseUnits(totalEquity, 18);
+            const subEquityBN = ethers.parseUnits(totalSubAccountEquity, 18);
+            const withdrawalBN = equityBN - subEquityBN;
+            availableForWithdrawal = ethers.formatUnits(withdrawalBN, 18);
+        } catch (calcError) {
+            console.error('Available for withdrawal calculation error:', calcError);
+            availableForWithdrawal = '0';
+        }
         
         return createResponse(
             true,
@@ -489,48 +555,72 @@ export async function vmGetOpenPositionDetail(_instance, _subAccountId, _symbol)
     }
 }
 
+
 /**
  * @async
- * @function vmGetOrderStatus
- * @description Retrieves the current status of an order via HTTP API
- * @param {Object} _grvtInstance - Grvt instance with HTTP client (should have .instance and .trading.accountId)
- * @param {string} _symbol - Market symbol (e.g., 'BTC_USDT_Perp')
- * @param {string} _orderId - Order ID to check
- * @returns {Promise<Object>} Response with order status
+ * @function vmGetOrderStatusById
+ * @description Retrieves order status by client_order_id via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _subAccountId - Sub account ID
+ * @param {string} _clientOrderId - Client order ID
+ * @returns {Promise<Object>} Response with order details in Extended-compatible format
  */
-export async function vmGetOrderStatus(_grvtInstance, _symbol, _orderId) {
+export async function vmGetOrderStatusById(_instance, _subAccountId, _clientOrderId) {
     try {
-        if (!_grvtInstance?.instance || !_grvtInstance?.trading?.accountId) {
-            throw new Error('Not authenticated');
-        }
-        if (!_symbol) {
-            throw new Error('Symbol is required');
-        }
-        if (!_orderId) {
-            throw new Error('Order ID is required');
+        if (!_clientOrderId) {
+            throw new Error('Client order ID is required');
         }
 
-        // Call the API to get all orders for the symbol
-        const response = await _grvtInstance.instance.post('/full/v1/orders', {
-            sub_account_id: _grvtInstance.trading.accountId,
-            instrument: _symbol
+        const response = await _instance.post('/full/v1/order', {
+            sub_account_id: _subAccountId,
+            client_order_id: _clientOrderId.toString()
         });
-
+        
         if (!response.data || !response.data.result) {
-            throw new Error('Invalid response from orders API');
+            return createResponse(false, 'Order not found', null, 'grvt.getOrderStatusById');
         }
-
-        // Find the order by orderId
-        const orders = response.data.result;
-        const order = orders.find(o => o.order_id === _orderId || o.external_id === _orderId);
-
-        if (!order) {
-            return createResponse(false, `Order ${_orderId} not found for ${_symbol}`, null, 'grvt.getOrderStatus');
+        
+        const order = response.data.result;
+        const leg = order.legs?.[0] || {};
+        
+        // Use ethers v6 BigNumber for precise calculations
+        const PRECISION = 18;
+        
+        // Get values as strings
+        const qtyStr = leg.size || '0';
+        const tradedSizeStr = order.state?.traded_size?.[0] || '0';
+        const avgFillPriceStr = order.state?.avg_fill_price?.[0] || '0';
+        
+        // Convert to BigNumber for calculation
+        const tradedSizeBN = ethers.parseUnits(tradedSizeStr, PRECISION);
+        const avgFillPriceBN = ethers.parseUnits(avgFillPriceStr, PRECISION);
+        
+        // Calculate qtyExeUsd = tradedSize * avgFillPrice
+        const qtyExeUsdBN = (tradedSizeBN * avgFillPriceBN) / ethers.parseUnits('1', PRECISION);
+        const qtyExeUsd = ethers.formatUnits(qtyExeUsdBN, PRECISION);
+        
+        // Determine order type
+        let orderType = 'LIMIT';
+        if (order.is_market) {
+            orderType = 'MARKET';
+        } else if (order.metadata?.trigger?.trigger_type && order.metadata.trigger.trigger_type !== 'UNSPECIFIED') {
+            orderType = order.metadata.trigger.trigger_type; // TAKE_PROFIT, STOP_LOSS, etc.
         }
-
-        return createResponse(true, 'success', order, 'grvt.getOrderStatus');
+        
+        const detail = {
+            symbol: leg.instrument || '',
+            orderType: orderType,
+            status: order.state?.status || 'UNKNOWN',
+            qty: qtyStr,
+            qtyExe: tradedSizeStr,
+            qtyExeUsd: qtyExeUsd,
+            avgPrice: avgFillPriceStr
+        };
+        
+        return createResponse(true, 'success', detail, 'grvt.getOrderStatusById');
+        
     } catch (error) {
         const message = error.response?.data?.error?.message || error.message || 'Failed to get order status';
-        return createResponse(false, message, null, 'grvt.getOrderStatus');
+        return createResponse(false, message, null, 'grvt.getOrderStatusById');
     }
 }

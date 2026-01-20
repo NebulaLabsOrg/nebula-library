@@ -249,25 +249,50 @@ class GrvtService:
             if isinstance(resp, GrvtError):
                 return {'error': str(resp)}
             
+            # The response contains the created Order object with order_id filled by GRVT backend
             result = resp.result if hasattr(resp, 'result') else resp
             
+            # Extract order_id - GRVT may return '0x00' initially, so we use client_order_id in that case
+            order_id = getattr(result, 'order_id', None)
+            
+            # Use client_order_id if order_id is empty, None, or '0x00'
+            if not order_id or order_id == '0x00':
+                final_order_id = client_order_id
+            else:
+                final_order_id = order_id
+            
             return {
-                'external_id': result.order_id if hasattr(result, 'order_id') else client_order_id,
-                'order_id': result.order_id if hasattr(result, 'order_id') else client_order_id,
+                'external_id': final_order_id,
+                'order_id': final_order_id,
+                'client_order_id': client_order_id,
+                'grvt_order_id': order_id,  # Keep the original for reference
                 'status': result.state.status.name if hasattr(result, 'state') and hasattr(result.state, 'status') else 'NEW'
             }
         except Exception as e:
             return {'error': str(e)}
     
     def cancel_order_by_external_id(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Cancel order by external ID"""
+        """Cancel order by external ID (can be order_id or client_order_id)"""
         try:
-            resp = self.api.cancel_order_v1(
-                types.ApiCancelOrderRequest(
-                    sub_account_id=self.account_id,
-                    order_id=params['external_id']
-                )
+            external_id = params.get('external_id')
+            
+            # Build cancel request - GRVT accepts either order_id or client_order_id
+            # Since we're using client_order_id as external_id, pass it as client_order_id
+            cancel_request = types.ApiCancelOrderRequest(
+                sub_account_id=self.account_id
             )
+            
+            # If external_id looks like a number (client_order_id), use client_order_id field
+            # Otherwise, use order_id field
+            try:
+                # Try to parse as int - if successful, it's likely a client_order_id
+                int(external_id)
+                cancel_request.client_order_id = str(external_id)
+            except (ValueError, TypeError):
+                # Otherwise treat it as order_id
+                cancel_request.order_id = str(external_id)
+            
+            resp = self.api.cancel_order_v1(cancel_request)
             
             if isinstance(resp, GrvtError):
                 return {'error': str(resp)}

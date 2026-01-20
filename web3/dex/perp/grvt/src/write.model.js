@@ -1,14 +1,3 @@
-/**
- * GRVT Write Model
- * Following NebulaLabs architecture pattern
- * 
- * Write Layer (wm* functions):
- * - Use Python SDK via _grvt._sendCommand()
- * - Call view functions internally for data
- * - Perform BigNumber calculations internally
- * - Use spawn/subprocess for isolation when calling Python SDK
- */
-
 import { createResponse } from '../../../../../utils/src/response.utils.js';
 import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail } from './view.model.js';
 import { 
@@ -65,9 +54,32 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
         
         // 3. Calculate order price
         const isBuy = _side === grvtEnum.orderSide.long;
-        const actPrice = _type === grvtEnum.orderType.market
-            ? calculateSlippagePrice(midPrice, _slippage, isBuy)
-            : midPrice;
+        let actPrice;
+        
+        if (_type === grvtEnum.orderType.market) {
+            actPrice = calculateSlippagePrice(midPrice, _slippage, isBuy);
+        } else {
+            // LIMIT order price logic
+            const bidPrice = parseFloat(prices.bestBidPrice || 0);
+            const askPrice = parseFloat(prices.bestAskPrice || 0);
+            const spread = askPrice - bidPrice;
+            
+            if (isBuy) {
+                // LONG: use BID if BID=ASK or spread > priceStep, otherwise midPrice
+                if (bidPrice === askPrice || spread > priceStep) {
+                    actPrice = bidPrice;
+                } else {
+                    actPrice = midPrice;
+                }
+            } else {
+                // SHORT: use ASK if BID=ASK or spread > priceStep, otherwise midPrice
+                if (bidPrice === askPrice || spread > priceStep) {
+                    actPrice = askPrice;
+                } else {
+                    actPrice = midPrice;
+                }
+            }
+        }
         
         // Round to tick size
         const roundedPrice = roundToTickSize(actPrice, priceStep);
@@ -115,26 +127,28 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             orderParams.post_only = true;
         }
         
-        console.log('[GRVT] Order params:', JSON.stringify(orderParams, null, 2));
-        
         // 8. Submit order via SDK
         const orderResult = await _grvt._sendCommand('place_order', orderParams);
-
-        console.log('[GRVT] Order Result:', orderResult);
         
         if (orderResult.error) {
             throw new Error(orderResult.error);
         }
         
-        const orderId = orderResult.external_id || orderResult.order_id;
+        // Use the order_id returned by GRVT as externalId
+        const externalId = orderResult.order_id || orderResult.client_order_id;
         
-        // 8. Return order submission result (WS monitoring removed)
+        if (!externalId) {
+            throw new Error('No order_id returned from GRVT');
+        }
+        
+        // 9. Return order submission result
         return createResponse(
             true,
             'success',
             {
                 symbol: _symbol,
-                orderId: orderId,
+                externalId: externalId,
+                orderId: externalId,
                 qty: qty,
                 price: roundedPrice,
                 side: _side,
@@ -152,9 +166,9 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
 /**
  * @async
  * @function wmSubmitCancelOrder
- * @description Cancels order via Python SDK
+ * @description Cancels order via Python SDK using external_id
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string} _externalId - Order ID
+ * @param {string} _externalId - External order ID to cancel
  * @returns {Promise<Object>} Response with cancel confirmation
  */
 export async function wmSubmitCancelOrder(_grvt, _externalId) {
@@ -163,9 +177,11 @@ export async function wmSubmitCancelOrder(_grvt, _externalId) {
             throw new Error('External ID is required');
         }
         
-        const cancelResult = await _grvt._sendCommand('cancel_order_by_external_id', {
+        const cancelParams = {
             external_id: _externalId.toString()
-        });
+        };
+        
+        const cancelResult = await _grvt._sendCommand('cancel_order_by_external_id', cancelParams);
         
         if (cancelResult.error) {
             throw new Error(cancelResult.error);
@@ -173,10 +189,9 @@ export async function wmSubmitCancelOrder(_grvt, _externalId) {
         
         return createResponse(
             true,
-            'Order cancelled successfully',
+            'success',
             { 
                 externalId: _externalId,
-                cancelled: true
             },
             'grvt.submitCancelOrder'
         );
@@ -254,9 +269,32 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
         
         // 6. Calculate order price
         const isBuy = closeSide === grvtEnum.orderSide.long;
-        const actPrice = _type === grvtEnum.orderType.market
-            ? calculateSlippagePrice(midPrice, _slippage, isBuy)
-            : midPrice;
+        let actPrice;
+        
+        if (_type === grvtEnum.orderType.market) {
+            actPrice = calculateSlippagePrice(midPrice, _slippage, isBuy);
+        } else {
+            // LIMIT order price logic
+            const bidPrice = parseFloat(prices.bestBidPrice || 0);
+            const askPrice = parseFloat(prices.bestAskPrice || 0);
+            const spread = askPrice - bidPrice;
+            
+            if (isBuy) {
+                // LONG: use BID if BID=ASK or spread > priceStep, otherwise midPrice
+                if (bidPrice === askPrice || spread > priceStep) {
+                    actPrice = bidPrice;
+                } else {
+                    actPrice = midPrice;
+                }
+            } else {
+                // SHORT: use ASK if BID=ASK or spread > priceStep, otherwise midPrice
+                if (bidPrice === askPrice || spread > priceStep) {
+                    actPrice = askPrice;
+                } else {
+                    actPrice = midPrice;
+                }
+            }
+        }
         
         const roundedPrice = roundToTickSize(actPrice, priceStep);
         
@@ -288,6 +326,9 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
         const sdkOrderType = _type === grvtEnum.orderType.market ? 'MARKET' : 'LIMIT';
         const timeInForce = sdkOrderType === 'MARKET' ? MARKET_TIME_IN_FORCE : LIMIT_TIME_IN_FORCE;
         
+        // Generate unique external_id for tracking
+        const externalId = randomUUID();
+        
         // Build order parameters - MARKET orders must NOT include price
         const orderParams = {
             market_name: _symbol,
@@ -295,7 +336,8 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             amount: qty.toString(),
             order_type: sdkOrderType,
             time_in_force: timeInForce,
-            reduce_only: true
+            reduce_only: true,
+            external_id: externalId
         };
         
         // Only add price and post_only for LIMIT orders
@@ -311,14 +353,13 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             throw new Error(orderResult.error);
         }
         
-        const orderId = orderResult.external_id || orderResult.order_id;
-        
         return createResponse(
             true,
             'Close order submitted successfully',
             {
                 symbol: _symbol,
-                orderId: orderId,
+                orderId: externalId,
+                externalId: externalId,
                 closedQty: qty,
                 price: roundedPrice
             },
