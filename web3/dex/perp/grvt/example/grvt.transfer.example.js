@@ -18,6 +18,7 @@ const grvtInstance = new Grvt({
         apiKey: process.env.GRVT_TRADING_API_KEY
     },
     slippage: 0.5,
+    environment: 'mainnet',
     usePython: true, // Enable Python SDK for write operations
 });
 

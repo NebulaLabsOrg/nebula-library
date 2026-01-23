@@ -10,7 +10,8 @@ import {
 import { grvtEnum } from './enum.js';
 import {
     MARKET_TIME_IN_FORCE,
-    LIMIT_TIME_IN_FORCE
+    LIMIT_TIME_IN_FORCE,
+    GLP_VAULT_ID
 } from './constant.js';
 
 /**
@@ -866,15 +867,15 @@ export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
 }
 /**
  * @async
- * @function wmVaultInvest
- * @description Invests funds in a vault with automatic EIP712 signing
+ * @function wmGlpVaultInvest
+ * @description Invests funds in the GLP Vault with automatic EIP712 signing
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string} _vaultId - Vault ID to invest in
  * @param {string|number} _amount - Amount to invest
  * @param {string} [_currency='USDT'] - Currency to invest
  * @returns {Promise<Object>} Response with investment result
  */
-export async function wmVaultInvest(_grvt, _vaultId, _amount, _currency = 'USDT') {
+export async function wmGlpVaultInvest(_grvt, _amount, _currency = 'USDT') {
+    const _vaultId = GLP_VAULT_ID;
     try {
         // Wait for Python service to initialize (max 5 seconds)
         for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
@@ -908,15 +909,15 @@ export async function wmVaultInvest(_grvt, _vaultId, _amount, _currency = 'USDT'
 
 /**
  * @async
- * @function wmVaultRedeem
- * @description Redeems LP tokens from a vault with automatic EIP712 signing
+ * @function wmGlpVaultRedeem
+ * @description Redeems LP tokens from the GLP Vault with automatic EIP712 signing
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string} _vaultId - Vault ID to redeem from
  * @param {string|number} _amount - Amount of LP tokens to redeem
  * @param {string} [_currency='USDT'] - Currency of the vault
  * @returns {Promise<Object>} Response with redemption result
  */
-export async function wmVaultRedeem(_grvt, _vaultId, _amount, _currency = 'USDT') {
+export async function wmGlpVaultRedeem(_grvt, _amount, _currency = 'USDT') {
+    const _vaultId = GLP_VAULT_ID;
     try {
         // Wait for Python service to initialize (max 5 seconds)
         for (let i = 0; i < 50 && !_grvt.pythonService; i++) {

@@ -3,14 +3,13 @@ import { grvtEnum } from './enum.js';
 import { 
     wmTransferToTrading,
     wmTransferToFunding,
-    wmVaultInvest,
-    wmVaultRedeem
+    wmGlpVaultInvest,
+    wmGlpVaultRedeem
 } from './write.model.js';
 import {
     getBaseUrl,
     getAuthUrl,
     getMarketDataUrl,
-    getWebSocketUrl,
     ensureAuthenticated,
     authenticate,
     findPythonPath,
@@ -130,9 +129,6 @@ export class Grvt {
         });
         
         this.pythonService = null;
-        
-        // WebSocket URL based on environment
-        this.wsUrl = getWebSocketUrl(this.environment);
         
         // Start authentication for trading account
         this.trading.authPromise = authenticate(
@@ -409,24 +405,22 @@ export class Grvt {
     }
     
     /**
-     * Invest funds in a vault
-     * @param {string} vaultId - Vault ID to invest in
+     * Invest funds in the GLP Vault
      * @param {string|number} amount - Amount to invest
-     * @param {string} [currency='USDC'] - Currency
+     * @param {string} [currency='USDT'] - Currency
      * @returns {Promise<Object>} Investment response
      */
-    async vaultInvest(vaultId, amount, currency = 'USDC') {
-        return wmVaultInvest(this, vaultId, amount, currency);
+    async glpVaultInvest(amount, currency = 'USDT') {
+        return wmGlpVaultInvest(this, amount, currency);
     }
     
     /**
-     * Redeem LP tokens from a vault
-     * @param {string} vaultId - Vault ID to redeem from
+     * Redeem LP tokens from the GLP Vault
      * @param {string|number} amount - Amount of LP tokens to redeem
-     * @param {string} [currency='USDC'] - Currency
+     * @param {string} [currency='USDT'] - Currency
      * @returns {Promise<Object>} Redemption response
      */
-    async vaultRedeem(vaultId, amount, currency = 'USDC') {
-        return wmVaultRedeem(this, vaultId, amount, currency);
+    async glpVaultRedeem(amount, currency = 'USDT') {
+        return wmGlpVaultRedeem(this, amount, currency);
     }
 }

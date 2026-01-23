@@ -23,11 +23,6 @@ export const GRVT_MARKET_DATA_MAINNET_URL = 'https://market-data.grvt.io';
 export const GRVT_MARKET_DATA_TESTNET_URL = 'https://market-data.testnet.grvt.io';
 export const GRVT_MARKET_DATA_STAGING_URL = 'https://market-data.staging.gravitymarkets.io';
 
-// WebSocket URLs (for real-time order updates, trades, market data)
-export const GRVT_MAINNET_WS_URL = 'wss://trades.grvt.io/ws/full';
-export const GRVT_TESTNET_WS_URL = 'wss://trades-testnet.grvt.io/ws/full';
-export const GRVT_STAGING_WS_URL = 'wss://trades.staging.gravitymarkets.io/ws/full';
-
 // Order TimeInForce
 export const MARKET_TIME_IN_FORCE = 'IOC';      // Immediate Or Cancel
 export const LIMIT_TIME_IN_FORCE = 'GTT';       // Good Till Time
@@ -47,6 +42,9 @@ export const DEFAULT_SLIPPAGE_PERCENT = 0.5;    // 0.5%
 // Polling intervals
 export const ORDER_MONITOR_INTERVAL_MS = 500;   // 500ms between checks
 export const ORDER_MONITOR_TIMEOUT_SEC = 120;   // 2 minute timeout
+
+// Vault IDs
+export const GLP_VAULT_ID = '1463215095';       // GLP Vault
 
 // Retry configuration
 export const MAX_RETRIES = 3;

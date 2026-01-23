@@ -14,6 +14,25 @@ import random
 import logging
 from typing import Dict, Any
 
+# Monkey-patch requests.Session to fix duplicate cookies issue in GRVT SDK
+import requests
+
+_original_cookies_update = requests.cookies.RequestsCookieJar.update
+
+def _patched_cookies_update(self, other=None, **kwargs):
+    """Patched update that removes existing 'gravity' cookie before adding new one"""
+    if other and isinstance(other, dict) and 'gravity' in other:
+        to_remove = [cookie for cookie in self if cookie.name == 'gravity']
+        for cookie in to_remove:
+            self.clear(cookie.domain, cookie.path, cookie.name)
+    elif 'gravity' in kwargs:
+        to_remove = [cookie for cookie in self if cookie.name == 'gravity']
+        for cookie in to_remove:
+            self.clear(cookie.domain, cookie.path, cookie.name)
+    return _original_cookies_update(self, other, **kwargs)
+
+requests.cookies.RequestsCookieJar.update = _patched_cookies_update
+
 try:
     from pysdk.grvt_raw_sync import GrvtRawSync
     from pysdk.grvt_raw_base import GrvtApiConfig, GrvtError
@@ -334,8 +353,24 @@ class GrvtService:
             return {'error': str(e)}
     
     def transfer(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Transfer between funding and trading accounts"""
+        """Transfer between funding and trading accounts using funding account credentials"""
         try:
+            # Get funding credentials from params (passed from Node.js wmTransferToTrading/wmTransferToFunding)
+            funding_address = params.get('funding_address') or self.funding_address
+            funding_private_key = params.get('funding_private_key') or self.funding_private_key
+            funding_api_key = params.get('funding_api_key') or self.funding_api_key
+            trading_account_id = params.get('trading_account_id') or self.account_id
+            
+            if not funding_address:
+                return {'error': 'Funding address is required'}
+            if not funding_private_key:
+                return {'error': 'Funding private key is required'}
+            if not funding_api_key:
+                return {'error': 'Funding API key is required'}
+            
+            # Create account from funding private key for signing
+            funding_account = Account.from_key(funding_private_key)
+            
             # Determine direction: to_trading or to_funding
             direction = params.get('direction', 'to_trading')
             amount = str(params['amount'])
@@ -344,26 +379,27 @@ class GrvtService:
             # Get currency ID (3 for USDT, 4 for USDC)
             currency_id = 4 if currency == 'USDC' else 3  # USDT = 3, USDC = 4
             
-            # IMPORTANT: from_account_id and to_account_id are ALWAYS the same (funding address)
+            # IMPORTANT: from_account_id and to_account_id are ALWAYS the same (funding address/main_account_id)
             # We transfer between sub-accounts using sub_account_id
-            funding_address = self.funding_address or self.config.get('trading_address')
+            # The funding_address IS the main_account_id
+            main_account_id = funding_address
             
             if direction == 'to_trading':
-                from_sub = '0'  # Funding account (main)
-                to_sub = str(self.account_id)  # Trading account (sub)
+                from_sub = '0'  # Funding account (main account, sub_account_id = 0)
+                to_sub = str(trading_account_id)  # Trading account (sub)
             else:  # to_funding
-                from_sub = str(self.account_id)  # Trading account (sub)
-                to_sub = '0'  # Funding account (main)
+                from_sub = str(trading_account_id)  # Trading account (sub)
+                to_sub = '0'  # Funding account (main account, sub_account_id = 0)
             
             # Generate unique nonce and expiration
             nonce = random.randint(0, 2**32 - 1)
             expiration = str(int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000)  # 20 days
             
-            # Create transfer object (following official SDK pattern)
+            # Create transfer object (following official SDK pattern from test_raw_utils.py)
             transfer = fixed_types.Transfer(
-                from_account_id=funding_address,
+                from_account_id=main_account_id,
                 from_sub_account_id=from_sub,
-                to_account_id=funding_address,  # SAME as from_account_id!
+                to_account_id=main_account_id,  # SAME as from_account_id for internal transfers!
                 to_sub_account_id=to_sub,
                 currency=currency,
                 num_tokens=amount,
@@ -379,20 +415,33 @@ class GrvtService:
                 transfer_metadata=''
             )
             
-            # Sign the transfer with funding private key
-            # IMPORTANT: Use funding API key for transfer authorization
-            api_config = GrvtApiConfig(
+            # Create API config with FUNDING credentials
+            # IMPORTANT: For transfers, we need to authenticate with funding API key
+            # The SDK uses trading_account_id for the X-Grvt-Account-Id header
+            # For funding account, we should use the trading sub-account ID that was created
+            funding_api_config = GrvtApiConfig(
                 env=self.env,
-                trading_account_id=self.account_id,
-                private_key=self.funding_private_key or self.private_key,
-                api_key=self.funding_api_key or self.api_key,  # Use funding API key!
+                trading_account_id=str(trading_account_id),  # Use trading sub-account ID for auth
+                private_key=funding_private_key,  # Funding private key for signing
+                api_key=funding_api_key,  # Funding API key for authentication
                 logger=logging.getLogger('grvt')
             )
             
-            signed_transfer = sign_transfer(transfer, api_config, self.account, currencyId=currency_id)
+            # Sign the transfer with funding account
+            signed_transfer = sign_transfer(
+                transfer, 
+                funding_api_config, 
+                funding_account,  # Use the funding account for signing
+                currencyId=currency_id
+            )
             
             # Create API instance with funding credentials for executing transfer
-            funding_api = GrvtRawSync(config=api_config)
+            # Use a fresh instance to avoid cookie conflicts
+            funding_api = GrvtRawSync(config=funding_api_config)
+            
+            # Clear any existing cookies to avoid "multiple cookies" error
+            if hasattr(funding_api, '_session') and hasattr(funding_api._session, 'cookies'):
+                funding_api._session.cookies.clear()
             
             # Create API request
             transfer_request = types.ApiTransferRequest(
@@ -421,10 +470,14 @@ class GrvtService:
                 'ack': result.ack if hasattr(result, 'ack') else True,
                 'direction': direction,
                 'amount': amount,
-                'currency': currency
+                'currency': currency,
+                'from_account': main_account_id,
+                'from_sub_account': from_sub,
+                'to_sub_account': to_sub
             }
         except Exception as e:
-            return {'error': str(e)}
+            import traceback
+            return {'error': str(e), 'traceback': traceback.format_exc()}
     
     def transfer_history(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Get transfer history"""
@@ -533,11 +586,26 @@ class GrvtService:
         try:
             from eth_account.messages import encode_typed_data
             
+            # Get funding credentials from params (passed from Node.js)
+            funding_address = params.get('funding_address') or self.funding_address
+            funding_private_key = params.get('funding_private_key') or self.funding_private_key
+            funding_api_key = params.get('funding_api_key') or self.funding_api_key
+            trading_account_id = params.get('trading_account_id') or self.account_id
+            
+            if not funding_address:
+                return {'error': 'Funding address is required'}
+            if not funding_private_key:
+                return {'error': 'Funding private key is required'}
+            if not funding_api_key:
+                return {'error': 'Funding API key is required'}
+            
+            # Create account from funding private key for signing
+            funding_account = Account.from_key(funding_private_key)
+            
             # Extract parameters
             vault_id = params['vault_id']
             amount = str(params['amount'])
             currency = params.get('currency', 'USDC')
-            funding_address = self.funding_address or self.config.get('trading_address')
             
             # Get currency ID (3 for USDT, 4 for USDC)
             currency_id = 4 if currency == 'USDC' else 3
@@ -577,13 +645,13 @@ class GrvtService:
                 ]
             }
             
-            # Encode and sign the typed data
+            # Encode and sign the typed data using funding account
             signable_message = encode_typed_data(domain_data, message_type, message_data)
-            signed_message = self.account.sign_message(signable_message)
+            signed_message = funding_account.sign_message(signable_message)
             
             # Create signature object
             signature = types.Signature(
-                signer=str(self.account.address),
+                signer=str(funding_account.address),
                 r="0x" + signed_message.r.to_bytes(32, byteorder="big").hex(),
                 s="0x" + signed_message.s.to_bytes(32, byteorder="big").hex(),
                 v=signed_message.v,
@@ -603,9 +671,9 @@ class GrvtService:
             # Use funding API instance for vault operations
             api_config = GrvtApiConfig(
                 env=self.env,
-                trading_account_id=self.account_id,
-                private_key=self.funding_private_key or self.private_key,
-                api_key=self.funding_api_key or self.api_key,
+                trading_account_id=trading_account_id,
+                private_key=funding_private_key,
+                api_key=funding_api_key,
                 logger=logging.getLogger('grvt')
             )
             funding_api = GrvtRawSync(config=api_config)
@@ -633,11 +701,26 @@ class GrvtService:
         try:
             from eth_account.messages import encode_typed_data
             
+            # Get funding credentials from params (passed from Node.js)
+            funding_address = params.get('funding_address') or self.funding_address
+            funding_private_key = params.get('funding_private_key') or self.funding_private_key
+            funding_api_key = params.get('funding_api_key') or self.funding_api_key
+            trading_account_id = params.get('trading_account_id') or self.account_id
+            
+            if not funding_address:
+                return {'error': 'Funding address is required'}
+            if not funding_private_key:
+                return {'error': 'Funding private key is required'}
+            if not funding_api_key:
+                return {'error': 'Funding API key is required'}
+            
+            # Create account from funding private key for signing
+            funding_account = Account.from_key(funding_private_key)
+            
             # Extract parameters
             vault_id = params['vault_id']
             amount = str(params['amount'])  # LP tokens amount
             currency = params.get('currency', 'USDC')
-            funding_address = self.funding_address or self.config.get('trading_address')
             
             # Get currency ID (3 for USDT, 4 for USDC)
             currency_id = 4 if currency == 'USDC' else 3
@@ -676,13 +759,13 @@ class GrvtService:
                 ]
             }
             
-            # Encode and sign the typed data
+            # Encode and sign the typed data using funding account
             signable_message = encode_typed_data(domain_data, message_type, message_data)
-            signed_message = self.account.sign_message(signable_message)
+            signed_message = funding_account.sign_message(signable_message)
             
             # Create signature object
             signature = types.Signature(
-                signer=str(self.account.address),
+                signer=str(funding_account.address),
                 r="0x" + signed_message.r.to_bytes(32, byteorder="big").hex(),
                 s="0x" + signed_message.s.to_bytes(32, byteorder="big").hex(),
                 v=signed_message.v,
@@ -702,9 +785,9 @@ class GrvtService:
             # Use funding API instance for vault operations
             api_config = GrvtApiConfig(
                 env=self.env,
-                trading_account_id=self.account_id,
-                private_key=self.funding_private_key or self.private_key,
-                api_key=self.funding_api_key or self.api_key,
+                trading_account_id=trading_account_id,
+                private_key=funding_private_key,
+                api_key=funding_api_key,
                 logger=logging.getLogger('grvt')
             )
             funding_api = GrvtRawSync(config=api_config)

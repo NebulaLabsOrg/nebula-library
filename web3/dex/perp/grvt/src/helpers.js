@@ -10,8 +10,7 @@ import { fileURLToPath } from 'url';
 import {
     GRVT_AUTH_MAINNET_URL, GRVT_AUTH_TESTNET_URL, GRVT_AUTH_STAGING_URL,
     GRVT_MAINNET_URL, GRVT_TESTNET_URL, GRVT_STAGING_URL,
-    GRVT_MARKET_DATA_MAINNET_URL, GRVT_MARKET_DATA_TESTNET_URL, GRVT_MARKET_DATA_STAGING_URL,
-    GRVT_MAINNET_WS_URL, GRVT_TESTNET_WS_URL, GRVT_STAGING_WS_URL
+    GRVT_MARKET_DATA_MAINNET_URL, GRVT_MARKET_DATA_TESTNET_URL, GRVT_MARKET_DATA_STAGING_URL
 } from './constant.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -64,23 +63,6 @@ export function getMarketDataUrl(environment) {
         case 'testnet':
         default:
             return GRVT_MARKET_DATA_TESTNET_URL;
-    }
-}
-
-/**
- * Get WebSocket URL (trades.* domain with /ws/full path)
- * @param {string} environment - Environment name
- * @returns {string} WebSocket URL
- */
-export function getWebSocketUrl(environment) {
-    switch (environment.toLowerCase()) {
-        case 'mainnet':
-            return GRVT_MAINNET_WS_URL;
-        case 'staging':
-            return GRVT_STAGING_WS_URL;
-        case 'testnet':
-        default:
-            return GRVT_TESTNET_WS_URL;
     }
 }
 
