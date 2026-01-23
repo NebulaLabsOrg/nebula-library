@@ -63,6 +63,13 @@ Effortlessly integrate blockchain technology. Crypto operation modules include:
 | `Defillama`  | DeFi and token data aggregator (markets, prices, protocols)       | `axios`          | `nebula-library/web3/data/defillama/index.js`|
 | `Pyth`       | Real-time price feeds from Pyth Network (Hermes API)              | `@pythnetwork/hermes-client` | `nebula-library/web3/data/price/pyth/index.js`|
 
+#### 🏗️ Infrastructure
+
+| **Module**       | **Purpose**                                                      | **Dependencies** | **Path**                                     |
+|------------------|------------------------------------------------------------------|------------------|----------------------------------------------|
+| `SmartAccount`   | ERC-4337 Account Abstraction client (gasless transactions, batch operations, flexible funding) | `ethers`, `axios` | `nebula-library/web3/infra/erc4337/index.js` |
+
+
 ### 📦 Scraper Module
 
 Automate data extraction from websites and APIs.
