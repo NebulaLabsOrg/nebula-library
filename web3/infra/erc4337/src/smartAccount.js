@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { CHAINS } from "./chains.js";
 import { ABI } from "./abi.js";
 import * as utils from "./utils.js";
+import { calculateGasPrice } from "../../../../utils/src/gas.utils.js";
 import { createResponse } from "../../../../utils/src/response.utils.js";
 
 /**
@@ -9,7 +10,7 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  * @property {string} rpcUrl - RPC provider URL for blockchain connection
  * @property {string} bundlerUrl - ERC-4337 bundler endpoint URL
  * @property {string} privateKey - Owner's private key (controls the smart account)
- * @property {number} [chainId] - Chain ID (e.g., 1 for Mainnet, 11155111 for Sepolia). Auto-configures factory and entryPoint
+ * @property {number} [chainId] - Optional: Chain ID for validation. If not provided, auto-detected from RPC.
  * @property {string} [factoryAddress] - Custom factory address (overrides chain default)
  * @property {string} [entryPointAddress] - Custom EntryPoint address (overrides chain default)
  * @property {string} [fundingStrategy='no-fund'] - Automatic funding strategy (be careful with parallel executions):
@@ -19,7 +20,11 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  * @property {string} [targetBalance] - Target balance in ETH for 'fund-with-threshold' strategy (e.g., '0.1')
  * @property {number} [nonceKey=0] - Nonce key for parallel execution (use different keys for concurrent operations)
  * @property {number} [salt=0] - Salt for deterministic account creation (use different values to create multiple accounts from the same owner)
+ * @property {number} [gasPriceIncreasePercent=0] - Percentage to increase gas price for faster inclusion (e.g., 20 for 20% higher)
+ * @property {number} [numberConfirmation=1] - Number of block confirmations to wait for after transaction is mined
  * @property {boolean} [verbose=false] - Enable detailed logging for debugging
+ * 
+ * NOTE: Paymaster support is not yet implemented. All transactions require the smart account to have sufficient ETH balance.
  */
 
 /**
@@ -57,17 +62,13 @@ export class SmartAccount {
         this.rpcUrl = config.rpcUrl;
         this.bundlerUrl = config.bundlerUrl;
 
-        // Use chain config if provided
-        if (config.chainId && CHAINS[config.chainId]) {
-            const chain = CHAINS[config.chainId];
-            this.chain = chain;
-            this.factoryAddress = config.factoryAddress || chain.factoryAddress;
-            this.entryPointAddress = config.entryPointAddress || chain.entryPointAddress;
-        } else {
-            this.chain = null;
-            this.factoryAddress = config.factoryAddress || CHAINS[11155111].factoryAddress;
-            this.entryPointAddress = config.entryPointAddress || CHAINS[11155111].entryPointAddress;
-        }
+        // Store config chainId for validation (optional)
+        this.configChainId = config.chainId || null;
+
+        // Chain configuration will be set during initialize()
+        this.chain = null;
+        this.factoryAddress = config.factoryAddress || null;
+        this.entryPointAddress = config.entryPointAddress || null;
 
         this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
         this.owner = new ethers.Wallet(config.privateKey, this.provider);
@@ -98,6 +99,18 @@ export class SmartAccount {
             throw new Error("targetBalance is required for 'fund-with-threshold' strategy");
         }
 
+        // Gas price configuration
+        this.gasPriceIncreasePercent = config.gasPriceIncreasePercent ?? 0;
+        if (this.gasPriceIncreasePercent < 0 || this.gasPriceIncreasePercent > 200) {
+            throw new Error("gasPriceIncreasePercent must be between 0 and 200");
+        }
+
+        // Transaction confirmation
+        this.numberConfirmation = config.numberConfirmation ?? 1;
+        if (!Number.isInteger(this.numberConfirmation) || this.numberConfirmation < 1) {
+            throw new Error("numberConfirmation must be a positive integer");
+        }
+
         // Verbose logging
         this.verbose = config.verbose !== undefined ? config.verbose : false;
     }
@@ -109,6 +122,38 @@ export class SmartAccount {
      */
     async initialize() {
         try {
+            // Get network info from provider
+            const network = await this.provider.getNetwork();
+            const detectedChainId = Number(network.chainId);
+
+            // If user provided chainId, validate it matches
+            if (this.configChainId && this.configChainId !== detectedChainId) {
+                throw new Error(`Chain ID mismatch: RPC is on chain ${detectedChainId}, but config specified chain ${this.configChainId}`);
+            }
+
+            // Auto-configure chain settings if available
+            if (CHAINS[detectedChainId]) {
+                this.chain = CHAINS[detectedChainId];
+                // Set factory and entryPoint if not manually overridden
+                if (!this.factoryAddress) this.factoryAddress = this.chain.factoryAddress;
+                if (!this.entryPointAddress) this.entryPointAddress = this.chain.entryPointAddress;
+                utils.log(this.verbose, `Auto-configured for ${this.chain.name} (Chain ID: ${detectedChainId})`);
+            } else {
+                // Chain not in predefined list, use defaults or user-provided addresses
+                if (!this.factoryAddress || !this.entryPointAddress) {
+                    throw new Error(`Chain ID ${detectedChainId} is not supported. Please provide factoryAddress and entryPointAddress manually.`);
+                }
+                utils.log(this.verbose, `Using custom configuration for Chain ID: ${detectedChainId}`);
+            }
+
+            // Verify bundler URL supports ERC-4337
+            const bundlerCheck = await utils.checkBundlerUrl(this.bundlerUrl, this.entryPointAddress);
+            
+            if (!bundlerCheck.isValid) {
+                throw new Error(`Invalid bundler URL: ${bundlerCheck.error}`);
+            }
+            utils.log(this.verbose, "Bundler URL is valid and supports ERC-4337");
+
             // Calculate smart account address
             this.address = await utils.calculateAccountAddress(
                 this.provider,
@@ -130,10 +175,7 @@ export class SmartAccount {
                 chainId: this.chain ? this.chain.chainId : null
             });
         } catch (error) {
-            return createResponse(false, error.message || "Initialization failed", {
-                error: error.message,
-                owner: this.owner.address
-            });
+            return createResponse(false, error.message || "Initialization failed", null);
         }
     }
 
@@ -167,12 +209,7 @@ export class SmartAccount {
                 explorerUrl: this.chain ? `${this.chain.explorer}/tx/${tx.hash}` : null
             });
         } catch (error) {
-            return createResponse(false, error.message || "Funding failed", {
-                error: error.message,
-                amount: _amount_in_eth,
-                from: this.owner.address,
-                to: this.address
-            });
+            return createResponse(false, error.message || "Funding failed", null);
         }
     }
     /**
@@ -201,10 +238,7 @@ export class SmartAccount {
                 userOpExplorerUrl: this.chain ? `${this.chain.jiffyscan}/userOpHash/${result.userOpHash}?network=${this.chain.name.toLowerCase().replace(" ", "-")}` : null
             });
         } catch (error) {
-            return createResponse(false, error.message || "Transaction failed", {
-                error: error.message,
-                smartAccount: this.address
-            });
+            return createResponse(false, error.message || "Transaction failed", null);
         }
     }
     /**
@@ -233,11 +267,7 @@ export class SmartAccount {
                 userOpExplorerUrl: this.chain ? `${this.chain.jiffyscan}/userOpHash/${result.userOpHash}?network=${this.chain.name.toLowerCase().replace(" ", "-")}` : null
             });
         } catch (error) {
-            return createResponse(false, error.message || "Batch transaction failed", {
-                error: error.message,
-                smartAccount: this.address,
-                batchSize: _transactions.length
-            });
+            return createResponse(false, error.message || "Batch transaction failed", null);
         }
     }
 
@@ -262,10 +292,7 @@ export class SmartAccount {
                 address: this.address
             });
         } catch (error) {
-            return createResponse(false, error.message || "Failed to get balance", {
-                error: error.message,
-                address: this.address
-            });
+            return createResponse(false, error.message || "Failed to get balance", null);
         }
     }
 
@@ -286,9 +313,7 @@ export class SmartAccount {
                 nonceKey: this.nonceKey
             });
         } catch (error) {
-            return createResponse(false, error.message || "Failed to get address", {
-                error: error.message
-            });
+            return createResponse(false, error.message || "Failed to get address", null);
         }
     }
 
@@ -321,9 +346,7 @@ export class SmartAccount {
                 bufferPercentage: 20
             });
         } catch (error) {
-            return createResponse(false, error.message || "Cost estimation failed", {
-                error: error.message
-            });
+            return createResponse(false, error.message || "Cost estimation failed", null);
         }
     }
     /**
@@ -363,12 +386,29 @@ export class SmartAccount {
     async #handleFunding(_callData) {
         if (!this.address) throw new Error("Call initialize() first");
 
+        const balance = await this.provider.getBalance(this.address);
+
         if (this.fundingStrategy === SmartAccount.FUNDING_STRATEGY.NO_FUND) {
+            // Pre-check balance if no automatic funding
+            const estimatedCostResponse = await this.estimateCost(_callData);
+            if (estimatedCostResponse.success && estimatedCostResponse.data) {
+                const estimatedCost = BigInt(estimatedCostResponse.data.costWithBuffer);
+                if (balance < estimatedCost) {
+                    const shortfall = ethers.formatEther(estimatedCost - balance);
+                    throw new Error(`Insufficient balance: account has ${ethers.formatEther(balance)} ETH, needs approximately ${ethers.formatEther(estimatedCost)} ETH (shortfall: ${shortfall} ETH)`);
+                }
+            }
             return null; // No automatic funding
         }
 
-        const balance = await this.provider.getBalance(this.address);
         const estimatedCostResponse = await this.estimateCost(_callData);
+        
+        // If estimation failed, skip automatic funding
+        if (!estimatedCostResponse.success || !estimatedCostResponse.data) {
+            utils.log(this.verbose, `Warning: Cost estimation failed, skipping automatic funding`);
+            return null;
+        }
+        
         const estimatedCost = BigInt(estimatedCostResponse.data.costWithBuffer);
 
         if (this.fundingStrategy === SmartAccount.FUNDING_STRATEGY.FUND_PER_TX) {
@@ -427,6 +467,15 @@ export class SmartAccount {
             throw new Error(`UserOperation failed with reason: ${receipt.reason || 'Unknown error'}`);
         }
 
+        // Wait for additional confirmations if configured
+        if (this.numberConfirmation > 1) {
+            utils.log(this.verbose, `Waiting for ${this.numberConfirmation - 1} additional confirmation(s)...`);
+            const txReceipt = await this.provider.getTransactionReceipt(receipt.receipt.transactionHash);
+            const confirmations = this.numberConfirmation - 1;
+            await this.provider.waitForTransaction(receipt.receipt.transactionHash, confirmations);
+            utils.log(this.verbose, `Transaction confirmed with ${this.numberConfirmation} confirmation(s)`);
+        }
+
         // Once mined, account exists
         this.accountExists = true;
 
@@ -454,7 +503,23 @@ export class SmartAccount {
             ? utils.createInitCode(this.factoryAddress, this.owner.address, this.salt)
             : "0x";
 
-        const gasFees = await utils.getGasFees(this.provider);
+        // Use standard gas calculation from utils
+        const gasPriceResponse = await calculateGasPrice(
+            this.rpcUrl,
+            this.gasPriceIncreasePercent,
+            true // Always use EIP-1559 for ERC-4337
+        );
+
+        if (!gasPriceResponse.success) {
+            throw new Error(`Failed to calculate gas price: ${gasPriceResponse.message}`);
+        }
+
+        const maxFeePerGas = ethers.parseUnits(gasPriceResponse.data.maxFee, 'gwei');
+        const maxPriorityFeePerGas = ethers.parseUnits(gasPriceResponse.data.maxPriorityFee, 'gwei');
+
+        // Ensure minimum priority fee for bundler (0.1 gwei)
+        const minPriorityFee = ethers.parseUnits('0.1', 'gwei');
+        const finalPriorityFee = maxPriorityFeePerGas > minPriorityFee ? maxPriorityFeePerGas : minPriorityFee;
 
         // Create temporary UserOp for gas estimation
         const tempUserOp = {
@@ -465,8 +530,8 @@ export class SmartAccount {
             callGasLimit: "0x0",
             verificationGasLimit: "0x0",
             preVerificationGas: "0x0",
-            maxFeePerGas: "0x" + gasFees.maxFeePerGas.toString(16),
-            maxPriorityFeePerGas: "0x" + gasFees.maxPriorityFeePerGas.toString(16),
+            maxFeePerGas: "0x" + maxFeePerGas.toString(16),
+            maxPriorityFeePerGas: "0x" + finalPriorityFee.toString(16),
             paymasterAndData: "0x",
             signature: "0x" + "00".repeat(65),
         };
@@ -491,8 +556,8 @@ export class SmartAccount {
             callGasLimit: "0x" + BigInt(gasEstimates.callGasLimit).toString(16),
             verificationGasLimit: "0x" + verificationGasLimit.toString(16),
             preVerificationGas: "0x" + BigInt(gasEstimates.preVerificationGas).toString(16),
-            maxFeePerGas: "0x" + gasFees.maxFeePerGas.toString(16),
-            maxPriorityFeePerGas: "0x" + gasFees.maxPriorityFeePerGas.toString(16),
+            maxFeePerGas: "0x" + maxFeePerGas.toString(16),
+            maxPriorityFeePerGas: "0x" + finalPriorityFee.toString(16),
             paymasterAndData: "0x",
             signature: "0x",
         };

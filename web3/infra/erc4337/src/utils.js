@@ -43,6 +43,70 @@ export async function isAccountDeployed(_provider, _accountAddress) {
 }
 
 /**
+ * Verify if the bundler URL supports ERC-4337 operations.
+ * @param {string} _bundlerUrl - Bundler RPC endpoint
+ * @param {string} _entryPointAddress - EntryPoint contract address
+ * @returns {Promise<{isValid: boolean, error: string|null}>} Validation result
+ */
+export async function checkBundlerUrl(_bundlerUrl, _entryPointAddress) {
+  try {
+    const response = await axios.post(_bundlerUrl, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_supportedEntryPoints",
+      params: [],
+    });
+
+    if (response.data.error) {
+      return {
+        isValid: false,
+        error: `Bundler returned error: ${response.data.error.message || JSON.stringify(response.data.error)}`
+      };
+    }
+
+    const supportedEntryPoints = response.data.result;
+    
+    if (!Array.isArray(supportedEntryPoints)) {
+      return {
+        isValid: false,
+        error: "Bundler does not support ERC-4337 (eth_supportedEntryPoints not available)"
+      };
+    }
+
+    // Check if the configured EntryPoint is supported
+    const isSupported = supportedEntryPoints.some(
+      ep => ep.toLowerCase() === _entryPointAddress.toLowerCase()
+    );
+
+    if (!isSupported) {
+      return {
+        isValid: false,
+        error: `EntryPoint ${_entryPointAddress} not supported by bundler. Supported: ${supportedEntryPoints.join(", ")}`
+      };
+    }
+
+    return { isValid: true, error: null };
+  } catch (error) {
+    if (error.response?.status === 403) {
+      return {
+        isValid: false,
+        error: "Bundler authentication failed (403). Check your API key or bundler URL."
+      };
+    }
+    if (error.response?.status === 404) {
+      return {
+        isValid: false,
+        error: "Bundler endpoint not found (404). This may not be a valid ERC-4337 bundler URL."
+      };
+    }
+    return {
+      isValid: false,
+      error: `Bundler check failed: ${error.message}`
+    };
+  }
+}
+
+/**
  * Get the current nonce for a smart account from the EntryPoint contract.
  * Supports parallel execution via different nonce keys.
  * @param {Object} _provider - Ethers JsonRpcProvider instance
@@ -161,24 +225,6 @@ export async function estimateUserOpGas(_bundlerUrl, _userOp, _entryPointAddress
   const data = response.data;
   if (data.error) throw new Error(`Gas estimation failed: ${data.error.message}`);
   return data.result;
-}
-
-/**
- * Get current gas fees with bundler-compatible minimum priority fee.
- * Ensures at least 0.1 gwei priority fee for bundler acceptance.
- * @param {Object} _provider - Ethers JsonRpcProvider instance
- * @returns {Promise<{maxFeePerGas: bigint, maxPriorityFeePerGas: bigint}>} Gas fee parameters
- */
-export async function getGasFees(_provider) {
-  const feeData = await _provider.getFeeData();
-  const minPriorityFee = 100000000n; // 0.1 gwei minimum for bundler
-  
-  return {
-    maxFeePerGas: feeData.maxFeePerGas,
-    maxPriorityFeePerGas: feeData.maxPriorityFeePerGas > minPriorityFee
-      ? feeData.maxPriorityFeePerGas
-      : minPriorityFee,
-  };
 }
 
 /**

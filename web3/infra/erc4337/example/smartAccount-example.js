@@ -5,12 +5,11 @@ import 'dotenv/config';
 const rpcUrl = process.env.RPC || "https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY";
 const bundlerUrl = process.env.BUNDLER_URL || "https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY";
 const privateKey = process.env.PRV_KEY;
-const chainId = parseInt(process.env.CHAIN_ID) || 11155111; // Sepolia
 const nonceKey = parseInt(process.env.NONCE_KEY) || 0;
 const verbose = process.env.VERBOSE === 'true' || true;
 
 // Test parameters
-const tokenAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // USDC Sepolia
+const tokenAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'//"0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // USDC Sepolia
 const spenderAddress = "0x0000000000000000000000000000000000000001";
 const isViewOnly = process.env.VIEW_ONLY === 'true' || false;
 
@@ -19,16 +18,16 @@ async function smartAccountExample() {
   console.log("SMART ACCOUNT EXAMPLE");
   console.log("=".repeat(50));
 
-  // Initialize Smart Account
+  // Initialize Smart Account (chainId is auto-detected from RPC)
   console.log("\nCalling: smartAccount.initialize");
   const account = new SmartAccount({
     rpcUrl,
     bundlerUrl,
     privateKey,
-    chainId,
     nonceKey,
     fundingStrategy: SmartAccount.FUNDING_STRATEGY.FUND_PER_TX,
-    verbose
+    verbose,
+    numberConfirmation: 2,
   });
   
   const initResult = await account.initialize();
@@ -68,14 +67,14 @@ async function smartAccountExample() {
       ethers.Interface.from(erc20ABI).encodeFunctionData("approve", [spenderAddress, ethers.parseUnits("5", 6)])
     );
     console.log(singleTxResult);
-
+/*
     // Send batch transactions
     console.log("\nCalling: smartAccount.sendBatch");
     const batchResult = await account.sendBatch([
       account.encodeCall(tokenAddress, erc20ABI, "approve", [spenderAddress, ethers.parseUnits("10", 6)]),
       account.encodeCall(tokenAddress, erc20ABI, "approve", [spenderAddress, ethers.parseUnits("20", 6)])
     ]);
-    console.log(batchResult);
+    console.log(batchResult);*/
   }
 }
 
