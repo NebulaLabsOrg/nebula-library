@@ -603,11 +603,11 @@ class GrvtService:
             funding_account = Account.from_key(funding_private_key)
             
             # Extract parameters
-            vault_id = params['vault_id']
+            vault_id = str(params['vault_id'])
             amount = str(params['amount'])
             currency = params.get('currency', 'USDC')
             
-            # Get currency ID (3 for USDT, 4 for USDC)
+            # Get currency ID (3 for USDT, 4 for USDC) - same as transfer
             currency_id = 4 if currency == 'USDC' else 3
             
             # Generate unique nonce and expiration (20 days)
@@ -615,18 +615,25 @@ class GrvtService:
             expiration_ns = int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000
             
             # Build EIP712 message data for vault invest
-            # Following the pattern of transfer but with vault-specific fields
+            # Pattern from Transfer: uses fromAccount (address), tokenCurrency (uint8), numTokens (uint64 * 1e6)
+            # For vault: mainAccount is like fromAccount, vaultId as uint64
             message_data = {
-                "mainAccountID": funding_address,
-                "vaultID": int(vault_id),
-                "tokenCurrency": currency_id,
-                "numTokens": int(float(amount) * 1_000_000),  # Convert to micro units (6 decimals)
+                "mainAccount": funding_address,  # Like fromAccount in Transfer
+                "vaultId": int(vault_id),  # uint64
+                "tokenCurrency": currency_id,  # uint8: 3=USDT, 4=USDC
+                "numTokens": int(float(amount) * 1_000_000),  # uint64, 6 decimals like Transfer
                 "nonce": nonce,
                 "expiration": expiration_ns
             }
             
             # Define EIP712 domain
-            chain_id = 326 if self.env == GrvtEnv.TESTNET else 1  # 326 for testnet, 1 for mainnet
+            # Chain IDs: PROD=325, TESTNET=326, STAGING=327
+            if self.env == GrvtEnv.PROD:
+                chain_id = 325
+            elif self.env == GrvtEnv.TESTNET:
+                chain_id = 326
+            else:
+                chain_id = 327
             domain_data = {
                 "name": "GRVT Exchange",
                 "version": "0",
@@ -634,10 +641,11 @@ class GrvtService:
             }
             
             # Define EIP712 message type for vault invest
+            # Following Transfer pattern with address, uint64, uint8 types
             message_type = {
                 "VaultInvest": [
-                    {"name": "mainAccountID", "type": "address"},
-                    {"name": "vaultID", "type": "uint64"},
+                    {"name": "mainAccount", "type": "address"},
+                    {"name": "vaultId", "type": "uint64"},
                     {"name": "tokenCurrency", "type": "uint8"},
                     {"name": "numTokens", "type": "uint64"},
                     {"name": "nonce", "type": "uint32"},
@@ -718,11 +726,11 @@ class GrvtService:
             funding_account = Account.from_key(funding_private_key)
             
             # Extract parameters
-            vault_id = params['vault_id']
+            vault_id = str(params['vault_id'])
             amount = str(params['amount'])  # LP tokens amount
             currency = params.get('currency', 'USDC')
             
-            # Get currency ID (3 for USDT, 4 for USDC)
+            # Get currency ID (3 for USDT, 4 for USDC) - same as transfer
             currency_id = 4 if currency == 'USDC' else 3
             
             # Generate unique nonce and expiration (20 days)
@@ -730,17 +738,24 @@ class GrvtService:
             expiration_ns = int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000
             
             # Build EIP712 message data for vault redeem
+            # Pattern from Transfer: uses fromAccount (address), tokenCurrency (uint8), numTokens (uint64 * 1e6)
             message_data = {
-                "mainAccountID": funding_address,
-                "vaultID": int(vault_id),
-                "tokenCurrency": currency_id,
-                "numTokens": int(float(amount) * 1_000_000),  # Convert to micro units (6 decimals)
+                "mainAccount": funding_address,  # Like fromAccount in Transfer
+                "vaultId": int(vault_id),  # uint64
+                "tokenCurrency": currency_id,  # uint8: 3=USDT, 4=USDC
+                "numTokens": int(float(amount) * 1_000_000),  # uint64, 6 decimals like Transfer
                 "nonce": nonce,
                 "expiration": expiration_ns
             }
             
             # Define EIP712 domain
-            chain_id = 326 if self.env == GrvtEnv.TESTNET else 1
+            # Chain IDs: PROD=325, TESTNET=326, STAGING=327
+            if self.env == GrvtEnv.PROD:
+                chain_id = 325
+            elif self.env == GrvtEnv.TESTNET:
+                chain_id = 326
+            else:
+                chain_id = 327
             domain_data = {
                 "name": "GRVT Exchange",
                 "version": "0",
@@ -748,10 +763,11 @@ class GrvtService:
             }
             
             # Define EIP712 message type for vault redeem
+            # Following Transfer pattern with address, uint64, uint8 types
             message_type = {
                 "VaultRedeem": [
-                    {"name": "mainAccountID", "type": "address"},
-                    {"name": "vaultID", "type": "uint64"},
+                    {"name": "mainAccount", "type": "address"},
+                    {"name": "vaultId", "type": "uint64"},
                     {"name": "tokenCurrency", "type": "uint8"},
                     {"name": "numTokens", "type": "uint64"},
                     {"name": "nonce", "type": "uint32"},

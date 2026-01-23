@@ -1,3 +1,0 @@
-grvt-pysdk>=0.2.1
-python-dotenv>=1.0.0
-eth-account>=0.10.0

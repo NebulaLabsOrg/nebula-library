@@ -391,6 +391,7 @@ export class Grvt {
      * @returns {Promise<Object>} Transfer response
      */
     async transferToTrading(amount, currency = 'USDC') {
+        console.log()
         return wmTransferToTrading(this, amount, currency);
     }
     
