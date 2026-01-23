@@ -1,0 +1,12 @@
+{
+  "name": "erc4337",
+  "main": "index.js",
+  "type": "module",
+  "devDependencies": {
+    "dotenv": "^17.2.1"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "ethers": "^6.16.0"
+  }
+}
