@@ -18,6 +18,7 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  *   - 'fund-with-threshold': Maintain target balance threshold
  * @property {string} [targetBalance] - Target balance in ETH for 'fund-with-threshold' strategy (e.g., '0.1')
  * @property {number} [nonceKey=0] - Nonce key for parallel execution (use different keys for concurrent operations)
+ * @property {number} [salt=0] - Salt for deterministic account creation (use different values to create multiple accounts from the same owner)
  * @property {boolean} [verbose=false] - Enable detailed logging for debugging
  */
 
@@ -70,7 +71,7 @@ export class SmartAccount {
 
         this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
         this.owner = new ethers.Wallet(config.privateKey, this.provider);
-        this.salt = 0;
+        this.salt = config.salt ?? 0; // Default to 0, can be changed to create different accounts
 
         this.address = null;
         this.accountExists = false;
@@ -112,7 +113,8 @@ export class SmartAccount {
             this.address = await utils.calculateAccountAddress(
                 this.provider,
                 this.factoryAddress,
-                this.owner.address
+                this.owner.address,
+                this.salt
             );
 
             // Check if account is deployed
@@ -122,6 +124,7 @@ export class SmartAccount {
                 address: this.address,
                 owner: this.owner.address,
                 isDeployed: this.accountExists,
+                salt: this.salt,
                 nonceKey: this.nonceKey,
                 chain: this.chain ? this.chain.name : null,
                 chainId: this.chain ? this.chain.chainId : null
@@ -267,6 +270,29 @@ export class SmartAccount {
     }
 
     /**
+     * Get the current smart account address
+     * @returns {Promise<Object>} Response with the smart account address, owner, deployment status, and salt
+     * @throws {Error} If initialize() has not been called first
+     */
+    async getAddress() {
+        try {
+            if (!this.address) throw new Error("Call initialize() first");
+
+            return createResponse(true, "success", {
+                address: this.address,
+                owner: this.owner.address,
+                isDeployed: this.accountExists,
+                salt: this.salt,
+                nonceKey: this.nonceKey
+            });
+        } catch (error) {
+            return createResponse(false, error.message || "Failed to get address", {
+                error: error.message
+            });
+        }
+    }
+
+    /**
      * Estimate the gas cost for a transaction without executing it.
      * Includes a 20% safety buffer on top of the base estimation.
      * @param {string} _callData - Encoded call data (use encodeSingleCall or encodeBatchCall)
@@ -396,6 +422,11 @@ export class SmartAccount {
         utils.log(this.verbose, "Waiting for transaction confirmation...");
         const receipt = await utils.waitForUserOpReceipt(this.bundlerUrl, userOpHash);
 
+        // Check if UserOp execution was successful
+        if (receipt.success !== true) {
+            throw new Error(`UserOperation failed with reason: ${receipt.reason || 'Unknown error'}`);
+        }
+
         // Once mined, account exists
         this.accountExists = true;
 
@@ -420,7 +451,7 @@ export class SmartAccount {
 
         // Create initCode only if account doesn't exist yet
         const initCode = _isNewAccount
-            ? utils.createInitCode(this.factoryAddress, this.owner.address)
+            ? utils.createInitCode(this.factoryAddress, this.owner.address, this.salt)
             : "0x";
 
         const gasFees = await utils.getGasFees(this.provider);

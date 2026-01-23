@@ -39,6 +39,11 @@ async function smartAccountExample() {
   const balanceResult = await account.getBalance();
   console.log(balanceResult);
 
+  // Get Address
+  console.log("\nCalling: smartAccount.getAddress");
+  const addressResult = await account.getAddress();
+  console.log(addressResult);
+
   // Encode call example
   console.log("\nCalling: smartAccount.encodeCall");
   const erc20ABI = ["function approve(address spender, uint256 amount) returns (bool)"];

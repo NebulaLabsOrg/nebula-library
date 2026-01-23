@@ -12,14 +12,14 @@ import { ABI } from "./abi.js";
  * @param {Object} _provider - Ethers JsonRpcProvider instance
  * @param {string} _factoryAddress - Factory contract address
  * @param {string} _ownerAddress - Owner wallet address
+ * @param {number} [_salt=0] - Salt for deterministic account creation
  * @returns {Promise<string>} Calculated smart account address
  */
-export async function calculateAccountAddress(_provider, _factoryAddress, _ownerAddress) {
+export async function calculateAccountAddress(_provider, _factoryAddress, _ownerAddress, _salt = 0) {
   const selector = "0x8cb84e18"; // getAddress(address,uint256)
-  const salt = 0;
   const encodedParams = ethers.AbiCoder.defaultAbiCoder().encode(
     ["address", "uint256"],
-    [_ownerAddress, salt]
+    [_ownerAddress, _salt]
   );
   const callData = selector + encodedParams.slice(2);
 
@@ -61,11 +61,12 @@ export async function getNonce(_provider, _entryPointAddress, _accountAddress, _
  * Only needed for the first transaction when the account doesn't exist yet.
  * @param {string} _factoryAddress - Factory contract address
  * @param {string} _ownerAddress - Owner wallet address
+ * @param {number} [_salt=0] - Salt for deterministic account creation
  * @returns {string} Encoded initCode (factory address + call data)
  */
-export function createInitCode(_factoryAddress, _ownerAddress) {
+export function createInitCode(_factoryAddress, _ownerAddress, _salt = 0) {
   const factory = new ethers.Interface(ABI.FACTORY);
-  const initCallData = factory.encodeFunctionData("createAccount", [_ownerAddress, 0]);
+  const initCallData = factory.encodeFunctionData("createAccount", [_ownerAddress, _salt]);
   return ethers.concat([_factoryAddress, initCallData]);
 }
 
