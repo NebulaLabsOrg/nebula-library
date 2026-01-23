@@ -9,7 +9,7 @@ const nonceKey = parseInt(process.env.NONCE_KEY) || 0;
 const verbose = process.env.VERBOSE === 'true' || true;
 
 // Test parameters
-const tokenAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'//"0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // USDC Sepolia
+const tokenAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // USDC Sepolia
 const spenderAddress = "0x0000000000000000000000000000000000000001";
 const isViewOnly = process.env.VIEW_ONLY === 'true' || false;
 
@@ -67,14 +67,14 @@ async function smartAccountExample() {
       ethers.Interface.from(erc20ABI).encodeFunctionData("approve", [spenderAddress, ethers.parseUnits("5", 6)])
     );
     console.log(singleTxResult);
-/*
+
     // Send batch transactions
     console.log("\nCalling: smartAccount.sendBatch");
     const batchResult = await account.sendBatch([
       account.encodeCall(tokenAddress, erc20ABI, "approve", [spenderAddress, ethers.parseUnits("10", 6)]),
       account.encodeCall(tokenAddress, erc20ABI, "approve", [spenderAddress, ethers.parseUnits("20", 6)])
     ]);
-    console.log(batchResult);*/
+    console.log(batchResult);
   }
 }
 
