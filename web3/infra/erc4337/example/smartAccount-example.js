@@ -28,6 +28,7 @@ async function smartAccountExample() {
     fundingStrategy: SmartAccount.FUNDING_STRATEGY.FUND_PER_TX,
     verbose,
     numberConfirmation: 2,
+    simulate: true
   });
   
   const initResult = await account.initialize();
