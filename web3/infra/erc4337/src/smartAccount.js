@@ -10,11 +10,10 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  * @property {string} rpcUrl - RPC provider URL for blockchain connection
  * @property {string} bundlerUrl - ERC-4337 bundler endpoint URL
  * @property {string} privateKey - Owner's private key (controls the smart account)
- * @property {number} [chainId] - Optional: Chain ID for validation. If not provided, auto-detected from RPC.
  * @property {string} [factoryAddress] - Custom factory address (overrides chain default)
  * @property {string} [entryPointAddress] - Custom EntryPoint address (overrides chain default)
  * @property {string} [fundingStrategy='no-fund'] - Automatic funding strategy (be careful with parallel executions):
- *   - 'no-fund': No automatic funding (manual funding required)
+ *   - 'no-fund': No automatic funding (manual funding required - default)
  *   - 'fund-per-tx': Auto-fund exact amount needed per transaction
  *   - 'fund-with-threshold': Maintain target balance threshold
  * @property {string} [targetBalance] - Target balance in ETH for 'fund-with-threshold' strategy (e.g., '0.1')
@@ -22,6 +21,7 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  * @property {number} [salt=0] - Salt for deterministic account creation (use different values to create multiple accounts from the same owner)
  * @property {number} [gasPriceIncreasePercent=0] - Percentage to increase gas price for faster inclusion (e.g., 20 for 20% higher)
  * @property {number} [numberConfirmation=1] - Number of block confirmations to wait for after transaction is mined
+ * @property {boolean} [simulate=false] - If true, simulate transactions without sending them on-chain (dry-run mode)
  * @property {boolean} [verbose=false] - Enable detailed logging for debugging
  * 
  * NOTE: Paymaster support is not yet implemented. All transactions require the smart account to have sufficient ETH balance.
@@ -37,7 +37,6 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  *   rpcUrl: "https://eth-sepolia.g.alchemy.com/v2/YOUR-KEY",
  *   bundlerUrl: "https://bundler.biconomy.io/api/v2/11155111/YOUR-KEY",
  *   privateKey: "0x...",
- *   chainId: 11155111, // Sepolia
  *   fundingStrategy: SmartAccount.FUNDING_STRATEGY.FUND_PER_TX,
  *   verbose: true
  * });
@@ -62,11 +61,9 @@ export class SmartAccount {
         this.rpcUrl = config.rpcUrl;
         this.bundlerUrl = config.bundlerUrl;
 
-        // Store config chainId for validation (optional)
-        this.configChainId = config.chainId || null;
-
         // Chain configuration will be set during initialize()
         this.chain = null;
+        this.chainId = null;
         this.factoryAddress = config.factoryAddress || null;
         this.entryPointAddress = config.entryPointAddress || null;
 
@@ -76,6 +73,11 @@ export class SmartAccount {
 
         this.address = null;
         this.accountExists = false;
+
+        // Gas price cache (5 seconds TTL)
+        this.gasPriceCache = null;
+        this.gasPriceCacheTimestamp = 0;
+        this.gasPriceCacheTTL = 5000; // 5 seconds in milliseconds
 
         // Nonce key for parallel execution support
         this.nonceKey = config.nonceKey ?? 0; // Default to 0 for backward compatibility
@@ -111,6 +113,9 @@ export class SmartAccount {
             throw new Error("numberConfirmation must be a positive integer");
         }
 
+        // Simulation mode
+        this.simulate = config.simulate ?? false;
+
         // Verbose logging
         this.verbose = config.verbose !== undefined ? config.verbose : false;
     }
@@ -125,11 +130,7 @@ export class SmartAccount {
             // Get network info from provider
             const network = await this.provider.getNetwork();
             const detectedChainId = Number(network.chainId);
-
-            // If user provided chainId, validate it matches
-            if (this.configChainId && this.configChainId !== detectedChainId) {
-                throw new Error(`Chain ID mismatch: RPC is on chain ${detectedChainId}, but config specified chain ${this.configChainId}`);
-            }
+            this.chainId = detectedChainId; // Cache chainId for future use
 
             // Auto-configure chain settings if available
             if (CHAINS[detectedChainId]) {
@@ -443,14 +444,32 @@ export class SmartAccount {
 
         const userOp = await this.#createUserOp(_callData, !this.accountExists);
 
-        const chainId = (await this.provider.getNetwork()).chainId;
         const signature = await utils.signUserOp(
             userOp,
             this.entryPointAddress,
-            chainId,
+            this.chainId,
             this.owner
         );
         userOp.signature = signature;
+
+        // Simulation mode: return without sending on-chain
+        if (this.simulate) {
+            utils.log(this.verbose, "[SIMULATION MODE] UserOperation prepared but not sent on-chain");
+            return {
+                userOpHash: "0x" + "0".repeat(64), // Simulated hash
+                txHash: "0x" + "0".repeat(64), // Simulated hash
+                receipt: {
+                    success: true,
+                    reason: "Simulated",
+                    receipt: {
+                        transactionHash: "0x" + "0".repeat(64),
+                        blockNumber: 0,
+                        gasUsed: "0"
+                    }
+                },
+                userOp: userOp // Include the prepared UserOp for inspection
+            };
+        }
 
         utils.log(this.verbose, "Sending UserOperation to bundler...");
         const userOpHash = await utils.sendUserOp(
@@ -503,19 +522,33 @@ export class SmartAccount {
             ? utils.createInitCode(this.factoryAddress, this.owner.address, this.salt)
             : "0x";
 
-        // Use standard gas calculation from utils
-        const gasPriceResponse = await calculateGasPrice(
-            this.rpcUrl,
-            this.gasPriceIncreasePercent,
-            true // Always use EIP-1559 for ERC-4337
-        );
+        // Use cached gas price if available and fresh (within TTL)
+        const now = Date.now();
+        let gasPriceData;
+        
+        if (this.gasPriceCache && (now - this.gasPriceCacheTimestamp) < this.gasPriceCacheTTL) {
+            gasPriceData = this.gasPriceCache;
+            utils.log(this.verbose, "Using cached gas price");
+        } else {
+            // Fetch fresh gas price
+            const gasPriceResponse = await calculateGasPrice(
+                this.rpcUrl,
+                this.gasPriceIncreasePercent,
+                true // Always use EIP-1559 for ERC-4337
+            );
 
-        if (!gasPriceResponse.success) {
-            throw new Error(`Failed to calculate gas price: ${gasPriceResponse.message}`);
+            if (!gasPriceResponse.success) {
+                throw new Error(`Failed to calculate gas price: ${gasPriceResponse.message}`);
+            }
+
+            gasPriceData = gasPriceResponse.data;
+            // Update cache
+            this.gasPriceCache = gasPriceData;
+            this.gasPriceCacheTimestamp = now;
         }
 
-        const maxFeePerGas = ethers.parseUnits(gasPriceResponse.data.maxFee, 'gwei');
-        const maxPriorityFeePerGas = ethers.parseUnits(gasPriceResponse.data.maxPriorityFee, 'gwei');
+        const maxFeePerGas = ethers.parseUnits(gasPriceData.maxFee, 'gwei');
+        const maxPriorityFeePerGas = ethers.parseUnits(gasPriceData.maxPriorityFee, 'gwei');
 
         // Ensure minimum priority fee for bundler (0.1 gwei)
         const minPriorityFee = ethers.parseUnits('0.1', 'gwei');
