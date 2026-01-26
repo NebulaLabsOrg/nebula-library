@@ -12,6 +12,7 @@ import sys
 import time
 import random
 import logging
+import os
 from typing import Dict, Any
 
 # Monkey-patch requests.Session to fix duplicate cookies issue in GRVT SDK
@@ -89,18 +90,9 @@ class GrvtService:
             # Create eth_account for signing transfers (use funding private key)
             self.account = Account.from_key(self.funding_private_key or self.private_key)
             
-            # Determine environment
-            env_str = self.config.get('environment', 'testnet').lower()
-            if env_str == 'mainnet':
-                self.env = GrvtEnv.PROD
-            elif env_str == 'staging':
-                self.env = GrvtEnv.STAGING
-            else:
-                self.env = GrvtEnv.TESTNET
-            
             # Create API config
             api_config = GrvtApiConfig(
-                env=self.env,
+                env=GrvtEnv.PROD,
                 trading_account_id=self.account_id,
                 private_key=self.private_key,
                 api_key=self.api_key,
@@ -381,8 +373,8 @@ class GrvtService:
             
             # IMPORTANT: from_account_id and to_account_id are ALWAYS the same (funding address/main_account_id)
             # We transfer between sub-accounts using sub_account_id
-            # The funding_address IS the main_account_id
-            main_account_id = funding_address
+            # Use GRVT_ACCOUNT_ADDRESS from environment if set, otherwise use funding_address
+            main_account_id = os.environ.get('GRVT_ACCOUNT_ADDRESS', funding_address)
             
             if direction == 'to_trading':
                 from_sub = '0'  # Funding account (main account, sub_account_id = 0)
@@ -420,8 +412,8 @@ class GrvtService:
             # The SDK uses trading_account_id for the X-Grvt-Account-Id header
             # For funding account, we should use the trading sub-account ID that was created
             funding_api_config = GrvtApiConfig(
-                env=self.env,
-                trading_account_id=str(trading_account_id),  # Use trading sub-account ID for auth
+                env=GrvtEnv.PROD,
+                trading_account_id=str(0),  # Use trading sub-account ID for auth
                 private_key=funding_private_key,  # Funding private key for signing
                 api_key=funding_api_key,  # Funding API key for authentication
                 logger=logging.getLogger('grvt')

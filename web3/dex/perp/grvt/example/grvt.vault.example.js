@@ -18,7 +18,6 @@ const grvtInstance = new Grvt({
     },
     slippage: 0.5,
     usePython: true,  // Required for vault operations
-    environment: 'mainnet'
 });
 
 async function testGlpVaultInvest() {

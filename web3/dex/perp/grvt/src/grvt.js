@@ -43,7 +43,6 @@ export class Grvt {
      * @param {string} config.trading.apiKey - Trading API key
      * @param {number} [config.slippage=0.5] - Default slippage percent
      * @param {Object} [config.throttler=null] - Optional throttler instance
-     * @param {string} [config.environment="testnet"] - Environment (mainnet/testnet/staging)
      * @param {boolean} [config.usePython=true] - Enable Python SDK
      */
     constructor(config) {
@@ -75,7 +74,6 @@ export class Grvt {
         
         this.slippage = config.slippage ?? 0.5;
         this.throttler = config.throttler ?? { enqueue: fn => fn() };
-        this.environment = config.environment ?? 'mainnet';
         this.usePython = config.usePython ?? false; // Default false - most ops use HTTP API
         this.pythonPath = 'python3'; // Default, will be updated in _initPythonService
         
@@ -95,7 +93,7 @@ export class Grvt {
         this.authenticated = false;
         this.authPromise = null;
         
-        const baseUrl = getBaseUrl(this.environment);
+        const baseUrl = getBaseUrl('mainnet');
         
         // Initialize HTTP instance for Trading API with trading account
         // Used for: positions, orders (requires trading auth)
@@ -122,7 +120,7 @@ export class Grvt {
         
         // Initialize HTTP instance for Market Data API (market-data.grvt.io)
         // Used for: instruments, ticker, orderbook, candles (public, no auth)
-        const marketDataUrl = getMarketDataUrl(this.environment);
+        const marketDataUrl = getMarketDataUrl('mainnet');
         this.marketDataInstance = createInstance(marketDataUrl, {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -132,7 +130,7 @@ export class Grvt {
         
         // Start authentication for trading account
         this.trading.authPromise = authenticate(
-            this.environment,
+            'mainnet',
             this.trading.apiKey,
             this.trading.accountId,
             this.tradingInstance
@@ -153,7 +151,7 @@ export class Grvt {
         
         // Start authentication for funding account
         this.funding.authPromise = authenticate(
-            this.environment,
+            'mainnet',
             this.funding.apiKey,
             null, // Funding doesn't need accountId for auth
             this.fundingInstance
@@ -197,8 +195,7 @@ export class Grvt {
             // For funding/transfer operations, use funding credentials
             funding_api_key: this.funding.apiKey,
             funding_private_key: this.funding.privateKey,
-            funding_address: this.funding.address,
-            environment: this.environment
+            funding_address: this.funding.address
         };
         
         return sendCommand(this.pythonService, command, enrichedParams);

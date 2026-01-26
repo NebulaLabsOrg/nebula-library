@@ -18,13 +18,12 @@ const grvtInstance = new Grvt({
         apiKey: process.env.GRVT_TRADING_API_KEY
     },
     slippage: 0.5,
-    environment: 'mainnet',
-    usePython: true, // Enable Python SDK for write operations
+    environment: 'mainnet'
 });
 
 // Example 1: Transfer 10 USDT from Funding account to Trading account
 console.log('\n=== Transfer 10 USDT to Trading Account ===');
-const transferToTradingResult = await grvtInstance.transferToTrading(10, 'USDT');
+const transferToTradingResult = await grvtInstance.transferToTrading(5, 'USDT');
 console.log('Transfer to Trading result:', transferToTradingResult);
 
 if (transferToTradingResult.success) {
@@ -39,7 +38,7 @@ await new Promise(resolve => setTimeout(resolve, 2000));
 
 // Example 2: Transfer 10 USDT from Trading account back to Funding account
 console.log('\n=== Transfer 10 USDT to Funding Account ===');
-const transferToFundingResult = await grvtInstance.transferToFunding(10, 'USDT');
+const transferToFundingResult = await grvtInstance.transferToFunding(5, 'USDT');
 console.log('Transfer to Funding result:', transferToFundingResult);
 
 if (transferToFundingResult.success) {
