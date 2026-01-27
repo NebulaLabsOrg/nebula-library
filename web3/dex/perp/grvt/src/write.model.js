@@ -195,12 +195,15 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                             {
                                 symbol: _symbol,
                                 currentOrderId,
-                                qty: qty,
-                                price: roundedPrice,
+                                priceSubmitted: roundedPrice,
                                 side: _side,
-                                type: _type,
                                 finalStatus: currentStatus,
-                                ...orderStatus
+                                orderType: orderStatus.orderType,
+                                status: orderStatus.status,
+                                qty: orderStatus.qty,
+                                qtyExe: orderStatus.qtyExe || '0.0',
+                                qtyExeUsd: orderStatus.qtyExeUsd,
+                                avgPrice: orderStatus.avgPrice || '0.0'
                             },
                             'grvt.submitOrder'
                         );
@@ -247,13 +250,15 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                                 {
                                     symbol: _symbol,
                                     currentOrderId,
-                                    qty: qty,
-                                    price: roundedPrice,
+                                    priceSubmitted: roundedPrice,
                                     side: _side,
-                                    type: _type,
                                     finalStatus: 'REJECTED',
                                     attempts: attemptCount,
-                                    ...orderStatus
+                                    orderType: orderStatus.orderType,
+                                    status: orderStatus.status,
+                                    qty: orderStatus.qty,
+                                    qtyExe: orderStatus.qtyExe || '0.0',
+                                    avgPrice: orderStatus.avgPrice || '0.0'
                                 },
                                 'grvt.submitOrder'
                             );
@@ -277,12 +282,15 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                             {
                                 symbol: _symbol,
                                 currentOrderId,
-                                qty: qty,
-                                price: roundedPrice,
+                                priceSubmitted: roundedPrice,
                                 side: _side,
-                                type: _type,
                                 finalStatus: 'TIMEOUT_CANCELLED',
-                                ...finalStatus
+                                orderType: finalStatus.orderType,
+                                status: finalStatus.status || 'TIMEOUT_CANCELLED',
+                                qty: finalStatus.qty,
+                                qtyExe: finalStatus.qtyExe || '0.0',
+                                qtyExeUsd: finalStatus.qtyExeUsd,
+                                avgPrice: finalStatus.avgPrice || '0.0'
                             },
                             'grvt.submitOrder'
                         );
@@ -305,10 +313,8 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                 {
                     symbol: _symbol,
                     currentOrderId,
-                    qty: qty,
-                    price: roundedPrice,
+                    priceSubmitted: roundedPrice,
                     side: _side,
-                    type: _type,
                     attempts: attemptCount
                 },
                 'grvt.submitOrder'
@@ -322,10 +328,8 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             {
                 symbol: _symbol,
                 currentOrderId: currentOrderId,
-                qty: qty,
-                price: roundedPrice,
-                side: _side,
-                type: _type
+                priceSubmitted: roundedPrice,
+                side: _side
             },
             'grvt.submitOrder'
         );
@@ -618,10 +622,14 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                             {
                                 symbol: _symbol,
                                 currentOrderId,
-                                closedQty: qty,
-                                price: roundedPrice,
+                                priceSubmitted: roundedPrice,
                                 finalStatus: currentStatus,
-                                ...orderStatus
+                                orderType: orderStatus.orderType,
+                                status: orderStatus.status,
+                                qty: orderStatus.qty,
+                                qtyExe: orderStatus.qtyExe,
+                                qtyExeUsd: orderStatus.qtyExeUsd,
+                                avgPrice: orderStatus.avgPrice
                             },
                             'grvt.submitCloseOrder'
                         );
@@ -671,11 +679,14 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                                 {
                                     symbol: _symbol,
                                     currentOrderId,
-                                    closedQty: qty,
-                                    price: roundedPrice,
+                                    priceSubmitted: roundedPrice,
                                     finalStatus: 'REJECTED',
                                     attempts: attemptCount,
-                                    ...orderStatus
+                                    orderType: orderStatus.orderType,
+                                    status: orderStatus.status,
+                                    qty: orderStatus.qty,
+                                    qtyExe: orderStatus.qtyExe || '0.0',
+                                    avgPrice: orderStatus.avgPrice || '0.0'
                                 },
                                 'grvt.submitCloseOrder'
                             );
@@ -699,10 +710,14 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                             {
                                 symbol: _symbol,
                                 currentOrderId,
-                                closedQty: qty,
-                                price: roundedPrice,
+                                priceSubmitted: roundedPrice,
                                 finalStatus: 'TIMEOUT_CANCELLED',
-                                ...finalStatus
+                                orderType: finalStatus.orderType,
+                                status: finalStatus.status || 'TIMEOUT_CANCELLED',
+                                qty: finalStatus.qty,
+                                qtyExe: finalStatus.qtyExe || '0.0',
+                                qtyExeUsd: finalStatus.qtyExeUsd,
+                                avgPrice: finalStatus.avgPrice || '0.0'
                             },
                             'grvt.submitCloseOrder'
                         );
@@ -725,8 +740,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                 {
                     symbol: _symbol,
                     currentOrderId,
-                    closedQty: qty,
-                    price: roundedPrice,
+                    priceSubmitted: roundedPrice,
                     attempts: attemptCount
                 },
                 'grvt.submitCloseOrder'
@@ -739,8 +753,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             {
                 symbol: _symbol,
                 currentOrderId,
-                closedQty: qty,
-                price: roundedPrice
+                priceSubmitted: roundedPrice
             },
             'grvt.submitCloseOrder'
         );

@@ -1,6 +1,13 @@
-# GRVT Extended Integration
+# GRVT Trading Client
 
 Production-ready GRVT DEX perpetual trading integration following the **NebulaLabs architecture pattern**.
+
+## 📋 Prerequisites
+
+- **Node.js**: ≥16.0.0
+- **Python**: ≥3.11.0 (only for full SDK mode)
+- **npm**: Latest stable version
+- **pip**: Python package installer (only for full SDK mode)
 
 ## 🏗️ Architecture
 
@@ -8,37 +15,63 @@ This implementation follows the proven NebulaLabs Extended module architecture:
 
 ```
 src/
-├── enum.js              # extendedEnum + grvtEnum (all constants)
+├── enum.js              # grvtEnum (all constants)
 ├── constant.js          # API URLs, TimeInForce, decimals
 ├── utils.js             # BigNumber calculations (calculateMidPrice, formatOrderQuantity)
-├── extended.js          # Main Extended class (Python SDK integration)
+├── grvt.js              # Full Grvt class (Python SDK integration)
+├── grvt-minimal.js      # GrvtMinimal class (HTTP API only)
 ├── view.model.js        # vm* functions (READ ONLY, HTTP/SDK API calls)
-└── write.model.js       # wm* functions (WRITE operations with embedded monitoring)
+├── write.model.js       # wm* functions (WRITE operations with embedded monitoring)
+└── helpers.js           # Authentication, Python service management
 ```
 
 ### Key Principles
 
 1. **View Layer (vm\*):** HTTP API or Python SDK calls, NO state changes
-2. **Write Layer (wm\*):** Python SDK operations with embedded WebSocket monitoring
+2. **Write Layer (wm\*):** Python SDK operations with embedded monitoring
 3. **BigNumber Integration:** Internal calculations use `ethers.BigNumber` for precision
 4. **Embedded Monitoring:** Order state tracking built into write operations
 
-## 📦 Installation
+## 🛠️ Setup
 
-### Node.js Dependencies
+### 1. Create Requirements File
 
-```bash
-npm install
+Create a `requirements.txt` file in the project root with the following content:
+
+```txt
+# Requirements for GRVT Python SDK dependencies
+grvt-pysdk
 ```
 
-### Python Dependencies
+### 2. Create Setup Script
+
+Create a `setup.sh` file in the project root:
 
 ```bash
+#!/bin/bash
+
+echo "🔧 Setting up GRVT project environment..."
+
+# Install Python dependencies (for full SDK mode)
+echo "📦 Installing Python dependencies..."
 pip install -r requirements.txt
-pip install -r python-service/requirements.txt
+
+# Install Node.js dependencies  
+echo "📦 Installing Node.js dependencies..."
+npm install
+
+echo "🎉 Setup completed successfully!"
 ```
 
-### Environment Setup
+### 3. Run Setup
+
+Execute the setup script:
+
+```bash
+sh ./setup.sh
+```
+
+### 4. Environment Setup
 
 ```bash
 cp .env.example .env
@@ -94,43 +127,209 @@ GRVT_ENV=testnet
 
 ## 🚀 Usage
 
-### Basic Setup
+### Full SDK Mode (with Python)
+
+For complete trading functionality including order placement, positions, transfers, and balance:
 
 ```javascript
-import { Extended, extendedEnum, grvtEnum } from './src/extended.js';
+import { Grvt } from '@nebula-library/web3/dex/perp/grvt';
 
-const extended = new Extended({
-    apiKey: process.env.GRVT_TRADING_API_KEY,
-    privateKey: process.env.GRVT_TRADING_PRIVATE_KEY,
-    publicKey: process.env.GRVT_TRADING_ADDRESS,
-    tradingAccountId: process.env.GRVT_TRADING_ACCOUNT_ID,
-    fundingAddress: process.env.GRVT_FUNDING_ADDRESS,
-    tradingAddress: process.env.GRVT_TRADING_ADDRESS,
+const grvt = new Grvt({
+    funding: {
+        address: process.env.GRVT_FUNDING_ADDRESS,
+        privateKey: process.env.GRVT_FUNDING_PRIVATE_KEY,
+        apiKey: process.env.GRVT_FUNDING_API_KEY
+    },
+    trading: {
+        address: process.env.GRVT_TRADING_ADDRESS,
+        accountId: process.env.GRVT_TRADING_ACCOUNT_ID,
+        privateKey: process.env.GRVT_TRADING_PRIVATE_KEY,
+        apiKey: process.env.GRVT_TRADING_API_KEY
+    },
     slippage: 0.5,
-    environment: 'testnet',
-    usePython: true
+    environment: 'testnet', // or 'mainnet'
+    usePython: true // Enable Python SDK for trading operations
 });
+
+// Full SDK functionality available
+const balance = await grvt.getWalletBalance();
+const positions = await grvt.getOpenPositions();
+
+// Submit order with monitoring and retry
+const order = await grvt.submitOrder(
+    grvtEnum.orderType.limit,
+    'BTC-PERP',
+    grvtEnum.orderSide.long,
+    grvtEnum.marketUnit.quoteOnMainCoin,
+    0.001,
+    (update) => console.log('Order update:', update), // callback
+    3,      // retry attempts
+    60000   // timeout ms
+);
+
+// Transfer funds
+const transfer = await grvt.transferToTrading('100', 'USDT');
+
+// Close position
+const close = await grvt.submitCloseOrder(
+    grvtEnum.orderType.market,
+    'BTC-PERP',
+    grvtEnum.marketUnit.quoteOnMainCoin,
+    0,
+    true // closeAll
+);
+
+// IMPORTANT: Always close the connection when done
+await grvt.close();
 ```
 
-### View Operations (Read Only)
+### 🌐 Web/Serverless Mode (GrvtMinimal - HTTP Only)
+
+**Perfect for serverless environments** like Gelato, AWS Lambda, Vercel Functions, or browser environments.
+
+**Zero dependencies on:**
+- ❌ Python
+- ❌ child_process
+- ❌ file system
+- ✅ Pure HTTP API calls
 
 ```javascript
-// Get wallet balance
-const balance = await extended.getWalletBalance();
-console.log('Available:', balance.data.availableForTrade);
+import { GrvtMinimal } from '@nebula-library/web3/dex/perp/grvt';
 
-// Get market data
-const markets = await extended.getMarketData('BTC-PERP');
-console.log('Ask:', markets.data[0].market_stats.ask_price);
+const grvt = new GrvtMinimal({
+    apiKey: process.env.GRVT_TRADING_API_KEY,
+    accountId: process.env.GRVT_TRADING_ACCOUNT_ID,
+    environment: 'testnet' // or 'mainnet'
+});
 
-// Get open positions
-const positions = await extended.getOpenPositions();
-console.log('Open positions:', positions.data.openPositions);
+// ✅ Read-only operations via HTTP:
+const walletStatus = await grvt.getWalletStatus();
+const walletBalance = await grvt.getWalletBalance();
+const positions = await grvt.getOpenPositions();
+const prices = await grvt.getMarketDataPrices('BTC-PERP');
+const orderStatus = await grvt.getOrderStatusById(orderId);
+const transferStatus = await grvt.getTransferStatusByTxId(txId);
 
-// Get position detail
-const detail = await extended.getOpenPositionDetail('BTC-PERP');
-console.log('Side:', detail.data.side);
-console.log('Qty:', detail.data.qty);
+// No cleanup needed (no Python service)
+await grvt.close(); // No-op, API compatible with full Grvt class
+```
+
+**GrvtMinimal Features:**
+- ✅ Wallet status and balance
+- ✅ Market data (prices, funding rates, open interest)
+- ✅ Position monitoring
+- ✅ Order status checking
+- ✅ Transfer status verification
+
+**GrvtMinimal Limitations:**
+- ❌ Cannot place orders (requires Python SDK for EIP712 signing)
+- ❌ Cannot cancel orders (requires Python SDK)
+- ❌ Cannot transfer funds (requires Python SDK for signing)
+- ✅ Perfect for monitoring, status checks, webhooks, dashboards
+
+### Hybrid Mode (usePython flag)
+
+Use the full `Grvt` class with Python disabled for specific cases:
+
+```javascript
+const grvt = new Grvt({
+    funding: { /* ... */ },
+    trading: { /* ... */ },
+    environment: 'testnet',
+    usePython: false // 🔥 Disable Python - HTTP only
+});
+
+// ✅ These work without Python (HTTP direct):
+const walletStatus = await grvt.getWalletStatus();
+const positions = await grvt.getOpenPositions();
+const orderStatus = await grvt.getOrderStatusById(orderId);
+
+// ❌ These require Python SDK (will throw error):
+// await grvt.submitOrder(...)      // Needs Python for EIP712 signing
+// await grvt.transferToTrading(...) // Needs Python for transfer signing
+```
+
+## � API Comparison
+
+| Feature | Full SDK (Grvt) | Minimal (GrvtMinimal) |
+|---------|----------------|----------------------|
+| **Setup Requirements** | Python + Node.js | Node.js only |
+| **Dependencies** | Python SDK, child_process | Pure HTTP (axios) |
+| **Wallet Balance** | ✅ | ✅ |
+| **Market Data** | ✅ | ✅ |
+| **Position Monitoring** | ✅ | ✅ |
+| **Order Status** | ✅ | ✅ |
+| **Transfer Status** | ✅ | ✅ |
+| **Submit Orders** | ✅ (with retry/callback) | ❌ |
+| **Cancel Orders** | ✅ (with retry) | ❌ |
+| **Fund Transfers** | ✅ (with verification) | ❌ |
+| **Order Monitoring** | ✅ Automatic | ❌ |
+| **Serverless Compatible** | ❌ | ✅ |
+| **Browser Compatible** | ❌ | ✅ |
+
+## 🎯 Use Case Guide
+
+### When to use **Full SDK (Grvt)**:
+- 🤖 **Trading Bots**: Automated trading strategies with order placement
+- 📊 **Portfolio Management**: Active position management and rebalancing
+- 🔄 **Fund Management**: Transfers between accounts
+- ⚡ **High Frequency Trading**: Low latency order submission
+- 🎮 **Trading Applications**: Full-featured trading interfaces
+
+### When to use **Minimal (GrvtMinimal)**:
+- 🌐 **Gelato Functions**: Automated tasks, webhook handlers
+- ☁️ **AWS Lambda**: Serverless monitoring and alerts
+- 🚀 **Vercel Functions**: Edge computing, API endpoints
+- 📱 **Mobile Apps**: Read-only trading dashboards
+- 🖥️ **Web Dashboards**: Position monitoring, P&L tracking
+- 📧 **Notification Services**: Order/transfer status alerts
+- 📈 **Analytics Services**: Market data aggregation
+
+## �🔐 Account Structure
+
+GRVT uses a two-account system:
+
+```
+┌─────────────────────────────────────────────┐
+│  FUNDING ADDRESS (Treasury)                 │
+│  └─ Address ONLY: 0xFundingAddress          │
+│  └─ NO Account ID                           │
+│  └─ Sub-Account: "0" (implicit)             │
+│  └─ Purpose: Hold funds, bridge to trading  │
+│                                              │
+│           ↓↓↓ TRANSFER ↓↓↓                  │
+│                                              │
+│  TRADING ADDRESS (Operations)               │
+│  ├─ Address: 0xTradingAddress               │
+│  ├─ Trading Account ID: hex string          │
+│  │   (1920109784202388)                     │
+│  ├─ Sub-Account: Same as Account ID         │
+│  ├─ Purpose: Orders, positions, margin      │
+│  └─ CAN trade, CAN have positions           │
+└─────────────────────────────────────────────┘
+```
+
+### Key Differences
+
+- **Funding Account:** A treasury account that holds funds securely. It has no account ID and cannot place orders or hold positions. Its primary purpose is to store funds and transfer them to the trading account when needed.
+- **Trading Account:** An operational account linked to a specific trading account ID. It can submit orders, manage positions, and handle margin requirements. Funds must be transferred from the funding account to the trading account before any trading activities can occur.
+
+### Environment Variables
+
+```bash
+# Funding Account
+GRVT_FUNDING_ADDRESS=0x...
+GRVT_FUNDING_PRIVATE_KEY=0x...
+GRVT_FUNDING_API_KEY=...
+
+# Trading Account
+GRVT_TRADING_ADDRESS=0x...
+GRVT_TRADING_ACCOUNT_ID=1920...
+GRVT_TRADING_PRIVATE_KEY=0x...
+GRVT_TRADING_API_KEY=...
+
+# Environment
+GRVT_ENV=testnet
 ```
 
 ### Write Operations (With Embedded Monitoring)
