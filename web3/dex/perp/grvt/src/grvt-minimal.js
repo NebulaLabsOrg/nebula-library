@@ -33,7 +33,6 @@ export class GrvtMinimal {
      * @param {string} config.apiKey - Trading API key for authentication
      * @param {string} config.accountId - Trading account ID (sub_account_id)
      * @param {Object} [config.throttler={ enqueue: fn => fn() }] - Throttler object to manage API requests
-     * @param {string} [config.environment="mainnet"] - Environment: "testnet" or "mainnet"
      */
     constructor(config) {
         if (!config || typeof config !== 'object') {
@@ -48,7 +47,7 @@ export class GrvtMinimal {
             throw new Error('accountId is required');
         }
 
-        this.environment = config.environment ?? "mainnet";
+        this.environment = "mainnet"; // Fixed to mainnet
         this.apiKey = config.apiKey;
         this.accountId = config.accountId;
         this.throttler = config.throttler ?? { enqueue: fn => fn() };
