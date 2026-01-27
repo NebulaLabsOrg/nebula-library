@@ -118,11 +118,13 @@ export class GrvtMinimal {
      * @returns {Promise<Object>} Wallet balance response
      */
     async getWalletBalance() {
-        if (this.authPromise) {
-            await this.authPromise;
-        }
-        const { vmGetWalletBalance } = await import('./view.model.js');
-        return vmGetWalletBalance(this.instance);
+        return this.throttler.enqueue(async () => {
+            if (this.authPromise) {
+                await this.authPromise;
+            }
+            const { vmGetWalletBalance } = await import('./view.model.js');
+            return vmGetWalletBalance(this.instance);
+        }, 2);
     }
 
     /**
@@ -132,57 +134,67 @@ export class GrvtMinimal {
      * @param {string} [symbol=''] - Optional symbol filter
      * @returns {Promise<Object>} Market data response
      */
-    async getMarketData(symbol = '') {
-        const { vmGetMarketData } = await import('./view.model.js');
-        return vmGetMarketData(this.marketDataInstance, symbol);
+    async getMarketData(_symbol = '') {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketData } = await import('./view.model.js');
+            return vmGetMarketData(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
      * @async
      * @method getMarketDataPrices
      * @description Get real-time market prices (ticker data)
-     * @param {string} symbol - Market symbol
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Real-time price data response
      */
-    async getMarketDataPrices(symbol) {
-        const { vmGetMarketDataPrices } = await import('./view.model.js');
-        return vmGetMarketDataPrices(this.marketDataInstance, symbol);
+    async getMarketDataPrices(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketDataPrices } = await import('./view.model.js');
+            return vmGetMarketDataPrices(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
      * @async
      * @method getMarketOrderSize
      * @description Get market order size configuration (min/max, step sizes)
-     * @param {string} symbol - Market symbol
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Market order size response
      */
-    async getMarketOrderSize(symbol) {
-        const { vmGetMarketOrderSize } = await import('./view.model.js');
-        return vmGetMarketOrderSize(this.marketDataInstance, symbol);
+    async getMarketOrderSize(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketOrderSize } = await import('./view.model.js');
+            return vmGetMarketOrderSize(this.marketDataInstance, _symbol);
+        }, 2);
     }
 
     /**
      * @async
      * @method getFundingRateHour
      * @description Get funding rate for a market
-     * @param {string} symbol - Market symbol
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Funding rate response
      */
-    async getFundingRateHour(symbol) {
-        const { vmGetFundingRateHour } = await import('./view.model.js');
-        return vmGetFundingRateHour(this.marketDataInstance, symbol);
+    async getFundingRateHour(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetFundingRateHour } = await import('./view.model.js');
+            return vmGetFundingRateHour(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
      * @async
      * @method getMarketOpenInterest
      * @description Get market open interest
-     * @param {string} symbol - Market symbol
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Market open interest response
      */
-    async getMarketOpenInterest(symbol) {
-        const { vmGetMarketOpenInterest } = await import('./view.model.js');
-        return vmGetMarketOpenInterest(this.marketDataInstance, symbol);
+    async getMarketOpenInterest(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketOpenInterest } = await import('./view.model.js');
+            return vmGetMarketOpenInterest(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
@@ -192,64 +204,64 @@ export class GrvtMinimal {
      * @returns {Promise<Object>} Open positions response
      */
     async getOpenPositions() {
-        if (this.authPromise) {
-            await this.authPromise;
-        }
-        const { vmGetOpenPositions } = await import('./view.model.js');
-        return vmGetOpenPositions(this.instance, this.accountId);
+        return this.throttler.enqueue(async () => {
+            if (this.authPromise) {
+                await this.authPromise;
+            }
+            const { vmGetOpenPositions } = await import('./view.model.js');
+            return vmGetOpenPositions(this.instance, this.accountId);
+        }, 2);
     }
 
     /**
      * @async
      * @method getOpenPositionDetail
      * @description Get detailed information for a specific open position
-     * @param {string} symbol - Market symbol
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Position detail response
      */
-    async getOpenPositionDetail(symbol) {
-        if (this.authPromise) {
-            await this.authPromise;
-        }
-        const { vmGetOpenPositionDetail } = await import('./view.model.js');
-        return vmGetOpenPositionDetail(this.instance, this.accountId, symbol);
+    async getOpenPositionDetail(_symbol) {
+        return this.throttler.enqueue(async () => {
+            if (this.authPromise) {
+                await this.authPromise;
+            }
+            const { vmGetOpenPositionDetail } = await import('./view.model.js');
+            return vmGetOpenPositionDetail(this.instance, this.accountId, _symbol);
+        }, 2);
     }
 
     /**
      * @async
      * @method getOrderStatusById
      * @description Get order status by client order ID
-     * @param {string} clientOrderId - Client order ID
+     * @param {string} _clientOrderId - Client order ID
      * @returns {Promise<Object>} Order status response
      */
-    async getOrderStatusById(clientOrderId) {
-        if (this.authPromise) {
-            await this.authPromise;
-        }
-        const { vmGetOrderStatusById } = await import('./view.model.js');
-        return vmGetOrderStatusById(this.instance, this.accountId, clientOrderId);
+    async getOrderStatusById(_clientOrderId) {
+        return this.throttler.enqueue(async () => {
+            if (this.authPromise) {
+                await this.authPromise;
+            }
+            const { vmGetOrderStatusById } = await import('./view.model.js');
+            return vmGetOrderStatusById(this.instance, this.accountId, _clientOrderId);
+        }, 2);
     }
 
     /**
      * @async
      * @method getTransferStatusByTxId
      * @description Get transfer status by transaction ID
-     * @param {string} transferId - Transfer transaction ID
-     * @param {string} [currency='USDT'] - Currency to filter
+     * @param {string} _transferId - Transfer transaction ID
+     * @param {string} [_currency='USDT'] - Currency to filter
      * @returns {Promise<Object>} Transfer status response
      */
-    async getTransferStatusByTxId(transferId, currency = 'USDT') {
-        if (this.authPromise) {
-            await this.authPromise;
-        }
-        const { vmGetTransferStatusByTxId } = await import('./view.model.js');
-        return vmGetTransferStatusByTxId(this.instance, transferId, currency);
-    }
-
-    /**
-     * No-op close method for API compatibility with full Grvt class
-     * @public
-     */
-    async close() {
-        // No resources to clean up in HTTP-only mode
+    async getTransferStatusByTxId(_transferId, _currency = 'USDT') {
+        return this.throttler.enqueue(async () => {
+            if (this.authPromise) {
+                await this.authPromise;
+            }
+            const { vmGetTransferStatusByTxId } = await import('./view.model.js');
+            return vmGetTransferStatusByTxId(this.instance, _transferId, _currency);
+        }, 2);
     }
 }

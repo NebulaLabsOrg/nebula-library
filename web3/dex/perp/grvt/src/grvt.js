@@ -212,7 +212,9 @@ export class Grvt {
     // ========================
     
     /**
-     * Get wallet status
+     * @async
+     * @method getWalletStatus
+     * @description Get wallet status including balances and account info
      * @returns {Promise<Object>} Wallet status response
      */
     async getWalletStatus() {
@@ -227,113 +229,157 @@ export class Grvt {
     }
     
     /**
-     * Get wallet balance
+     * @async
+     * @method getWalletBalance
+     * @description Get wallet balance with detailed breakdown
      * @returns {Promise<Object>} Wallet balance response
      */
     async getWalletBalance() {
-        if (this.trading.authPromise) {
-            await this.trading.authPromise;
-        }
-        const { vmGetWalletBalance } = await import('./view.model.js');
-        return vmGetWalletBalance(this.instance);
+        return this.throttler.enqueue(async () => {
+            if (this.trading.authPromise) {
+                await this.trading.authPromise;
+            }
+            const { vmGetWalletBalance } = await import('./view.model.js');
+            return vmGetWalletBalance(this.instance);
+        });
     }
     
     /**
-     * Get market data
-     * @param {string} [symbol=''] - Optional symbol filter
+     * @async
+     * @method getMarketData
+     * @description Get market data for instruments
+     * @param {string} [_symbol=''] - Optional symbol filter
      * @returns {Promise<Object>} Market data response
      */
-    async getMarketData(symbol = '') {
-        const { vmGetMarketData } = await import('./view.model.js');
-        return vmGetMarketData(this.marketDataInstance, symbol);
+    async getMarketData(_symbol = '') {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketData } = await import('./view.model.js');
+            return vmGetMarketData(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
-     * Get market data prices (real-time ticker data)
-     * @param {string} symbol - Market symbol
+     * @async
+     * @method getMarketDataPrices
+     * @description Get market data prices (real-time ticker data)
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Real-time price data response
      */
-    async getMarketDataPrices(symbol) {
-        const { vmGetMarketDataPrices } = await import('./view.model.js');
-        return vmGetMarketDataPrices(this.marketDataInstance, symbol);
+    async getMarketDataPrices(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketDataPrices } = await import('./view.model.js');
+            return vmGetMarketDataPrices(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
-     * Get market order size
-     * @param {string} symbol - Market symbol
+     * @async
+     * @method getMarketOrderSize
+     * @description Get market order size configuration (min/max, step sizes)
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Market order size response
      */
-    async getMarketOrderSize(symbol) {
-        const { vmGetMarketOrderSize } = await import('./view.model.js');
-        return vmGetMarketOrderSize(this.marketDataInstance, symbol);
+    async getMarketOrderSize(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketOrderSize } = await import('./view.model.js');
+            return vmGetMarketOrderSize(this.marketDataInstance, _symbol);
+        }, 2);
     }
 
     /**
-     * Get funding rate hour
-     * @param {string} symbol - Market symbol
+     * @async
+     * @method getFundingRateHour
+     * @description Get funding rate for a market
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Funding rate response
      */
-    async getFundingRateHour(symbol) {
-        const { vmGetFundingRateHour } = await import('./view.model.js');
-        return vmGetFundingRateHour(this.marketDataInstance, symbol);
+    async getFundingRateHour(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetFundingRateHour } = await import('./view.model.js');
+            return vmGetFundingRateHour(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
-     * Get market open interest
-     * @param {string} symbol - Market symbol
+     * @async
+     * @method getMarketOpenInterest
+     * @description Get market open interest
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Market open interest response
      */
-    async getMarketOpenInterest(symbol) {
-        const { vmGetMarketOpenInterest } = await import('./view.model.js');
-        return vmGetMarketOpenInterest(this.marketDataInstance, symbol);
+    async getMarketOpenInterest(_symbol) {
+        return this.throttler.enqueue(async () => {
+            const { vmGetMarketOpenInterest } = await import('./view.model.js');
+            return vmGetMarketOpenInterest(this.marketDataInstance, _symbol);
+        });
     }
 
     /**
-     * Get open positions
+     * @async
+     * @method getOpenPositions
+     * @description Get all open positions
      * @returns {Promise<Object>} Open positions response
      */
     async getOpenPositions() {
-        if (this.trading.authPromise) {
-            await this.trading.authPromise;
-        }
-        const { vmGetOpenPositions } = await import('./view.model.js');
-        return vmGetOpenPositions(this.instance, this.trading.accountId);
+        return this.throttler.enqueue(async () => {
+            if (this.trading.authPromise) {
+                await this.trading.authPromise;
+            }
+            const { vmGetOpenPositions } = await import('./view.model.js');
+            return vmGetOpenPositions(this.instance, this.trading.accountId);
+        }, 2);
     }
     
     /**
-     * Get open position detail
-     * @param {string} symbol - Market symbol
+     * @async
+     * @method getOpenPositionDetail
+     * @description Get open position detail
+     * @param {string} _symbol - Market symbol
      * @returns {Promise<Object>} Position detail response
      */
-    async getOpenPositionDetail(symbol) {
-        if (this.trading.authPromise) {
-            await this.trading.authPromise;
-        }
-        const { vmGetOpenPositionDetail } = await import('./view.model.js');
-        return vmGetOpenPositionDetail(this.instance, this.trading.accountId, symbol);
+    async getOpenPositionDetail(_symbol) {
+        return this.throttler.enqueue(async () => {
+            if (this.trading.authPromise) {
+                await this.trading.authPromise;
+            }
+            const { vmGetOpenPositionDetail } = await import('./view.model.js');
+            return vmGetOpenPositionDetail(this.instance, this.trading.accountId, _symbol);
+        }, 2);
     }
     
     /**
-     * Get order status by client order ID (HTTP API)
-     * @param {string} clientOrderId - Client order ID
+     * @async
+     * @method getOrderStatusById
+     * @description Get order status by client order ID
+     * @param {string} _clientOrderId - Client order ID
      * @returns {Promise<Object>} Order status response
      */
-    async getOrderStatusById(clientOrderId) {
-        if (this.trading.authPromise) {
-            await this.trading.authPromise;
-        }
-        
-        const { vmGetOrderStatusById } = await import('./view.model.js');
-        return vmGetOrderStatusById(this.instance, this.trading.accountId, clientOrderId);
+    async getOrderStatusById(_clientOrderId) {
+        return this.throttler.enqueue(async () => {
+            if (this.trading.authPromise) {
+                await this.trading.authPromise;
+            }
+            const { vmGetOrderStatusById } = await import('./view.model.js');
+            return vmGetOrderStatusById(this.instance, this.trading.accountId, _clientOrderId);
+        }, 2);
     }
 
-    async getTransferStatusByTxId(transferId) {
-        if (this.funding.authPromise) {
-            await this.funding.authPromise;
-        }
-        
-        const { vmGetTransferStatusByTxId } = await import('./view.model.js');
-        return vmGetTransferStatusByTxId(this.fundingInstance, transferId);
+    /**
+     * @async
+     * @method getTransferStatusByTxId
+     * @description Get transfer status by transaction ID
+     * @param {string} _transferId - Transfer transaction ID
+     * @param {string} [currency='USDT'] - Currency to filter
+     * @returns {Promise<Object>} Transfer status response
+     */
+    async getTransferStatusByTxId(_transferId) {
+        return this.throttler.enqueue(async () => {
+            if (this.funding.authPromise) {
+                await this.funding.authPromise;
+            }
+            const { vmGetTransferStatusByTxId } = await import('./view.model.js');
+            return vmGetTransferStatusByTxId(this.fundingInstance, _transferId);
+        }, 2);
     }
     
     // =========================
@@ -341,7 +387,9 @@ export class Grvt {
     // =========================
     
     /**
-     * Submit order
+     * @async
+     * @method submitOrder
+     * @description Submit an order with automatic monitoring
      * @param {string} type - Order type (MARKET or LIMIT)
      * @param {string} symbol - Market symbol
      * @param {string} side - Order side (BUY or SELL)
@@ -358,7 +406,9 @@ export class Grvt {
     }
     
     /**
-     * Submit cancel order
+     * @async
+     * @method submitCancelOrder
+     * @description Submit cancel order request
      * @param {string} externalId - Order ID to cancel
      * @param {number} [retry=0] - Number of retry attempts if cancel fails
      * @returns {Promise<Object>} Cancel confirmation response
@@ -369,7 +419,9 @@ export class Grvt {
     }
     
     /**
-     * Submit close order with automatic monitoring
+     * @async
+     * @method submitCloseOrder
+     * @description Submit close order with automatic monitoring
      * @param {string} type - Order type
      * @param {string} symbol - Market symbol
      * @param {string} marketUnit - Market unit
@@ -386,7 +438,9 @@ export class Grvt {
     }
     
     /**
-     * Transfer funds from Funding to Trading account
+     * @async
+     * @method transferToTrading
+     * @description Transfer funds from Funding to Trading account
      * @param {string|number} amount - Amount to transfer
      * @param {string} [currency='USDC'] - Currency
      * @returns {Promise<Object>} Transfer response
@@ -397,7 +451,9 @@ export class Grvt {
     }
     
     /**
-     * Transfer funds from Trading to Funding account (before withdrawal)
+     * @async
+     * @method transferToFunding
+     * @description Transfer funds from Trading to Funding account (before withdrawal)
      * @param {string|number} amount - Amount to transfer
      * @param {string} [currency='USDC'] - Currency
      * @returns {Promise<Object>} Transfer response
