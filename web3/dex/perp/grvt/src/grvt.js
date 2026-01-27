@@ -241,7 +241,7 @@ export class Grvt {
             }
             const { vmGetWalletBalance } = await import('./view.model.js');
             return vmGetWalletBalance(this.instance);
-        });
+        }, 2);
     }
     
     /**
