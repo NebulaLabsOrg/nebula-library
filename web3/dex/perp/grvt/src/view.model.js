@@ -624,3 +624,60 @@ export async function vmGetOrderStatusById(_instance, _subAccountId, _clientOrde
         return createResponse(false, message, null, 'grvt.getOrderStatusById');
     }
 }
+
+/**
+ * @async
+ * @function vmGetTransferStatusByTxId
+ * @description Checks if a transfer is completed by transaction ID via HTTP API
+ * @param {Object} _instance - HTTP client instance (axios)
+ * @param {string} _txId - Transaction ID
+ * @param {string} [_currency='USDT'] - Currency filter (USDT or USDC)
+ * @returns {Promise<Object>} Response with completed status (true if found in history, false if not found)
+ */
+export async function vmGetTransferStatusByTxId(_instance, _txId, _currency = 'USDT') {
+    try {
+        if (!_txId) {
+            throw new Error('Transaction ID is required');
+        }
+
+        const response = await _instance.post('/full/v1/transfer_history', {
+            currency: [_currency],
+            tx_id: _txId.toString()
+        });
+        
+        // If not found or empty result, transfer is not completed
+        if (!response.data || !response.data.result || response.data.result.length === 0) {
+            return createResponse(
+                true, 
+                'Transfer not found or not completed', 
+                {
+                    completed: false,
+                    txId: _txId
+                }, 
+                'grvt.getTransferStatusByTxId'
+            );
+        }
+        
+        const transfer = response.data.result;
+        
+        // If result is an array, get first item
+        const transferData = Array.isArray(transfer) ? transfer[0] : transfer;
+        
+        // If found in transfer_history, it means the transfer is completed
+        return createResponse(
+            true, 
+            'Transfer completed', 
+            {
+                completed: true,
+                txId: transferData.tx_id || _txId,
+                amount: transferData.num_tokens || '0',
+                currency: transferData.currency || _currency
+            }, 
+            'grvt.getTransferStatusByTxId'
+        );
+        
+    } catch (error) {
+        const message = error.response?.data?.error?.message || error.message || 'Failed to get transfer status';
+        return createResponse(false, message, null, 'grvt.getTransferStatusByTxId');
+    }
+}

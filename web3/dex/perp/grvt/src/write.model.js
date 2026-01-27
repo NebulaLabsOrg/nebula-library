@@ -1,18 +1,8 @@
-import { randomUUID } from 'crypto';
 import { createResponse } from '../../../../../utils/src/response.utils.js';
-import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetOrderStatusById } from './view.model.js';
-import {
-    formatOrderQuantity,
-    calculateSlippagePrice,
-    validateOrderParams,
-    roundToTickSize
-} from './utils.js';
+import { vmGetMarketDataPrices, vmGetMarketOrderSize, vmGetOpenPositionDetail, vmGetOrderStatusById, vmGetTransferStatusByTxId } from './view.model.js';
+import { formatOrderQuantity, calculateSlippagePrice, validateOrderParams, roundToTickSize } from './utils.js';
 import { grvtEnum } from './enum.js';
-import {
-    MARKET_TIME_IN_FORCE,
-    LIMIT_TIME_IN_FORCE,
-    GLP_VAULT_ID
-} from './constant.js';
+import { MARKET_TIME_IN_FORCE, LIMIT_TIME_IN_FORCE, } from './constant.js';
 
 /**
  * @async
@@ -138,17 +128,16 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             throw new Error(orderResult.error);
         }
 
-        // Use the order_id returned by GRVT as externalId
-        const externalId = orderResult.order_id || orderResult.client_order_id;
+        // Use the order_id returned by GRVT as currentOrderId
+        const currentOrderId = orderResult.order_id || orderResult.client_order_id;
 
-        if (!externalId) {
+        if (!currentOrderId) {
             throw new Error('No order_id returned from GRVT');
         }
 
         // 9. If retry/timeout logic is enabled, monitor the order
         if (_retry > 0 || (_onOrderUpdate && typeof _onOrderUpdate === 'function')) {
             let attemptCount = 0;
-            let currentOrderId = externalId;
             let lastQtyExe = '0.0';
             let lastStatus = null;
             let lastAvgPrice = '0.0';
@@ -182,8 +171,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                     if (_onOrderUpdate && typeof _onOrderUpdate === 'function' && dataChanged) {
                         _onOrderUpdate({
                             symbol: _symbol,
-                            externalId: currentOrderId,
-                            orderId: currentOrderId,
+                            currentOrderId,
                             status: currentStatus,
                             ...orderStatus
                         });
@@ -206,8 +194,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                             `Order ${currentStatus.toLowerCase()}`,
                             {
                                 symbol: _symbol,
-                                externalId: currentOrderId,
-                                orderId: currentOrderId,
+                                currentOrderId,
                                 qty: qty,
                                 price: roundedPrice,
                                 side: _side,
@@ -259,8 +246,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                                 'Order rejected after maximum retry attempts',
                                 {
                                     symbol: _symbol,
-                                    externalId: currentOrderId,
-                                    orderId: currentOrderId,
+                                    currentOrderId,
                                     qty: qty,
                                     price: roundedPrice,
                                     side: _side,
@@ -290,8 +276,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                             'Order cancelled due to timeout',
                             {
                                 symbol: _symbol,
-                                externalId: currentOrderId,
-                                orderId: currentOrderId,
+                                currentOrderId,
                                 qty: qty,
                                 price: roundedPrice,
                                 side: _side,
@@ -319,8 +304,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
                 'Order monitoring completed',
                 {
                     symbol: _symbol,
-                    externalId: currentOrderId,
-                    orderId: currentOrderId,
+                    currentOrderId,
                     qty: qty,
                     price: roundedPrice,
                     side: _side,
@@ -337,8 +321,7 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
             'success',
             {
                 symbol: _symbol,
-                externalId: externalId,
-                orderId: externalId,
+                currentOrderId: currentOrderId,
                 qty: qty,
                 price: roundedPrice,
                 side: _side,
@@ -358,13 +341,13 @@ export async function wmSubmitOrder(_grvt, _slippage, _type, _symbol, _side, _ma
  * @function wmSubmitCancelOrder
  * @description Cancels order via Python SDK using external_id with automatic retry
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string} _externalId - External order ID to cancel
+ * @param {string} _currentOrderId - Current order ID to cancel
  * @param {number} [_retry=0] - Number of retry attempts if cancel fails
  * @returns {Promise<Object>} Response with cancel confirmation
  */
-export async function wmSubmitCancelOrder(_grvt, _externalId, _retry = 0) {
-    if (!_externalId) {
-        return createResponse(false, 'External ID is required', null, 'grvt.submitCancelOrder');
+export async function wmSubmitCancelOrder(_grvt, _currentOrderId, _retry = 0) {
+    if (!_currentOrderId) {
+        return createResponse(false, 'Current order ID is required', null, 'grvt.submitCancelOrder');
     }
 
     let lastError = null;
@@ -372,7 +355,7 @@ export async function wmSubmitCancelOrder(_grvt, _externalId, _retry = 0) {
     for (let attempt = 0; attempt <= _retry; attempt++) {
         try {
             const cancelParams = {
-                external_id: _externalId.toString()
+                external_id: _currentOrderId.toString()
             };
 
             const cancelResult = await _grvt._sendCommand('cancel_order_by_external_id', cancelParams);
@@ -385,7 +368,7 @@ export async function wmSubmitCancelOrder(_grvt, _externalId, _retry = 0) {
                 true,
                 'success',
                 {
-                    externalId: _externalId,
+                    currentOrderId: _currentOrderId,
                     attempts: attempt + 1
                 },
                 'grvt.submitCancelOrder'
@@ -404,7 +387,7 @@ export async function wmSubmitCancelOrder(_grvt, _externalId, _retry = 0) {
 
     // All attempts failed
     const message = lastError?.response?.data?.error?.message || lastError?.message || 'Failed to cancel order';
-    return createResponse(false, message, { externalId: _externalId, attempts: _retry + 1 }, 'grvt.submitCancelOrder');
+    return createResponse(false, message, { currentOrderId: _currentOrderId, attempts: _retry + 1 }, 'grvt.submitCancelOrder');
 }
 
 /**
@@ -569,17 +552,16 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             throw new Error(orderResult.error);
         }
 
-        // Use the order_id returned by GRVT as externalId
-        const externalId = orderResult.order_id || orderResult.client_order_id;
+        // Use the order_id returned by GRVT as currentOrderId
+        const currentOrderId = orderResult.order_id || orderResult.client_order_id;
 
-        if (!externalId) {
+        if (!currentOrderId) {
             throw new Error('No order_id returned from GRVT');
         }
 
         // 9. If retry/timeout logic is enabled, monitor the order
         if (_retry > 0 || (_onOrderUpdate && typeof _onOrderUpdate === 'function')) {
             let attemptCount = 0;
-            let currentOrderId = externalId;
             let lastQtyExe = '0.0';
             let lastStatus = null;
             let lastAvgPrice = '0.0';
@@ -612,8 +594,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                     if (_onOrderUpdate && typeof _onOrderUpdate === 'function' && dataChanged) {
                         _onOrderUpdate({
                             symbol: _symbol,
-                            externalId: currentOrderId,
-                            orderId: currentOrderId,
+                            currentOrderId,
                             status: currentStatus,
                             ...orderStatus
                         });
@@ -636,8 +617,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                             `Close order ${currentStatus.toLowerCase()}`,
                             {
                                 symbol: _symbol,
-                                externalId: currentOrderId,
-                                orderId: currentOrderId,
+                                currentOrderId,
                                 closedQty: qty,
                                 price: roundedPrice,
                                 finalStatus: currentStatus,
@@ -663,7 +643,6 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                                 order_type: sdkOrderType,
                                 time_in_force: timeInForce,
                                 reduce_only: true,
-                                external_id: randomUUID()
                             };
 
                             // Only add price and post_only for LIMIT orders
@@ -691,8 +670,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                                 'Close order rejected after maximum retry attempts',
                                 {
                                     symbol: _symbol,
-                                    externalId: currentOrderId,
-                                    orderId: currentOrderId,
+                                    currentOrderId,
                                     closedQty: qty,
                                     price: roundedPrice,
                                     finalStatus: 'REJECTED',
@@ -720,8 +698,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                             'Close order cancelled due to timeout',
                             {
                                 symbol: _symbol,
-                                externalId: currentOrderId,
-                                orderId: currentOrderId,
+                                currentOrderId,
                                 closedQty: qty,
                                 price: roundedPrice,
                                 finalStatus: 'TIMEOUT_CANCELLED',
@@ -747,8 +724,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
                 'Close order monitoring completed',
                 {
                     symbol: _symbol,
-                    externalId: currentOrderId,
-                    orderId: currentOrderId,
+                    currentOrderId,
                     closedQty: qty,
                     price: roundedPrice,
                     attempts: attemptCount
@@ -762,8 +738,7 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
             'success',
             {
                 symbol: _symbol,
-                orderId: externalId,
-                externalId: externalId,
+                currentOrderId,
                 closedQty: qty,
                 price: roundedPrice
             },
@@ -776,18 +751,17 @@ export async function wmSubmitCloseOrder(_grvt, _slippage, _type, _symbol, _mark
     }
 }
 
-
-
 /**
  * @async
  * @function wmTransferToTrading
  * @description Transfers funds from Funding account to Trading account
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string|number} _amount - Amount to transfer
- * @param {string} [_currency='USDC'] - Currency to transfer
+ * @param {string} [_currency='USDT'] - Currency to transfer
+ * @param {number} [_retry=3] - Number of retry attempts for transfer status check
  * @returns {Promise<Object>} Response with transfer result
  */
-export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
+export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDT', _retry = 3) {
     try {
         // Wait for Python service to initialize (max 5 seconds)
         for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
@@ -816,7 +790,43 @@ export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
             throw new Error(result.error);
         }
 
-        return createResponse(true, 'Funds transferred to trading account', result, 'grvt.transferToTrading');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Check transfer status using vmGetTransferStatusByTxId with retry logic
+        let confirmed = false;
+        if (result.tx_id) {
+            const retryDelay = 2000; // 2 seconds between retries
+            
+            for (let attempt = 0; attempt < _retry; attempt++) {
+                const statusResponse = await vmGetTransferStatusByTxId(_grvt.instance, result.tx_id, _currency);
+                
+                if (statusResponse.success && statusResponse.data?.completed === true) {
+                    confirmed = true;
+                    break;
+                }
+                
+                // If not the last attempt, wait before retrying
+                if (attempt < _retry - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
+            }
+        }
+
+        return createResponse(
+            true,
+            'success',
+            {
+                txId: result.tx_id,
+                submitted: result.success && result.ack,
+                confirmed: confirmed,
+                amount: result.amount,
+                direction: result.direction,
+                currency: result.currency,
+                fromSubAccount: result.from_sub_account,
+                toSubAccount: result.to_sub_account
+            },
+            'grvt.transferToTrading'
+        );
     } catch (error) {
         return createResponse(false, error.message, null, 'grvt.transferToTrading');
     }
@@ -828,10 +838,11 @@ export async function wmTransferToTrading(_grvt, _amount, _currency = 'USDC') {
  * @description Transfers funds from Trading account to Funding account (required before withdrawal)
  * @param {Object} _grvt - Grvt instance (for Python SDK access)
  * @param {string|number} _amount - Amount to transfer
- * @param {string} [_currency='USDC'] - Currency to transfer
+ * @param {string} [_currency='USDT'] - Currency to transfer
+ * @param {number} [_retry=3] - Number of retry attempts for transfer status check
  * @returns {Promise<Object>} Response with transfer result
  */
-export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
+export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDT', _retry = 3) {
     try {
         // Wait for Python service to initialize (max 5 seconds)
         for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
@@ -842,6 +853,7 @@ export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
             throw new Error('Python service failed to initialize');
         }
         
+        // Pass all credentials - Python service will use Trading credentials for to_funding direction
         const result = await _grvt._sendCommand('transfer', {
             amount: _amount.toString(),
             currency: _currency,
@@ -860,91 +872,44 @@ export async function wmTransferToFunding(_grvt, _amount, _currency = 'USDC') {
             throw new Error(result.error);
         }
 
-        return createResponse(true, 'Funds transferred to funding account', result, 'grvt.transferToFunding');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Check transfer status using vmGetTransferStatusByTxId with retry logic
+        let confirmed = false;
+        if (result.tx_id) {
+            const retryDelay = 2000; // 2 seconds between retries
+            
+            for (let attempt = 0; attempt < _retry; attempt++) {
+                const statusResponse = await vmGetTransferStatusByTxId(_grvt.instance, result.tx_id, _currency);
+                
+                if (statusResponse.success && statusResponse.data?.completed === true) {
+                    confirmed = true;
+                    break;
+                }
+                
+                // If not the last attempt, wait before retrying
+                if (attempt < _retry - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
+            }
+        }
+
+        return createResponse(
+            true,
+            'success',
+            {
+                txId: result.tx_id,
+                submitted: result.success && result.ack,
+                confirmed: confirmed,
+                amount: result.amount,
+                direction: result.direction,
+                currency: result.currency,
+                fromSubAccount: result.from_sub_account,
+                toSubAccount: result.to_sub_account
+            },
+            'grvt.transferToFunding'
+        );
     } catch (error) {
         return createResponse(false, error.message, null, 'grvt.transferToFunding');
-    }
-}
-/**
- * @async
- * @function wmGlpVaultInvest
- * @description Invests funds in the GLP Vault with automatic EIP712 signing
- * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string|number} _amount - Amount to invest
- * @param {string} [_currency='USDT'] - Currency to invest
- * @returns {Promise<Object>} Response with investment result
- */
-export async function wmGlpVaultInvest(_grvt, _amount, _currency = 'USDT') {
-    const _vaultId = GLP_VAULT_ID;
-    try {
-        // Wait for Python service to initialize (max 5 seconds)
-        for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        if (!_grvt.pythonService) {
-            throw new Error('Python service failed to initialize');
-        }
-        
-        const result = await _grvt._sendCommand('vault_invest', {
-            vault_id: _vaultId,
-            amount: _amount.toString(),
-            currency: _currency,
-            funding_address: _grvt.funding.address,
-            funding_private_key: _grvt.funding.privateKey,
-            funding_api_key: _grvt.funding.apiKey,
-            trading_account_id: _grvt.trading.accountId,
-            environment: _grvt.environment
-        });
-
-        if (result.error) {
-            throw new Error(result.error);
-        }
-
-        return createResponse(true, 'Successfully invested in vault', result, 'grvt.vaultInvest');
-    } catch (error) {
-        return createResponse(false, error.message, null, 'grvt.vaultInvest');
-    }
-}
-
-/**
- * @async
- * @function wmGlpVaultRedeem
- * @description Redeems LP tokens from the GLP Vault with automatic EIP712 signing
- * @param {Object} _grvt - Grvt instance (for Python SDK access)
- * @param {string|number} _amount - Amount of LP tokens to redeem
- * @param {string} [_currency='USDT'] - Currency of the vault
- * @returns {Promise<Object>} Response with redemption result
- */
-export async function wmGlpVaultRedeem(_grvt, _amount, _currency = 'USDT') {
-    const _vaultId = GLP_VAULT_ID;
-    try {
-        // Wait for Python service to initialize (max 5 seconds)
-        for (let i = 0; i < 50 && !_grvt.pythonService; i++) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        if (!_grvt.pythonService) {
-            throw new Error('Python service failed to initialize');
-        }
-        
-        const result = await _grvt._sendCommand('vault_redeem', {
-            vault_id: _vaultId,
-            amount: _amount.toString(),
-            currency: _currency,
-            funding_address: _grvt.funding.address,
-            funding_private_key: _grvt.funding.privateKey,
-            funding_api_key: _grvt.funding.apiKey,
-            trading_account_id: _grvt.trading.accountId,
-            environment: _grvt.environment
-        });
-
-        if (result.error) {
-            throw new Error(result.error);
-        }
-
-        return createResponse(true, 'Successfully redeemed from vault', result, 'grvt.vaultRedeem');
-    } catch (error) {
-        return createResponse(false, error.message, null, 'grvt.vaultRedeem');
     }
 }

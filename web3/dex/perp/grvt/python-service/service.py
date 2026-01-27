@@ -345,23 +345,11 @@ class GrvtService:
             return {'error': str(e)}
     
     def transfer(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Transfer between funding and trading accounts using funding account credentials"""
+        """Transfer between funding and trading accounts"""
         try:
-            # Get funding credentials from params (passed from Node.js wmTransferToTrading/wmTransferToFunding)
+            # Get credentials from params
             funding_address = params.get('funding_address') or self.funding_address
-            funding_private_key = params.get('funding_private_key') or self.funding_private_key
-            funding_api_key = params.get('funding_api_key') or self.funding_api_key
             trading_account_id = params.get('trading_account_id') or self.account_id
-            
-            if not funding_address:
-                return {'error': 'Funding address is required'}
-            if not funding_private_key:
-                return {'error': 'Funding private key is required'}
-            if not funding_api_key:
-                return {'error': 'Funding API key is required'}
-            
-            # Create account from funding private key for signing
-            funding_account = Account.from_key(funding_private_key)
             
             # Determine direction: to_trading or to_funding
             direction = params.get('direction', 'to_trading')
@@ -371,27 +359,48 @@ class GrvtService:
             # Get currency ID (3 for USDT, 4 for USDC)
             currency_id = 4 if currency == 'USDC' else 3  # USDT = 3, USDC = 4
             
-            # IMPORTANT: from_account_id and to_account_id are ALWAYS the same (funding address/main_account_id)
-            # We transfer between sub-accounts using sub_account_id
+            # IMPORTANT: Choose credentials based on direction
+            # - to_trading: use FUNDING credentials (transferring FROM funding TO trading)
+            # - to_funding: use TRADING credentials (transferring FROM trading TO funding)
+            if direction == 'to_trading':
+                # Use funding credentials
+                signing_private_key = params.get('funding_private_key') or self.funding_private_key
+                signing_api_key = params.get('funding_api_key') or self.funding_api_key
+                auth_account_id = str(0)  # Funding account (sub_account_id = 0)
+                from_sub = '0'  # Funding account
+                to_sub = str(trading_account_id)  # Trading account
+                
+                if not signing_private_key or not signing_api_key:
+                    return {'error': 'Funding credentials required for to_trading transfer'}
+            else:  # to_funding
+                # Use trading credentials (from Trading Account API key)
+                signing_private_key = params.get('trading_private_key') or self.private_key
+                signing_api_key = params.get('trading_api_key') or self.api_key
+                auth_account_id = str(trading_account_id)  # Trading account
+                from_sub = str(trading_account_id)  # Trading account
+                to_sub = '0'  # Funding account
+                
+                if not signing_private_key or not signing_api_key:
+                    return {'error': 'Trading credentials required for to_funding transfer'}
+            
+            if not funding_address:
+                return {'error': 'Funding address is required'}
+            
+            # Create account from appropriate private key for signing
+            signing_account = Account.from_key(signing_private_key)
+            
             # Use GRVT_ACCOUNT_ADDRESS from environment if set, otherwise use funding_address
             main_account_id = os.environ.get('GRVT_ACCOUNT_ADDRESS', funding_address)
-            
-            if direction == 'to_trading':
-                from_sub = '0'  # Funding account (main account, sub_account_id = 0)
-                to_sub = str(trading_account_id)  # Trading account (sub)
-            else:  # to_funding
-                from_sub = str(trading_account_id)  # Trading account (sub)
-                to_sub = '0'  # Funding account (main account, sub_account_id = 0)
             
             # Generate unique nonce and expiration
             nonce = random.randint(0, 2**32 - 1)
             expiration = str(int(time.time_ns()) + 20 * 24 * 60 * 60 * 1_000_000_000)  # 20 days
             
-            # Create transfer object (following official SDK pattern from test_raw_utils.py)
+            # Create transfer object
             transfer = fixed_types.Transfer(
                 from_account_id=main_account_id,
                 from_sub_account_id=from_sub,
-                to_account_id=main_account_id,  # SAME as from_account_id for internal transfers!
+                to_account_id=main_account_id,  # SAME as from_account_id for internal transfers
                 to_sub_account_id=to_sub,
                 currency=currency,
                 num_tokens=amount,
@@ -407,33 +416,29 @@ class GrvtService:
                 transfer_metadata=''
             )
             
-            # Create API config with FUNDING credentials
-            # IMPORTANT: For transfers, we need to authenticate with funding API key
-            # The SDK uses trading_account_id for the X-Grvt-Account-Id header
-            # For funding account, we should use the trading sub-account ID that was created
-            funding_api_config = GrvtApiConfig(
+            # Create API config with appropriate credentials
+            api_config = GrvtApiConfig(
                 env=GrvtEnv.PROD,
-                trading_account_id=str(0),  # Use trading sub-account ID for auth
-                private_key=funding_private_key,  # Funding private key for signing
-                api_key=funding_api_key,  # Funding API key for authentication
+                trading_account_id=auth_account_id,
+                private_key=signing_private_key,
+                api_key=signing_api_key,
                 logger=logging.getLogger('grvt')
             )
             
-            # Sign the transfer with funding account
+            # Sign the transfer with appropriate account
             signed_transfer = sign_transfer(
                 transfer, 
-                funding_api_config, 
-                funding_account,  # Use the funding account for signing
+                api_config, 
+                signing_account,
                 currencyId=currency_id
             )
             
-            # Create API instance with funding credentials for executing transfer
-            # Use a fresh instance to avoid cookie conflicts
-            funding_api = GrvtRawSync(config=funding_api_config)
+            # Create API instance with appropriate credentials
+            api_instance = GrvtRawSync(config=api_config)
             
             # Clear any existing cookies to avoid "multiple cookies" error
-            if hasattr(funding_api, '_session') and hasattr(funding_api._session, 'cookies'):
-                funding_api._session.cookies.clear()
+            if hasattr(api_instance, '_session') and hasattr(api_instance._session, 'cookies'):
+                api_instance._session.cookies.clear()
             
             # Create API request
             transfer_request = types.ApiTransferRequest(
@@ -448,8 +453,8 @@ class GrvtService:
                 transfer_metadata=signed_transfer.transfer_metadata
             )
             
-            # Execute transfer using funding API instance
-            resp = funding_api.transfer_v1(transfer_request)
+            # Execute transfer
+            resp = api_instance.transfer_v1(transfer_request)
             
             if isinstance(resp, GrvtError):
                 return {'error': str(resp)}

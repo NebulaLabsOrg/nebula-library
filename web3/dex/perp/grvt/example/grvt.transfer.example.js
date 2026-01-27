@@ -18,38 +18,21 @@ const grvtInstance = new Grvt({
         apiKey: process.env.GRVT_TRADING_API_KEY
     },
     slippage: 0.5,
-    environment: 'mainnet'
+    usePython: true, // Enable Python SDK for write operations
 });
 
-// Example 1: Transfer 10 USDT from Funding account to Trading account
-console.log('\n=== Transfer 10 USDT to Trading Account ===');
-const transferToTradingResult = await grvtInstance.transferToTrading(5, 'USDT');
-console.log('Transfer to Trading result:', transferToTradingResult);
+console.log('Transfer 5 USDT Example');
 
-if (transferToTradingResult.success) {
-    console.log('✓ Successfully transferred 10 USDT to Trading account');
-    console.log('Transfer data:', transferToTradingResult.data);
-} else {
-    console.error('✗ Transfer to Trading failed:', transferToTradingResult.message);
-}
+console.log('Calling: grvtInstance.transferToTrading()');
+const transferToTradingResult = await grvtInstance.transferToTrading(5, 'USDT');
+console.log(transferToTradingResult);
 
 // Wait a moment before next transfer
 await new Promise(resolve => setTimeout(resolve, 2000));
 
-// Example 2: Transfer 10 USDT from Trading account back to Funding account
-console.log('\n=== Transfer 10 USDT to Funding Account ===');
+console.log('Calling: grvtInstance.transferToFunding()');
 const transferToFundingResult = await grvtInstance.transferToFunding(5, 'USDT');
-console.log('Transfer to Funding result:', transferToFundingResult);
-
-if (transferToFundingResult.success) {
-    console.log('✓ Successfully transferred 10 USDT to Funding account');
-    console.log('Transfer data:', transferToFundingResult.data);
-} else {
-    console.error('✗ Transfer to Funding failed:', transferToFundingResult.message);
-}
-
-console.log('\n=== Transfer Example Complete ===');
-console.log('Note: Always ensure you have sufficient balance in the source account before transferring.');
+console.log(transferToFundingResult);
 
 // Cleanup: close the Extended instance to prevent memory leaks
 await grvtInstance.close();

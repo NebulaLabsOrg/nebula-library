@@ -107,5 +107,10 @@ console.log('Calling: grvtInstance.getWalletBalance()');
 const walletBalance = await grvtInstance.getWalletBalance();
 console.log(walletBalance);
 
+console.log('Get transer status')
+console.log('Calling: grvtInstance.getTransferStatusByTxId()');
+const transferStatus = await grvtInstance.getTransferStatusByTxId('83318549');
+console.log(transferStatus);
+
 // Cleanup: close the Extended instance to prevent memory leaks
 await grvtInstance.close();

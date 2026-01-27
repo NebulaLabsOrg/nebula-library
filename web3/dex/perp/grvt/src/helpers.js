@@ -67,20 +67,6 @@ export function getMarketDataUrl(environment) {
 }
 
 /**
- * Ensure authentication is complete before making API calls
- * @param {Object} context - Instance context with authenticated and authPromise
- * @returns {Promise<void>}
- */
-export async function ensureAuthenticated(context) {
-    if (context.authenticated) {
-        return;
-    }
-    if (context.authPromise) {
-        await context.authPromise;
-    }
-}
-
-/**
  * Authenticate with GRVT API to obtain session cookie
  * @param {string} environment - Environment name
  * @param {string} apiKey - Trading API key

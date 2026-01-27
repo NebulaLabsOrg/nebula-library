@@ -161,9 +161,100 @@ const close = await extended.submitCloseOrder(
 // Cancel order
 const cancel = await extended.submitCancelOrder(orderId);
 
-// Submit withdrawal
-const withdrawal = await extended.submitWithdrawal('100', starkAddress);
+// Transfer funds between accounts
+const transferToTrading = await extended.transferToTrading('100', 'USDT');
+console.log('Transfer confirmed:', transferToTrading.data.confirmed);
+
+const transferToFunding = await extended.transferToFunding('50', 'USDT');
+console.log('Transfer confirmed:', transferToFunding.data.confirmed);
 ```
+
+### Advanced Order Operations with Retry and Callbacks
+
+#### Order Submission with Automatic Retry
+
+Submit orders with automatic retry on rejection and real-time status updates:
+
+```javascript
+// Submit order with retry and callback
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,      // type
+    'BTC-PERP',                         // symbol
+    extendedEnum.order.long,            // side
+    extendedEnum.order.quoteOnMainCoin, // market unit
+    0.001,                              // quantity
+    (update) => {                       // callback (optional)
+        console.log('Order Update:', {
+            id: update.currentOrderId,
+            status: update.status,
+            filled: update.qtyExe,
+            avgPrice: update.avgPrice
+        });
+    },
+    3,                                  // retry attempts (optional, default: 0)
+    60000                               // timeout ms (optional, default: 60000)
+);
+```
+
+**Parameters:**
+- `_onOrderUpdate`: Callback function invoked whenever order state changes (status, filled quantity, or average price updates)
+- `_retry`: Number of retry attempts if order is REJECTED (default: 0, no retry)
+- `_timeout`: Maximum wait time in milliseconds, resets when filled quantity increases (default: 60000ms)
+
+**Retry Behavior:**
+1. If order is REJECTED and retries remain, the order is automatically cancelled
+2. A new order is submitted with the same parameters
+3. Process repeats until order succeeds or max retries reached
+4. Callback notified of each retry attempt
+
+**Timeout Behavior:**
+1. Timeout counter starts when order is submitted
+2. Resets whenever filled quantity increases (partial fills extend timeout)
+3. When timeout expires without completion, order is automatically cancelled
+4. Final status returned as `TIMEOUT_CANCELLED`
+
+#### Close Position with Retry and Callbacks
+
+Close positions with the same advanced features:
+
+```javascript
+// Close position with monitoring and retry
+const close = await extended.submitCloseOrder(
+    extendedEnum.order.type.limit,      // type
+    'BTC-PERP',                         // symbol
+    extendedEnum.order.quoteOnMainCoin, // market unit
+    0,                                  // quantity (ignored if closeAll=true)
+    true,                               // closeAll
+    (update) => {                       // callback (optional)
+        console.log('Close Order Update:', update);
+    },
+    3,                                  // retry attempts (optional)
+    60000                               // timeout ms (optional)
+);
+```
+
+**Key Features:**
+- Automatically detects current position and creates opposite side order
+- Uses `reduce_only` flag to prevent opening new positions
+- Supports partial closes by setting `closeAll=false` and specifying quantity
+- Same retry and timeout logic as regular orders
+
+#### Cancel Order with Retry
+
+Cancel orders with automatic retry on failure:
+
+```javascript
+// Cancel with 2 retry attempts
+const cancel = await extended.submitCancelOrder(
+    orderId,   // order ID to cancel
+    2          // retry attempts (optional, default: 0)
+);
+```
+
+**Retry Behavior:**
+- If cancellation fails, automatically retries up to specified attempts
+- 1 second delay between retry attempts
+- Returns success/failure with total attempt count
 
 ## 🔍 BigNumber Calculations
 
@@ -194,9 +285,9 @@ console.log(midPrice); // 50000.0556055555
 Write operations automatically monitor order state:
 
 ```javascript
-// wmSubmitOrder internally calls _monitorOrderState()
+// wmSubmitOrder internally monitors order state
 // Polls every 500ms until terminal state
-// Terminal states: FILLED, CANCELLED, REJECTED, EXPIRED, TIMEOUT
+// Terminal states: FILLED, CANCELLED, REJECTED, EXPIRED, TIMEOUT_CANCELLED
 ```
 
 No manual monitoring needed - the function returns final state:
@@ -208,8 +299,49 @@ const result = await extended.submitOrder(...);
 // - 'FILLED' (success)
 // - 'CANCELLED' (user cancelled)
 // - 'REJECTED' (exchange rejected)
-// - 'TIMEOUT' (monitoring timeout after 120s)
+// - 'TIMEOUT_CANCELLED' (monitoring timeout exceeded)
+// - 'EXPIRED' (order expired per time-in-force)
 ```
+
+### Order State Lifecycle
+
+```
+SUBMITTED → NEW → OPEN → PARTIALLY_FILLED → FILLED ✅
+                    ↓
+                  CANCELLED ⚠️
+                    ↓
+                  REJECTED ❌ (can trigger retry)
+                    ↓
+                  EXPIRED ⏰
+```
+
+### Monitoring Features
+
+1. **Automatic State Tracking**: Continuously polls order status until terminal state
+2. **Partial Fill Detection**: Detects when filled quantity increases and resets timeout
+3. **Real-time Callbacks**: Invokes callback function on any state change
+4. **Smart Timeout**: Timeout resets on partial fills to allow orders to complete
+5. **Automatic Cancellation**: Orders are cancelled if timeout expires without completion
+
+### Transfer Confirmation with Retry
+
+Transfer operations verify completion via the transfer history API:
+
+```javascript
+// Transfers automatically check completion status with 3 retry attempts
+const transfer = await extended.transferToTrading('100', 'USDT');
+
+console.log('TX ID:', transfer.data.txId);
+console.log('Submitted:', transfer.data.submitted);  // API accepted transfer
+console.log('Confirmed:', transfer.data.confirmed);  // Transfer in history (verified)
+```
+
+**Retry Logic:**
+- Makes up to 3 attempts to verify transfer appears in history
+- 2 second delay between verification attempts
+- Returns `confirmed: true` if transfer found in history
+- Returns `confirmed: false` if transfer not found after 3 attempts
+- Database processing may take time, retry ensures accurate status
 
 ## 📊 Response Format
 
@@ -228,6 +360,8 @@ All functions return standardized responses:
 
 ## 🧪 Examples
 
+### Basic Workflow Example
+
 Run the complete workflow example:
 
 ```bash
@@ -242,6 +376,102 @@ This demonstrates:
 5. Get position detail (VIEW)
 6. Close position (WRITE + monitoring)
 7. Get order history (VIEW)
+
+### Advanced Examples
+
+#### Order with Callback and Retry
+```bash
+node example/grvt.open-order.example.js
+```
+
+Demonstrates:
+- Real-time order status updates via callback
+- Automatic retry on rejection
+- Timeout handling with automatic cancellation
+
+#### Position Closing with Monitoring
+```bash
+node example/grvt.close-order.example.js
+```
+
+Demonstrates:
+- Automatic position detection
+- Reduce-only order placement
+- Close monitoring until completion
+
+#### Fund Transfers with Verification
+```bash
+node example/grvt.transfer.example.js
+```
+
+Demonstrates:
+- Transfer from Funding to Trading account
+- Transfer from Trading to Funding account
+- Automatic confirmation verification with retry
+- Status checking via transfer history API
+
+### Custom Implementation Examples
+
+#### Simple Order Without Monitoring
+```javascript
+// For fire-and-forget orders (no monitoring, no retry)
+const order = await extended.submitOrder(
+    extendedEnum.order.type.market,
+    'BTC-PERP',
+    extendedEnum.order.long,
+    extendedEnum.order.quoteOnMainCoin,
+    0.001
+    // No callback, no retry, no timeout - defaults to basic submission
+);
+```
+
+#### Order with Custom Timeout
+```javascript
+// 30 second timeout for fast execution
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,
+    'ETH-PERP',
+    extendedEnum.order.short,
+    extendedEnum.order.quoteOnMainCoin,
+    0.01,
+    null,   // no callback
+    0,      // no retry
+    30000   // 30 second timeout
+);
+```
+
+#### Advanced Order with Full Features
+```javascript
+// Production-ready order with all features
+let lastUpdate = null;
+
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,
+    'BTC-PERP',
+    extendedEnum.order.long,
+    extendedEnum.order.quoteOnMainCoin,
+    0.001,
+    (update) => {
+        // Track order progress
+        if (lastUpdate?.status !== update.status) {
+            console.log(`Status changed: ${lastUpdate?.status || 'NONE'} → ${update.status}`);
+        }
+        if (lastUpdate?.qtyExe !== update.qtyExe) {
+            console.log(`Filled: ${update.qtyExe} @ ${update.avgPrice}`);
+        }
+        lastUpdate = update;
+    },
+    5,      // 5 retry attempts on rejection
+    120000  // 2 minute timeout (resets on partial fills)
+);
+
+if (order.success) {
+    console.log('Final Status:', order.data.finalStatus);
+    console.log('Total Filled:', order.data.qtyExe);
+    console.log('Average Price:', order.data.avgPrice);
+    console.log('Retry Attempts:', order.data.attempts || 0);
+}
+```
 
 ## 🏛️ Architecture Comparison
 
@@ -331,6 +561,35 @@ grvtEnum.orderState.expired
 - [GRVT API Documentation](https://docs.grvt.io)
 - [GRVT Python SDK](https://github.com/gravity-technologies/grvt-pysdk)
 - [NebulaLabs Repository](https://github.com/NebulaLabsOrg/nebula-library)
+
+## 🔑 Key Features Summary
+
+### Order Management
+- ✅ **Automatic Monitoring**: Orders tracked until completion without manual polling
+- ✅ **Smart Retry**: Failed orders automatically retried with configurable attempts
+- ✅ **Real-time Callbacks**: Live updates on order status, fills, and price
+- ✅ **Dynamic Timeout**: Timeout resets on partial fills to allow completion
+- ✅ **Auto-Cancel**: Orders cancelled on timeout to prevent orphaned orders
+
+### Transfer Operations
+- ✅ **Bidirectional Transfers**: Between Funding and Trading accounts
+- ✅ **Automatic Verification**: Transfer history checked with retry logic
+- ✅ **Correct Credentials**: Direction-based credential selection (Funding→Trading uses Funding key, Trading→Funding uses Trading key)
+- ✅ **Confirmation Status**: Returns both submission and confirmation status
+
+### Architecture Benefits
+- ✅ **Separation of Concerns**: View (read) and Write (modify) layers clearly separated
+- ✅ **BigNumber Precision**: All calculations use ethers.BigNumber internally
+- ✅ **Standardized Responses**: Consistent response format across all operations
+- ✅ **Error Handling**: Comprehensive error handling with detailed traces
+- ✅ **Python SDK Integration**: Seamless subprocess communication for SDK operations
+
+### Production-Ready Features
+- ✅ **Environment Support**: Testnet and Mainnet configurations
+- ✅ **Security**: Private key isolation in Python service
+- ✅ **Reliability**: Automatic retry and timeout handling
+- ✅ **Observability**: Real-time callbacks and detailed logging
+- ✅ **Type Safety**: Enums for order types, sides, and states
 
 ## 🤝 Contributing
 

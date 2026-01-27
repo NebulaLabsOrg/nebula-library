@@ -3,14 +3,10 @@ import { grvtEnum } from './enum.js';
 import { 
     wmTransferToTrading,
     wmTransferToFunding,
-    wmGlpVaultInvest,
-    wmGlpVaultRedeem
 } from './write.model.js';
 import {
     getBaseUrl,
-    getAuthUrl,
     getMarketDataUrl,
-    ensureAuthenticated,
     authenticate,
     findPythonPath,
     initPythonService,
@@ -330,7 +326,15 @@ export class Grvt {
         const { vmGetOrderStatusById } = await import('./view.model.js');
         return vmGetOrderStatusById(this.instance, this.trading.accountId, clientOrderId);
     }
-    
+
+    async getTransferStatusByTxId(transferId) {
+        if (this.funding.authPromise) {
+            await this.funding.authPromise;
+        }
+        
+        const { vmGetTransferStatusByTxId } = await import('./view.model.js');
+        return vmGetTransferStatusByTxId(this.fundingInstance, transferId);
+    }
     
     // =========================
     // WRITE METHODS (SDK CALLS)
@@ -400,25 +404,5 @@ export class Grvt {
      */
     async transferToFunding(amount, currency = 'USDC') {
         return wmTransferToFunding(this, amount, currency);
-    }
-    
-    /**
-     * Invest funds in the GLP Vault
-     * @param {string|number} amount - Amount to invest
-     * @param {string} [currency='USDT'] - Currency
-     * @returns {Promise<Object>} Investment response
-     */
-    async glpVaultInvest(amount, currency = 'USDT') {
-        return wmGlpVaultInvest(this, amount, currency);
-    }
-    
-    /**
-     * Redeem LP tokens from the GLP Vault
-     * @param {string|number} amount - Amount of LP tokens to redeem
-     * @param {string} [currency='USDT'] - Currency
-     * @returns {Promise<Object>} Redemption response
-     */
-    async glpVaultRedeem(amount, currency = 'USDT') {
-        return wmGlpVaultRedeem(this, amount, currency);
     }
 }
