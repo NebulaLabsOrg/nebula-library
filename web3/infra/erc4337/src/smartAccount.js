@@ -6,6 +6,7 @@ import { calculateGasPrice } from "../../../../utils/src/gas.utils.js";
 import { createResponse } from "../../../../utils/src/response.utils.js";
 
 /**
+ * Enables account abstraction at the application layer, allowing smart contract wallets to function as first-class accounts without changing the core protocol.
  * @typedef {Object} SmartAccountConfig
  * @property {string} rpcUrl - RPC provider URL for blockchain connection
  * @property {string} bundlerUrl - ERC-4337 bundler endpoint URL
@@ -25,6 +26,7 @@ import { createResponse } from "../../../../utils/src/response.utils.js";
  * @property {boolean} [verbose=false] - Enable detailed logging for debugging
  * 
  * NOTE: Paymaster support is not yet implemented. All transactions require the smart account to have sufficient ETH balance.
+ * NOTE: ERC20 token payments for gas are not supported in this version.
  */
 
 /**
