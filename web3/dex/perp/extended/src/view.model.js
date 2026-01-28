@@ -13,7 +13,7 @@ export async function vmGetWalletStatus(_instance) {
     try {
         const response = await _instance.get('/user/balance');
         const data = response.data.data;
-
+        console.log(data);
         return createResponse(
             true,
             'success',

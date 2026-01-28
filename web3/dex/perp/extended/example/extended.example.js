@@ -17,6 +17,11 @@ const extendedInstance = new Extended({
     throttler: extendedThrottler
 });
 
+console.log('Get account info');
+console.log('Calling: extended.getWalletStatus');
+const accountInfo = await extendedInstance.getWalletStatus();
+console.log(accountInfo);
+/*
 console.log('Get token quantity');
 console.log('Calling: extended.getWalletBalance');
 const walletBalance = await extendedInstance.getWalletBalance();
@@ -73,6 +78,6 @@ while (close?.data?.status !== extendedEnum.order.status.filled) {
     close = await extendedInstance.getOrderStatus(closeOrderResponse.data.orderId);
 }
 console.log(close);
-
+*/
 // Cleanup: close the Extended instance to prevent memory leaks
 await extendedInstance.close();
