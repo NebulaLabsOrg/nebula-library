@@ -1,0 +1,807 @@
+# GRVT Trading Client
+
+Production-ready GRVT DEX perpetual trading integration following the **NebulaLabs architecture pattern**.
+
+## 📋 Prerequisites
+
+- **Node.js**: ≥16.0.0
+- **Python**: ≥3.11.0 (only for full SDK mode)
+- **npm**: Latest stable version
+- **pip**: Python package installer (only for full SDK mode)
+
+## 🏗️ Architecture
+
+This implementation follows the proven NebulaLabs Extended module architecture:
+
+```
+src/
+├── enum.js              # grvtEnum (all constants)
+├── constant.js          # API URLs, TimeInForce, decimals
+├── utils.js             # BigNumber calculations (calculateMidPrice, formatOrderQuantity)
+├── grvt.js              # Full Grvt class (Python SDK integration)
+├── grvt-minimal.js      # GrvtMinimal class (HTTP API only)
+├── view.model.js        # vm* functions (READ ONLY, HTTP/SDK API calls)
+├── write.model.js       # wm* functions (WRITE operations with embedded monitoring)
+└── helpers.js           # Authentication, Python service management
+```
+
+### Key Principles
+
+1. **View Layer (vm\*):** HTTP API or Python SDK calls, NO state changes
+2. **Write Layer (wm\*):** Python SDK operations with embedded monitoring
+3. **BigNumber Integration:** Internal calculations use `ethers.BigNumber` for precision
+4. **Embedded Monitoring:** Order state tracking built into write operations
+
+## 🛠️ Setup
+
+### 1. Create Requirements File
+
+Create a `requirements.txt` file in the project root with the following content:
+
+```txt
+# Requirements for GRVT Python SDK dependencies
+grvt-pysdk
+```
+
+### 2. Create Setup Script
+
+Create a `setup.sh` file in the project root:
+
+```bash
+#!/bin/bash
+
+echo "🔧 Setting up GRVT project environment..."
+
+# Install Python dependencies (for full SDK mode)
+echo "📦 Installing Python dependencies..."
+pip install -r requirements.txt
+
+# Install Node.js dependencies  
+echo "📦 Installing Node.js dependencies..."
+npm install
+
+echo "🎉 Setup completed successfully!"
+```
+
+### 3. Run Setup
+
+Execute the setup script:
+
+```bash
+sh ./setup.sh
+```
+
+### 4. Environment Setup
+
+```bash
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+## 🔐 Account Structure
+
+GRVT uses a two-account system:
+
+```
+┌─────────────────────────────────────────────┐
+│  FUNDING ADDRESS (Treasury)                 │
+│  └─ Address ONLY: 0xFundingAddress          │
+│  └─ NO Account ID                           │
+│  └─ Sub-Account: "0" (implicit)             │
+│  └─ Purpose: Hold funds, bridge to trading  │
+│                                              │
+│           ↓↓↓ TRANSFER ↓↓↓                  │
+│                                              │
+│  TRADING ADDRESS (Operations)               │
+│  ├─ Address: 0xTradingAddress               │
+│  ├─ Trading Account ID: hex string          │
+│  │   (1920109784202388)                     │
+│  ├─ Sub-Account: Same as Account ID         │
+│  ├─ Purpose: Orders, positions, margin      │
+│  └─ CAN trade, CAN have positions           │
+└─────────────────────────────────────────────┘
+```
+
+### Key Differences
+
+- **Funding Account:** A treasury account that holds funds securely. It has no account ID and cannot place orders or hold positions. Its primary purpose is to store funds and transfer them to the trading account when needed.
+- **Trading Account:** An operational account linked to a specific trading account ID. It can submit orders, manage positions, and handle margin requirements. Funds must be transferred from the funding account to the trading account before any trading activities can occur.
+
+### Environment Variables
+
+```bash
+# Funding Account
+GRVT_FUNDING_ADDRESS=0x...
+GRVT_FUNDING_PRIVATE_KEY=0x...
+GRVT_FUNDING_API_KEY=...
+
+# Trading Account
+GRVT_TRADING_ADDRESS=0x...
+GRVT_TRADING_ACCOUNT_ID=1920...
+GRVT_TRADING_PRIVATE_KEY=0x...
+GRVT_TRADING_API_KEY=...
+
+# Environment
+GRVT_ENV=testnet
+```
+
+## 🚀 Usage
+
+### Full SDK Mode (with Python)
+
+For complete trading functionality including order placement, positions, transfers, and balance:
+
+```javascript
+import { Grvt } from '@nebula-library/web3/dex/perp/grvt';
+
+const grvt = new Grvt({
+    funding: {
+        address: process.env.GRVT_FUNDING_ADDRESS,
+        privateKey: process.env.GRVT_FUNDING_PRIVATE_KEY,
+        apiKey: process.env.GRVT_FUNDING_API_KEY
+    },
+    trading: {
+        address: process.env.GRVT_TRADING_ADDRESS,
+        accountId: process.env.GRVT_TRADING_ACCOUNT_ID,
+        privateKey: process.env.GRVT_TRADING_PRIVATE_KEY,
+        apiKey: process.env.GRVT_TRADING_API_KEY
+    },
+    slippage: 0.5,
+    environment: 'testnet', // or 'mainnet'
+    usePython: true // Enable Python SDK for trading operations
+});
+
+// Full SDK functionality available
+const balance = await grvt.getWalletBalance();
+const positions = await grvt.getOpenPositions();
+
+// Submit order with monitoring and retry
+const order = await grvt.submitOrder(
+    grvtEnum.orderType.limit,
+    'BTC-PERP',
+    grvtEnum.orderSide.long,
+    grvtEnum.marketUnit.quoteOnMainCoin,
+    0.001,
+    (update) => console.log('Order update:', update), // callback
+    3,      // retry attempts
+    60000   // timeout ms
+);
+
+// Transfer funds
+const transfer = await grvt.transferToTrading('100', 'USDT');
+
+// Close position
+const close = await grvt.submitCloseOrder(
+    grvtEnum.orderType.market,
+    'BTC-PERP',
+    grvtEnum.marketUnit.quoteOnMainCoin,
+    0,
+    true // closeAll
+);
+
+// IMPORTANT: Always close the connection when done
+await grvt.close();
+```
+
+### 🌐 Web/Serverless Mode (GrvtMinimal - HTTP Only)
+
+**Perfect for serverless environments** like Gelato, AWS Lambda, Vercel Functions, or browser environments.
+
+**Zero dependencies on:**
+- ❌ Python
+- ❌ child_process
+- ❌ file system
+- ✅ Pure HTTP API calls
+
+```javascript
+import { GrvtMinimal } from '@nebula-library/web3/dex/perp/grvt';
+
+const grvt = new GrvtMinimal({
+    apiKey: process.env.GRVT_TRADING_API_KEY,
+    accountId: process.env.GRVT_TRADING_ACCOUNT_ID,
+    environment: 'testnet' // or 'mainnet'
+});
+
+// ✅ Read-only operations via HTTP:
+const walletStatus = await grvt.getWalletStatus();
+const walletBalance = await grvt.getWalletBalance();
+const positions = await grvt.getOpenPositions();
+const prices = await grvt.getMarketDataPrices('BTC-PERP');
+const orderStatus = await grvt.getOrderStatusById(orderId);
+const transferStatus = await grvt.getTransferStatusByTxId(txId);
+
+// No cleanup needed (no Python service)
+await grvt.close(); // No-op, API compatible with full Grvt class
+```
+
+**GrvtMinimal Features:**
+- ✅ Wallet status and balance
+- ✅ Market data (prices, funding rates, open interest)
+- ✅ Position monitoring
+- ✅ Order status checking
+- ✅ Transfer status verification
+
+**GrvtMinimal Limitations:**
+- ❌ Cannot place orders (requires Python SDK for EIP712 signing)
+- ❌ Cannot cancel orders (requires Python SDK)
+- ❌ Cannot transfer funds (requires Python SDK for signing)
+- ✅ Perfect for monitoring, status checks, webhooks, dashboards
+
+### Hybrid Mode (usePython flag)
+
+Use the full `Grvt` class with Python disabled for specific cases:
+
+```javascript
+const grvt = new Grvt({
+    funding: { /* ... */ },
+    trading: { /* ... */ },
+    environment: 'testnet',
+    usePython: false // 🔥 Disable Python - HTTP only
+});
+
+// ✅ These work without Python (HTTP direct):
+const walletStatus = await grvt.getWalletStatus();
+const positions = await grvt.getOpenPositions();
+const orderStatus = await grvt.getOrderStatusById(orderId);
+
+// ❌ These require Python SDK (will throw error):
+// await grvt.submitOrder(...)      // Needs Python for EIP712 signing
+// await grvt.transferToTrading(...) // Needs Python for transfer signing
+```
+
+## � API Comparison
+
+| Feature | Full SDK (Grvt) | Minimal (GrvtMinimal) |
+|---------|----------------|----------------------|
+| **Setup Requirements** | Python + Node.js | Node.js only |
+| **Dependencies** | Python SDK, child_process | Pure HTTP (axios) |
+| **Wallet Balance** | ✅ | ✅ |
+| **Market Data** | ✅ | ✅ |
+| **Position Monitoring** | ✅ | ✅ |
+| **Order Status** | ✅ | ✅ |
+| **Transfer Status** | ✅ | ✅ |
+| **Submit Orders** | ✅ (with retry/callback) | ❌ |
+| **Cancel Orders** | ✅ (with retry) | ❌ |
+| **Fund Transfers** | ✅ (with verification) | ❌ |
+| **Order Monitoring** | ✅ Automatic | ❌ |
+| **Serverless Compatible** | ❌ | ✅ |
+| **Browser Compatible** | ❌ | ✅ |
+
+## 🎯 Use Case Guide
+
+### When to use **Full SDK (Grvt)**:
+- 🤖 **Trading Bots**: Automated trading strategies with order placement
+- 📊 **Portfolio Management**: Active position management and rebalancing
+- 🔄 **Fund Management**: Transfers between accounts
+- ⚡ **High Frequency Trading**: Low latency order submission
+- 🎮 **Trading Applications**: Full-featured trading interfaces
+
+### When to use **Minimal (GrvtMinimal)**:
+- 🌐 **Gelato Functions**: Automated tasks, webhook handlers
+- ☁️ **AWS Lambda**: Serverless monitoring and alerts
+- 🚀 **Vercel Functions**: Edge computing, API endpoints
+- 📱 **Mobile Apps**: Read-only trading dashboards
+- 🖥️ **Web Dashboards**: Position monitoring, P&L tracking
+- 📧 **Notification Services**: Order/transfer status alerts
+- 📈 **Analytics Services**: Market data aggregation
+
+## �🔐 Account Structure
+
+GRVT uses a two-account system:
+
+```
+┌─────────────────────────────────────────────┐
+│  FUNDING ADDRESS (Treasury)                 │
+│  └─ Address ONLY: 0xFundingAddress          │
+│  └─ NO Account ID                           │
+│  └─ Sub-Account: "0" (implicit)             │
+│  └─ Purpose: Hold funds, bridge to trading  │
+│                                              │
+│           ↓↓↓ TRANSFER ↓↓↓                  │
+│                                              │
+│  TRADING ADDRESS (Operations)               │
+│  ├─ Address: 0xTradingAddress               │
+│  ├─ Trading Account ID: hex string          │
+│  │   (1920109784202388)                     │
+│  ├─ Sub-Account: Same as Account ID         │
+│  ├─ Purpose: Orders, positions, margin      │
+│  └─ CAN trade, CAN have positions           │
+└─────────────────────────────────────────────┘
+```
+
+### Key Differences
+
+- **Funding Account:** A treasury account that holds funds securely. It has no account ID and cannot place orders or hold positions. Its primary purpose is to store funds and transfer them to the trading account when needed.
+- **Trading Account:** An operational account linked to a specific trading account ID. It can submit orders, manage positions, and handle margin requirements. Funds must be transferred from the funding account to the trading account before any trading activities can occur.
+
+### Environment Variables
+
+```bash
+# Funding Account
+GRVT_FUNDING_ADDRESS=0x...
+GRVT_FUNDING_PRIVATE_KEY=0x...
+GRVT_FUNDING_API_KEY=...
+
+# Trading Account
+GRVT_TRADING_ADDRESS=0x...
+GRVT_TRADING_ACCOUNT_ID=1920...
+GRVT_TRADING_PRIVATE_KEY=0x...
+GRVT_TRADING_API_KEY=...
+
+# Environment
+GRVT_ENV=testnet
+```
+
+### Write Operations (With Embedded Monitoring)
+
+```javascript
+// Submit LIMIT order (automatically monitored until terminal state)
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,      // type
+    'BTC-PERP',                         // symbol
+    extendedEnum.order.long,            // side (BUY)
+    extendedEnum.order.quoteOnMainCoin, // market unit
+    0.001                               // quantity
+);
+
+console.log('Order ID:', order.data.orderId);
+console.log('Status:', order.data.status);        // FILLED, CANCELLED, etc.
+console.log('Filled:', order.data.filledQty);
+
+// Close position (automatically monitored)
+const close = await extended.submitCloseOrder(
+    extendedEnum.order.type.market,     // type
+    'BTC-PERP',                         // symbol
+    extendedEnum.order.quoteOnMainCoin, // market unit
+    0,                                  // quantity (ignored when closeAll=true)
+    true                                // closeAll
+);
+
+// Cancel order
+const cancel = await extended.submitCancelOrder(orderId);
+
+// Transfer funds between accounts
+const transferToTrading = await extended.transferToTrading('100', 'USDT');
+console.log('Transfer confirmed:', transferToTrading.data.confirmed);
+
+const transferToFunding = await extended.transferToFunding('50', 'USDT');
+console.log('Transfer confirmed:', transferToFunding.data.confirmed);
+```
+
+### Advanced Order Operations with Retry and Callbacks
+
+#### Order Submission with Automatic Retry
+
+Submit orders with automatic retry on rejection and real-time status updates:
+
+```javascript
+// Submit order with retry and callback
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,      // type
+    'BTC-PERP',                         // symbol
+    extendedEnum.order.long,            // side
+    extendedEnum.order.quoteOnMainCoin, // market unit
+    0.001,                              // quantity
+    (update) => {                       // callback (optional)
+        console.log('Order Update:', {
+            id: update.currentOrderId,
+            status: update.status,
+            filled: update.qtyExe,
+            avgPrice: update.avgPrice
+        });
+    },
+    3,                                  // retry attempts (optional, default: 0)
+    60000                               // timeout ms (optional, default: 60000)
+);
+```
+
+**Parameters:**
+- `_onOrderUpdate`: Callback function invoked whenever order state changes (status, filled quantity, or average price updates)
+- `_retry`: Number of retry attempts if order is REJECTED (default: 0, no retry)
+- `_timeout`: Maximum wait time in milliseconds, resets when filled quantity increases (default: 60000ms)
+
+**Retry Behavior:**
+1. If order is REJECTED and retries remain, the order is automatically cancelled
+2. A new order is submitted with the same parameters
+3. Process repeats until order succeeds or max retries reached
+4. Callback notified of each retry attempt
+
+**Timeout Behavior:**
+1. Timeout counter starts when order is submitted
+2. Resets whenever filled quantity increases (partial fills extend timeout)
+3. When timeout expires without completion, order is automatically cancelled
+4. Final status returned as `TIMEOUT_CANCELLED`
+
+#### Close Position with Retry and Callbacks
+
+Close positions with the same advanced features:
+
+```javascript
+// Close position with monitoring and retry
+const close = await extended.submitCloseOrder(
+    extendedEnum.order.type.limit,      // type
+    'BTC-PERP',                         // symbol
+    extendedEnum.order.quoteOnMainCoin, // market unit
+    0,                                  // quantity (ignored if closeAll=true)
+    true,                               // closeAll
+    (update) => {                       // callback (optional)
+        console.log('Close Order Update:', update);
+    },
+    3,                                  // retry attempts (optional)
+    60000                               // timeout ms (optional)
+);
+```
+
+**Key Features:**
+- Automatically detects current position and creates opposite side order
+- Uses `reduce_only` flag to prevent opening new positions
+- Supports partial closes by setting `closeAll=false` and specifying quantity
+- Same retry and timeout logic as regular orders
+
+#### Cancel Order with Retry
+
+Cancel orders with automatic retry on failure:
+
+```javascript
+// Cancel with 2 retry attempts
+const cancel = await extended.submitCancelOrder(
+    orderId,   // order ID to cancel
+    2          // retry attempts (optional, default: 0)
+);
+```
+
+**Retry Behavior:**
+- If cancellation fails, automatically retries up to specified attempts
+- 1 second delay between retry attempts
+- Returns success/failure with total attempt count
+
+## 🔍 BigNumber Calculations
+
+All internal calculations use `ethers.BigNumber` for precision:
+
+```javascript
+// Input: number/string from API
+const askPrice = '50000.123456789';
+const bidPrice = '49999.987654321';
+
+// Internal: BigNumber arithmetic
+const midPrice = calculateMidPrice(askPrice, bidPrice);
+
+// Output: number for display/API
+console.log(midPrice); // 50000.0556055555
+```
+
+### Utility Functions
+
+- **`calculateMidPrice(ask, bid)`** - Calculate mid price with BigNumber
+- **`formatOrderQuantity(qty, isQuoteOnSec, price, step)`** - Format quantity with step size
+- **`calculateSlippagePrice(price, slippage, isBuy)`** - Apply slippage adjustment
+- **`roundToTickSize(price, tickSize)`** - Round price to valid tick
+- **`validateOrderParams(params)`** - Validate order before submission
+
+## 🔄 Embedded WebSocket Monitoring
+
+Write operations automatically monitor order state:
+
+```javascript
+// wmSubmitOrder internally monitors order state
+// Polls every 500ms until terminal state
+// Terminal states: FILLED, CANCELLED, REJECTED, EXPIRED, TIMEOUT_CANCELLED
+```
+
+No manual monitoring needed - the function returns final state:
+
+```javascript
+const result = await extended.submitOrder(...);
+
+// result.data.status contains final state:
+// - 'FILLED' (success)
+// - 'CANCELLED' (user cancelled)
+// - 'REJECTED' (exchange rejected)
+// - 'TIMEOUT_CANCELLED' (monitoring timeout exceeded)
+// - 'EXPIRED' (order expired per time-in-force)
+```
+
+### Order State Lifecycle
+
+```
+SUBMITTED → NEW → OPEN → PARTIALLY_FILLED → FILLED ✅
+                    ↓
+                  CANCELLED ⚠️
+                    ↓
+                  REJECTED ❌ (can trigger retry)
+                    ↓
+                  EXPIRED ⏰
+```
+
+### Monitoring Features
+
+1. **Automatic State Tracking**: Continuously polls order status until terminal state
+2. **Partial Fill Detection**: Detects when filled quantity increases and resets timeout
+3. **Real-time Callbacks**: Invokes callback function on any state change
+4. **Smart Timeout**: Timeout resets on partial fills to allow orders to complete
+5. **Automatic Cancellation**: Orders are cancelled if timeout expires without completion
+
+### Transfer Confirmation with Retry
+
+Transfer operations verify completion via the transfer history API:
+
+```javascript
+// Transfers automatically check completion status with 3 retry attempts
+const transfer = await extended.transferToTrading('100', 'USDT');
+
+console.log('TX ID:', transfer.data.txId);
+console.log('Submitted:', transfer.data.submitted);  // API accepted transfer
+console.log('Confirmed:', transfer.data.confirmed);  // Transfer in history (verified)
+```
+
+**Retry Logic:**
+- Makes up to 3 attempts to verify transfer appears in history
+- 2 second delay between verification attempts
+- Returns `confirmed: true` if transfer found in history
+- Returns `confirmed: false` if transfer not found after 3 attempts
+- Database processing may take time, retry ensures accurate status
+
+## 📊 Response Format
+
+All functions return standardized responses:
+
+```javascript
+{
+    success: true,
+    message: 'success',
+    data: { /* response data */ },
+    source: 'grvt.functionName',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    trace: null  // Only present on errors
+}
+```
+
+## 🧪 Examples
+
+### Basic Workflow Example
+
+Run the complete workflow example:
+
+```bash
+npm run example
+```
+
+This demonstrates:
+1. Check wallet balance (VIEW)
+2. Get market data (VIEW)
+3. Submit LIMIT order (WRITE + monitoring)
+4. Check positions (VIEW)
+5. Get position detail (VIEW)
+6. Close position (WRITE + monitoring)
+7. Get order history (VIEW)
+
+### Advanced Examples
+
+#### Order with Callback and Retry
+```bash
+node example/grvt.open-order.example.js
+```
+
+Demonstrates:
+- Real-time order status updates via callback
+- Automatic retry on rejection
+- Timeout handling with automatic cancellation
+
+#### Position Closing with Monitoring
+```bash
+node example/grvt.close-order.example.js
+```
+
+Demonstrates:
+- Automatic position detection
+- Reduce-only order placement
+- Close monitoring until completion
+
+#### Fund Transfers with Verification
+```bash
+node example/grvt.transfer.example.js
+```
+
+Demonstrates:
+- Transfer from Funding to Trading account
+- Transfer from Trading to Funding account
+- Automatic confirmation verification with retry
+- Status checking via transfer history API
+
+### Custom Implementation Examples
+
+#### Simple Order Without Monitoring
+```javascript
+// For fire-and-forget orders (no monitoring, no retry)
+const order = await extended.submitOrder(
+    extendedEnum.order.type.market,
+    'BTC-PERP',
+    extendedEnum.order.long,
+    extendedEnum.order.quoteOnMainCoin,
+    0.001
+    // No callback, no retry, no timeout - defaults to basic submission
+);
+```
+
+#### Order with Custom Timeout
+```javascript
+// 30 second timeout for fast execution
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,
+    'ETH-PERP',
+    extendedEnum.order.short,
+    extendedEnum.order.quoteOnMainCoin,
+    0.01,
+    null,   // no callback
+    0,      // no retry
+    30000   // 30 second timeout
+);
+```
+
+#### Advanced Order with Full Features
+```javascript
+// Production-ready order with all features
+let lastUpdate = null;
+
+const order = await extended.submitOrder(
+    extendedEnum.order.type.limit,
+    'BTC-PERP',
+    extendedEnum.order.long,
+    extendedEnum.order.quoteOnMainCoin,
+    0.001,
+    (update) => {
+        // Track order progress
+        if (lastUpdate?.status !== update.status) {
+            console.log(`Status changed: ${lastUpdate?.status || 'NONE'} → ${update.status}`);
+        }
+        if (lastUpdate?.qtyExe !== update.qtyExe) {
+            console.log(`Filled: ${update.qtyExe} @ ${update.avgPrice}`);
+        }
+        lastUpdate = update;
+    },
+    5,      // 5 retry attempts on rejection
+    120000  // 2 minute timeout (resets on partial fills)
+);
+
+if (order.success) {
+    console.log('Final Status:', order.data.finalStatus);
+    console.log('Total Filled:', order.data.qtyExe);
+    console.log('Average Price:', order.data.avgPrice);
+    console.log('Retry Attempts:', order.data.attempts || 0);
+}
+```
+
+## 🏛️ Architecture Comparison
+
+| Layer | NebulaLabs Pattern | GRVT Implementation |
+|-------|-------------------|---------------------|
+| **View** | HTTP API via axios | HTTP API + Python SDK |
+| **Write** | Python SDK via subprocess | Python SDK via subprocess |
+| **Calculations** | BigNumber internally | BigNumber internally |
+| **Monitoring** | Embedded in write ops | Embedded in write ops |
+| **Response** | createResponse() | createResponse() |
+
+## 🔧 Python Service
+
+The Python service runs as a subprocess:
+
+```
+Node.js (extended.js)
+    ↓
+    stdin/stdout (JSON)
+    ↓
+Python (service.py)
+    ↓
+    GRVT Python SDK
+```
+
+Communication protocol:
+
+```javascript
+// Request
+{ "command": "place_order", "params": { /* ... */ } }
+
+// Response
+{ "data": { "order_id": "...", "status": "NEW" } }
+// or
+{ "error": "Error message" }
+```
+
+## 🛡️ Error Handling
+
+All operations include comprehensive error handling:
+
+```javascript
+try {
+    const result = await extended.submitOrder(...);
+    if (!result.success) {
+        console.error('Error:', result.message);
+        console.error('Trace:', result.trace);
+    }
+} catch (error) {
+    console.error('Exception:', error.message);
+}
+```
+
+## 📝 Order Types & Sides
+
+```javascript
+// Order Types
+extendedEnum.order.type.market  // MARKET
+extendedEnum.order.type.limit   // LIMIT
+
+// Order Sides
+extendedEnum.order.long         // BUY
+extendedEnum.order.short        // SELL
+
+// Market Unit
+extendedEnum.order.quoteOnMainCoin      // Quote in main coin
+extendedEnum.order.quoteOnSecCoin       // Quote in secondary coin
+
+// Order States (GRVT-specific)
+grvtEnum.orderState.new
+grvtEnum.orderState.partially_filled
+grvtEnum.orderState.filled
+grvtEnum.orderState.cancelled
+grvtEnum.orderState.rejected
+grvtEnum.orderState.expired
+```
+
+## 🔐 Security Notes
+
+- Never commit `.env` file to version control
+- Keep private keys secure
+- Use separate funding and trading accounts
+- Test on testnet before mainnet deployment
+
+## 📚 Additional Resources
+
+- [GRVT API Documentation](https://docs.grvt.io)
+- [GRVT Python SDK](https://github.com/gravity-technologies/grvt-pysdk)
+- [NebulaLabs Repository](https://github.com/NebulaLabsOrg/nebula-library)
+
+## 🔑 Key Features Summary
+
+### Order Management
+- ✅ **Automatic Monitoring**: Orders tracked until completion without manual polling
+- ✅ **Smart Retry**: Failed orders automatically retried with configurable attempts
+- ✅ **Real-time Callbacks**: Live updates on order status, fills, and price
+- ✅ **Dynamic Timeout**: Timeout resets on partial fills to allow completion
+- ✅ **Auto-Cancel**: Orders cancelled on timeout to prevent orphaned orders
+
+### Transfer Operations
+- ✅ **Bidirectional Transfers**: Between Funding and Trading accounts
+- ✅ **Automatic Verification**: Transfer history checked with retry logic
+- ✅ **Correct Credentials**: Direction-based credential selection (Funding→Trading uses Funding key, Trading→Funding uses Trading key)
+- ✅ **Confirmation Status**: Returns both submission and confirmation status
+
+### Architecture Benefits
+- ✅ **Separation of Concerns**: View (read) and Write (modify) layers clearly separated
+- ✅ **BigNumber Precision**: All calculations use ethers.BigNumber internally
+- ✅ **Standardized Responses**: Consistent response format across all operations
+- ✅ **Error Handling**: Comprehensive error handling with detailed traces
+- ✅ **Python SDK Integration**: Seamless subprocess communication for SDK operations
+
+### Production-Ready Features
+- ✅ **Environment Support**: Testnet and Mainnet configurations
+- ✅ **Security**: Private key isolation in Python service
+- ✅ **Reliability**: Automatic retry and timeout handling
+- ✅ **Observability**: Real-time callbacks and detailed logging
+- ✅ **Type Safety**: Enums for order types, sides, and states
+
+## 🤝 Contributing
+
+This implementation follows NebulaLabs standards. Maintain:
+- View/Write separation
+- BigNumber calculations
+- Embedded monitoring
+- Standardized responses
+
+## 📄 License
+
+MIT
+
+---
+
+**Built with ❤️ following NebulaLabs architecture pattern**
